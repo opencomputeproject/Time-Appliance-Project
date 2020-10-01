@@ -29,21 +29,23 @@
          1. [PPS In](#PPS-In)
          1. [Hardware timestamps](#Hardware-timestamps)
    1. [Time Card](#Time-Card-1)
-      1. [GNSS receiver](#example)
-      1. [Redundancy Protection](#example)
+      1. [GNSS receiver](#GNSS-receiver)
+      1. [Redundancy Protection](#Redundancy-Protection)
       1. [Bridge](#example)
-         1. [Hardware Implementation](#example)
-      1. [Interfaces](#example)
-      1. [Form Factor](#example)
-      1. [LED](#example)
+         1. [Hardware Implementation](#Hardware-Implementation)
+         1. [Software Implementation](#Software-Implementation)
+         1. [Hybrid Implementation](#Hybrid-Implementation)
+      1. [Interfaces](#Interfaces)
+      1. [Form Factor](#Form-Factor)
+      1. [LED](#LED)
    1. [PTP Flows](#example)
-      1. [Two-Step Sync](#example)
-      1. [One-Step Sync](#example)
-      1. [Delay Response](#example)
+      1. [Two-Step Sync](#Two-Step-Sync)
+      1. [One-Step Sync](#One-Step-Sync)
+      1. [Delay Response](#Delay-Response)
    1. [Holdover](#example)
-      1. [Definition](#example)
-      1. [Indication](#example)
-      1. [Requirements](#example)
+      1. [Definition](#Definition)
+      1. [Indication](#Indication)
+      1. [Requirements](#Requirements)
 
 
 
@@ -81,7 +83,7 @@ OGM | Open GrandMaster
 NIC | Network Interface Card
 COTS | Commodity off-the-shelf
 
-_Table 1. Abbreviations_
+Table 1. Abbreviations
 
 # General 
 
