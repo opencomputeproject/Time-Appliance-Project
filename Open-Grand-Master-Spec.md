@@ -6,7 +6,7 @@
 
 # TAP Project
 
-# Table of Contents
+## Table of Contents
 1. [Abbreviations](#Abbreviations)
 1. [General](#General)
 1. [High-Level Architecture](#High-Level-Architecture)
@@ -39,6 +39,7 @@
       1. [Interfaces](#Interfaces)
          1. [LED](#LED)
 
+## List of images
 List Of Images | Description
 ------------ | -------------
 [Figure 1](#figure-1) | OGM Block Diagram
@@ -48,7 +49,7 @@ List Of Images | Description
 [Figure 5](#figure-5) | Bridge Block Diagram
 
 
-# Abbreviations
+## Abbreviations
 Abbreviation | Description
 ------------ | -------------
 AC | Atomic Clock
