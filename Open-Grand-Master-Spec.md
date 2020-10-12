@@ -19,35 +19,25 @@
    1. [COTS Server](#COTS-Server)
       1. [Hardware](#Hardware)
       1. [Software](#Software)
-      1. [Requirements](#Requirements)
    1. [NIC](#NIC)
-      1. [Requirements](#Requirements)
-         1. [Form-Factor](#Form-Factor)
-         1. [Pcie Interface](#Pcie-Interface)
-         1. [Network Ports](#Network-Ports)
-         1. [PPS out](#PPS-out)
-         1. [PPS In](#PPS-In)
-         1. [Hardware timestamps](#Hardware-timestamps)
+      1. [Form-Factor](#Form-Factor)
+      1. [Pcie Interface](#Pcie-Interface)
+      1. [Network Ports](#Network-Ports)
+      1. [PPS out](#PPS-out)
+      1. [PPS In](#PPS-In)
+      1. [Hardware timestamps](#Hardware-timestamps)
    1. [Time Card](#Time-Card-1)
-      1. [GNSS receiver](#GNSS-receiver)
-      1. [Redundancy Protection](#Redundancy-Protection)
+      1. [Form Factor](#Form-Factor)
+      1. [GNSS](#GNSS)
+         1. [Receiver](#Receiver)
+         1. [Security](#Security)
+      1. [Clock](#Clock)
       1. [Bridge](#example)
          1. [Hardware Implementation](#Hardware-Implementation)
          1. [Software Implementation](#Software-Implementation)
          1. [Hybrid Implementation](#Hybrid-Implementation)
       1. [Interfaces](#Interfaces)
-      1. [Form Factor](#Form-Factor)
-      1. [LED](#LED)
-   1. [PTP Flows](#example)
-      1. [Two-Step Sync](#Two-Step-Sync)
-      1. [One-Step Sync](#One-Step-Sync)
-      1. [Delay Response](#Delay-Response)
-   1. [Holdover](#example)
-      1. [Definition](#Definition)
-      1. [Indication](#Indication)
-      1. [Requirements](#Requirements)
-
-
+         1. [LED](#LED)
 
 List Of Images | Description
 ------------ | -------------
@@ -61,27 +51,28 @@ List Of Images | Description
 # Abbreviations
 Abbreviation | Description
 ------------ | -------------
-OCP | Open Compute Platform
-TAP | Time Appliance Project
-PTP | Precision Time Protocol
-PTM | Precision Time Measurements
-NTP | Network Time Protocol
-GM | GrandMaster
+AC | Atomic Clock
+COTS | Commodity off-the-shelf
+DC | Datacenter
 GMC | GrandMaster Clock
-GTM | Go-To-Market
-XO | Oscillator
-TCXO | Temperature-compensated Oscillator
-OCXO | Oven-Controlled Oscillator 
+GM | GrandMaster
 GNSS | Global Navigation Satellite System
+GTM | Go-To-Market
+HW | Hardware
+NIC | Network Interface Card
+NTP | Network Time Protocol
+OCP | Open Compute Platform
+OCXO | Oven-Controlled Oscillator
+OGM | Open GrandMaster
+PHC | PTP Hardware Clock
+PTM | Precision Time Measurements
+PTP | Precision Time Protocol
+SW | Software
+TAP | Time Appliance Project
+TCXO | Temperature-compensated Oscillator
 ToD | Time of Day
 TS | Timestamp
-PHC | PTP Hardware Clock
-DC | Datacenter
-HW | Hardware
-SW | Software
-OGM | Open GrandMaster
-NIC | Network Interface Card
-COTS | Commodity off-the-shelf
+XO | Oscillator
 
 Table 1. Abbreviations
 
@@ -95,11 +86,11 @@ PTP architecture is scalable and defines the time source from an entity called t
 
 The current state-of-the-art grandmaster implementations suffer from a few drawbacks that we wish to accommodate:
 
-*   They are HW appliances that usually target different GTM than a DC 
-*   They expose none standard and inconsistent Interfaces and SW feature-sets
-*   Development cycles and the effort needed to add new features are large and expensive
-*   It doesn’t rely on open-source software
-*   The accuracy/stability grades aren’t in line with DC requirements 
+* They are HW appliances that usually target different GTM than a DC 
+* They expose none standard and inconsistent Interfaces and SW feature-sets
+* Development cycles and the effort needed to add new features are large and expensive
+* It doesn’t rely on open-source software
+* The accuracy/stability grades aren’t in line with DC requirements 
 
 This document describes an open architecture of a Grandmaster, that could eventually be deployed either in a DC or in an edge environment. 
 
@@ -114,82 +105,72 @@ In general, the OGM is divided into 3 HW components:
 
 The philosophy behind this fragmentation is very clear, and each decision, modification that will be made, must look-out to this philosophy:
 
-*   COTS servers keep their “value for money” due to huge market requirements. They are usually updated with the latest OS version, security patches, and newer technology, faster than HW appliances. 
-*   Modern Commodity NICs already support HW timestamp, lead the market with Ethernet and PCIe latest Speeds and Feeds. Modern NIC also supports a wide range of OS versions and comes with a great software ecosystem. NIC + COTS server will allow the OGM to run a full software (and even open source one) PTP and NTP stack. 
-*   Timecard will be the smallest (conceptually) possible HW board, which will provide the GNSS signal input and stable frequency input. Isolating these functions in a timecard will allow OGM to choose the proper timecard for their needs (accuracy, stability, cost, etc) and remain with the same SW, interface, and architecture.
+* COTS servers keep their “value for money” due to huge market requirements. They are usually updated with the latest OS version, security patches, and newer technology, faster than HW appliances. 
+* Modern Commodity NICs already support HW timestamp, lead the market with Ethernet and PCIe latest Speeds and Feeds. Modern NIC also supports a wide range of OS versions and comes with a great software ecosystem. NIC + COTS server will allow the OGM to run a full software (and even open source one) PTP and NTP stack. 
+* Timecard will be the smallest (conceptually) possible HW board, which will provide the GNSS signal input and stable frequency input. Isolating these functions in a timecard will allow OGM to choose the proper timecard for their needs (accuracy, stability, cost, etc) and remain with the same SW, interface, and architecture.
 ## Responsibilities and Requirements 
 ### OGM Requirements 
 ### COTS Server
 * Run commodity OS
 * PCIe as an interconnect
-* support PTM
+* PTM Support
 #### Network Interface Card
 * PPS in/out
-* PTM
+* PTM Support
 * Hardware timestamps
 * [optional] Time of day tunnel from timecard to SW
 #### Time Card
 * Holdover
 * GNSS in
 * PPS in/out
-* Leap
+* Leap second awareness
 * Time of day
-* [optional] PTM
+* [optional] PTM Support
 
 # Detailed Architecture 
 ## COTS Server
 ### Hardware
-* 2x PCIe Gen3.0/Gen4.0 slot
+* 2x PCIe Gen3.0/Gen4.0 slots
 ### Software
 * Linux/*nix operating system
 * ptp4l serves PTP on NIC
 * Chrony/NTPd reading `/dev/ptpX` of a NIC
-### Requirements
 ## NIC
-### Requirements 
-#### Form-Factor
-
+### Form-Factor
 * Standard PCIe Stand-up Card
-* Half-Height, Half-Length, Tall Bracket (??)
+* Half-Height, Half-Length, Tall Bracket
 * Single Slot - Passive Cooling Solution
 * Support for Standard PCIe Tall and Short brackets
 
-#### Pcie Interface
-
+### PCIe Interface
 * PCIe Gen3.0/Gen4.0 X n lanes on Gold-fingers where n = at least 8
 
-#### Network Ports
-
+### Network Ports
 * Single or Dual-port Ethernet
 
-#### PPS out
-
+### PPS out
 * PPS Out Rise/Fall Time < 5 nano Sec 
 * PPS Out Delay < 400 pico Sec
 * PPS Out Jitter < 250 fento Sec
 * PPS Out Impedance	= 50 Ohm
 * PPS Out frequency	1Hz - 10MHz
 
-#### PPS In
-
+### PPS In
 * PPS In Delay < 400pSec
 * PPS In Jitter < 250fSec
 * PPS In Impedance 	= 50 Ohm
 * PPS In frequency 1Hz - 10MHz
 
 
-#### Hardware timestamps 
+### Hardware timestamps 
 
-NIC should timestamp all ingress packets.
-
-Non PTP packets can be batch and have a common TS in the SW descriptor, as long as they are not distant more than TBD nanosecond 
-
-NIC should timestamp all PPP egress packets
+NIC should timestamp all ingress packets.  
+Non PTP packets can be batch and have a common TS in the SW descriptor, as long as they are not distant more than TBD nanosecond.  
+NIC should timestamp all PPP egress packets.  
 
 * PHC
 * PTM 
 * 1PPS input
-* Network port &lt;TBD speed, form-factor>
 * [optional] 10MHz input which can be used as frequency input to the TSU unit 
 * [optional] Multi-host support
 
@@ -206,9 +187,12 @@ General Idea is this card will be connected via PCIe to the server and provide T
 
 For the extremely high precision 1PPS output of the Time Card will be connected to the 1PPS input of the NIC, providing &lt;100ns precision. 
 
+### Form Factor
+* Standard PCIe Stand-up Card
+* Single Slot - Passive Cooling Solution
 
-### GNSS receiver
-
+### GNSS
+#### Receiver
 The GNSS receiver can be a product from ublock or any other vendor as long as it provides PPS output and the TOD using any suitable format.
 
 This is the recommended module:  **u-blox LEA-M8T-0-10 concurrent GNSS timing module**
@@ -218,32 +202,34 @@ This is the recommended module:  **u-blox LEA-M8T-0-10 concurrent GNSS timing mo
 
 <p align="center">Figure 2. GNSS Receiver</p>
 
+#### Security
+There are 2 main attack vectors on GNSS receiver
+#### Jamming
+Jamming is the simplest form of attack. In order to keep operations while under attack the most reliable approach is to perform a long run holdover.  
+See more about holdover in the [clock](#Clock) section.
 
+#### Spoofing
+GNSS authenticity is relevant today. A mechanism to protect against over-the-air spoofing incidents is desirable.
+With a special equipment it is possible to simulate GNSS constellation and spoof the receiver. Basic principals to protect against such attack:
+* Use high-quality GNSS receivers which verify packet signature
+* Disciplining implementations see more in [bridge](#bridge) section should protect against sudden jumps in time and space. For the datacenter use cases jump in space could be completely forbidden.
 
-### Redundancy Protection 
-
-When GNSS signals are lost or interrupted there’s a need for redundancy and holdover capacity and covered in the [Holdover](#Holdover) section
+### Clock
+GNSS requires "clear sky" to function properly. Moreover there were several historical events of a short term time jumps by some GNSS constallations.
+Because of reliability and in combination with the security concenrns an additional holdover should be performed by [high quality](https://www.meinbergglobal.com/english/specs/gpsopt.htm) XO. An example could be AC, OCXO, etc.
+In oreder to perform sustainable operation we recommend to use an AC with a holdover ± 1us or HQ OCXO with a holdover ± 22 µs.
 
 One approach is to use rubidium atomic clocks. Examples:
 * [Miniature Atomic Clock (MAC - SA.3Xm)](https://www.microsemi.com/product-directory/embedded-clocks-frequency-references/3825-miniature-atomic-clock-mac?fbclid=IwAR26trWBnHtV6ydBpKiViv3qS4jUpHAtQXJumUusIMB_RnCGclg2Qbd6lSc)
+* [mRO-50](https://www.orolia.com/products/atomic-clocks-oscillators/mro-50)
 
 <a id="Figure-3">![Atomic Clock Example](https://user-images.githubusercontent.com/4749052/94845627-dccb4500-0417-11eb-8f74-f9c44213177d.png)</a>
 
 <p align="center">Figure 3. Atomic Clock Example</p>
 
-
-
-### GNSS Vulnerability Protection 
-
-GNSS authenticity is relevant today. A mechanism to protect against over-the-air spoofing incidents is desirable.
-
-
-
 ### Bridge
 
 Bridge between GNSS receiver and Atomic clock can be implemented using software or hardware solutions. The hardware implementation is preferred and is our end goal.
-
-
 
 #### Hardware Implementation
 Here is one of the examples of hardware implementations.
@@ -277,11 +263,8 @@ Combination of 2 options
 * 1PPS / 10MHz SMA output
 * 1PPS / 10MHz SMA input
 * GNSS Antenna SMA input
-* Network port: speed and form factor &lt;TBD>
-### Form Factor
-* PCIe to leverage more broader market platforms 
-* Environmental, cooling
-### LED
+
+#### LED
 
 LED should be used to provide externally visible status information of the timing card. 
 
@@ -290,13 +273,3 @@ For example:
 * Solid green - card is powered, GNSS ok, 1PPS/10MHz output ok
 * Flashing green - card is in warm-up, acquiring satellites
 * Solid red - alarm / malfunction
-
-## PTP Flows
-### Two-Step Sync
-### One-Step Sync
-### Delay Response
-## Holdover
-### Definition
-### Indication 
-### Requirements
-*   1us per day
