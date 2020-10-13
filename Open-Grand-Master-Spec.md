@@ -235,7 +235,7 @@ Here is one of the examples of hardware implementations.
 * FPGA is responsible for most of the functionality
 * Exposed /dev/phc and /dev/pps are read by open source software such as ptp4l and chronyd
 
-<a id="Figure-4">![Time Card Block Diagram](https://user-images.githubusercontent.com/4749052/94844545-519d7f80-0416-11eb-8edc-c040c3511c77.png)</a>
+<a id="Figure-4">![Time Card Block Diagram](https://user-images.githubusercontent.com/4749052/95886452-8266a880-0d76-11eb-82b1-950b4a30d60b.png)</a>
 
 <p align="center">Figure 4. Time Card Block Diagram</p>
 
