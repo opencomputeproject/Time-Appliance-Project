@@ -11,7 +11,6 @@
 1. [General](#General)
 1. [High-Level Architecture](#High-Level-Architecture)
    1. [Responsibilities and Requirements](#Responsibilities-and-Requirements)
-      1. [OGM Requirements](#OGM-Requirements)
       1. [COTS Server](#COTS-Server)
       1. [Network Interface Card](#Network-Interface-Card)
       1. [Time Card](#Time-Card)
@@ -109,7 +108,6 @@ The philosophy behind this fragmentation is very clear, and each decision, modif
 * Modern Commodity NICs already support HW timestamp, lead the market with Ethernet and PCIe latest Speeds and Feeds. Modern NIC also supports a wide range of OS versions and comes with a great software ecosystem. NIC + COTS server will allow the OGM to run a full software (and even open source one) PTP and NTP stack. 
 * Timecard will be the smallest (conceptually) possible HW board, which will provide the GNSS signal input and stable frequency input. Isolating these functions in a timecard will allow OGM to choose the proper timecard for their needs (accuracy, stability, cost, etc) and remain with the same SW, interface, and architecture.
 ## Responsibilities and Requirements 
-### OGM Requirements 
 ### COTS Server
 * Run commodity OS
 * PCIe as an interconnect
