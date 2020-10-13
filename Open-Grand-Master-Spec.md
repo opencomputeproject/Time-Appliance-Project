@@ -35,7 +35,6 @@
       1. [Bridge](#example)
          1. [Hardware Implementation](#Hardware-Implementation)
          1. [Software Implementation](#Software-Implementation)
-         1. [Hybrid Implementation](#Hybrid-Implementation)
       1. [Interfaces](#Interfaces)
          1. [LED](#LED)
 
@@ -221,8 +220,9 @@ Because of reliability and in combination with the security concenrns an additio
 In oreder to perform sustainable operation we recommend to use an AC with a holdover ± 1us or HQ OCXO with a holdover ± 22 µs.
 
 One approach is to use rubidium atomic clocks. Examples:
-* [Miniature Atomic Clock (MAC - SA.3Xm)](https://www.microsemi.com/product-directory/embedded-clocks-frequency-references/3825-miniature-atomic-clock-mac?fbclid=IwAR26trWBnHtV6ydBpKiViv3qS4jUpHAtQXJumUusIMB_RnCGclg2Qbd6lSc)
+* [SA.3Xm](https://www.microsemi.com/product-directory/embedded-clocks-frequency-references/3825-miniature-atomic-clock-mac?fbclid=IwAR26trWBnHtV6ydBpKiViv3qS4jUpHAtQXJumUusIMB_RnCGclg2Qbd6lSc)
 * [mRO-50](https://www.orolia.com/products/atomic-clocks-oscillators/mro-50)
+* [SA.45s](https://www.microsemi.com/product-directory/embedded-clocks-frequency-references/5207-space-csac)
 
 <a id="Figure-3">![Atomic Clock Example](https://user-images.githubusercontent.com/4749052/94845627-dccb4500-0417-11eb-8f74-f9c44213177d.png)</a>
 
@@ -246,14 +246,11 @@ Here is one of the examples of hardware implementations.
 <p align="center">Figure 5. Bridge Block Diagram</p>
 
 #### Software Implementation
-Software implementation still requires most of the components, however the communication between components is done with user space software
+Software implementation still requires most of the components, however the communication between components is done with user space software:
 * GPSd exposing /dev/ppsY and provides TOD via SHM
-* phc2sys can copy data between clocks, including between GPSd and Atomic and then Atomic to PHC on the NIC
-
-#### Hybrid Implementation
-Combination of 2 options
 * FPGA board reads 1 PPS from different sources
 * Host daemon monitors the offset and steers oscillator
+* phc2sys can copy data between clocks, including between GPSd and Atomic and then Atomic to PHC on the NIC
 
 ### Interfaces
 * PCIe
