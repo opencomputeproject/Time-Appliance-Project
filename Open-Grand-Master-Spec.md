@@ -87,7 +87,7 @@ The current state-of-the-art grandmaster implementations suffer from a few drawb
 
 * They are HW appliances that usually target different GTM than a DC 
 * They expose none standard and inconsistent Interfaces and SW feature-sets
-* Development cycles and the effort needed to add new features are large and expensive
+* Development cycles and the effort needed to add new features are long and expensive
 * It doesn’t rely on open-source software
 * The accuracy/stability grades aren’t in line with DC requirements 
 
@@ -141,7 +141,7 @@ The philosophy behind this fragmentation is very clear, and each decision, modif
 * Support for Standard PCIe Tall and Short brackets
 
 ### PCIe Interface
-* PCIe Gen3.0/Gen4.0 X n lanes on Gold-fingers where n = at least 8
+* PCIe Gen3.0/Gen4.0 X n lanes on Gold-fingers, where n = at least 8
 
 ### Network Ports
 * Single or Dual-port Ethernet
@@ -154,8 +154,8 @@ The philosophy behind this fragmentation is very clear, and each decision, modif
 * PPS Out frequency	1Hz - 10MHz
 
 ### PPS In
-* PPS In Delay < 400pSec
-* PPS In Jitter < 250fSec
+* PPS In Delay < 400 pico Sec
+* PPS In Jitter < 250 fento Sec
 * PPS In Impedance 	= 50 Ohm
 * PPS In frequency 1Hz - 10MHz
 
@@ -235,7 +235,7 @@ Here is one of the examples of hardware implementations.
 * FPGA is responsible for most of the functionality
 * Exposed /dev/phc and /dev/pps are read by open source software such as ptp4l and chronyd
 
-<a id="Figure-4">![Time Card Block Diagram](https://user-images.githubusercontent.com/4749052/95886452-8266a880-0d76-11eb-82b1-950b4a30d60b.png)</a>
+<a id="Figure-4">![Time Card - Block Diagram](https://user-images.githubusercontent.com/4749052/95886452-8266a880-0d76-11eb-82b1-950b4a30d60b.png)</a>
 
 <p align="center">Figure 4. Time Card Block Diagram</p>
 
