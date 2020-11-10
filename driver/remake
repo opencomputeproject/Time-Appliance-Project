@@ -1,0 +1,9 @@
+set -euo pipefail
+
+KVER=`uname -r`
+KDIR=/usr/src/kernels/${KVER}
+
+make -C $KDIR M=$PWD
+
+ln -sf ${PWD}/ptp_ocp.ko /lib/modules/${KVER}
+depmod -a
