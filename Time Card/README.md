@@ -1,4 +1,4 @@
-# Time Card
+# Time Card (www.timingcard.com)
 
 ![Time Card](images/timecard.png)
 
