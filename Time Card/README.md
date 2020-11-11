@@ -15,6 +15,10 @@ The open grandmaster project envisions the following system diagram.
 
 ![Open Grandmaster System Diagram](images/overall.png)
 
+The initial design of the Time card was the following napkin sketch.
+
+![Initial design](images/idea.png)
+
 ## What you find on this repository
 
 Here you can find the Bill of Material (parts from Digikey)
