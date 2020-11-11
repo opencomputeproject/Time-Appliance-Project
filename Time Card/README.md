@@ -1,6 +1,6 @@
 # Time Card
 
-![Time Card](/images/timecard.png)
+![Time Card](images/timecard.png)
 
 Time Card is the heart of the Open Grandmaster Project. 
 You can find more info on www.ocptap.com
