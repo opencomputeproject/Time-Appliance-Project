@@ -222,7 +222,7 @@ One approach is to use rubidium atomic clocks. Examples:
 * [mRO-50](https://www.orolia.com/products/atomic-clocks-oscillators/mro-50)
 * [SA.45s](https://www.microsemi.com/product-directory/embedded-clocks-frequency-references/5207-space-csac)
 
-<a id="Figure-3">![Atomic Clock Example](https://user-images.githubusercontent.com/4749052/94845627-dccb4500-0417-11eb-8f74-f9c44213177d.png)</a>
+<a id="Figure-3">![Atomic Clock Example](https://user-images.githubusercontent.com/4749052/98942099-6bd27f00-24e5-11eb-868a-a813986e5e94.png)</a>
 
 <p align="center">Figure 3. Atomic Clock Example</p>
 
