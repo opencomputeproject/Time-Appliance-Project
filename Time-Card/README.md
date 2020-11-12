@@ -26,3 +26,7 @@ The initial design of the Time card was the following napkin sketch:
 * Driver (Kernel Module) CentOS 8
 * CAD files for the custom PCIe bracket 
 
+## Where can I get one?
+
+You have all necessary source code, BOM, Gerber files and binaries to build it youself. However, we are currently working with several suppliers and will have their contact info soon available to allow you to puchase an out-of-the-box ready Time Card.
+
