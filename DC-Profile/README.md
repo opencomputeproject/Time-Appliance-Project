@@ -92,3 +92,88 @@ DC-BC |	A boundary clock that can support multiple PTP ports in MASTER state and
 DC-TC |	An end-to-end transparent clock. | FSW (Fabric Switches) SSW (Spine Switches)
 DC-OC	| An ordinary clock that can have 1 PTP port always in SLAVE.  Also known as slave-only with no port in MASTER state.	| Server / NIC card
 
+
+## Transport mechanisms required, permitted, or prohibited
+
+The permitted transport mechanism is UDP over IPv6 per Annex E.  All other transport mechanisms are prohibited. The UDP checksum needs to be updated anytime a PTP timestamp is generated or a PTP message is processed. Given that all nodes are PTP-aware and that full-timing support is implemented, the use of VLAN IDs is not necessary but not prohibited.
+
+
+### communication
+
+All PTP messages are sent using unicast addressing.  All clock types defined support unicast negotiation according to clause 16.1 of IEEE 1588. In addition, clocks in SLAVE state support unicast discovery according to clause 17.5 of IEEE 1588.  Clocks in SLAVE state support configuration of DC-GM using the unicast master table.
+
+The following messages are messages are supported:
+
+* Signaling, Announce, Sync, Delay Request/Response
+
+
+The following TLVs for unicast negotiation are supported:
+
+* REQUEST_UNICAST_TRANSMISSION TLV
+* GRANT_UNICAST_TRANSMISSION TLV
+* CANCEL_UNICAST_TRANSMISSION
+* ACKNOWLEDGE_CANCEL_UNICAST_TRANSMISSION
+
+
+The following TLVs should be supported:
+
+* PATH_TRACE
+* ORGANIZATION_EXTENSION
+* MANAGEMENT
+
+
+Security TLVs are not considered as the infrastructure is assumed to be in a well-controlled environment
+
+
+### UNICAST NEGOTIATION:
+
+The figure below shows unicast negotiation between a DC-BC and DC-GM.  Signaling messages are used to negotiate unicast parameters such as message rates and duration of the service.  The use of transparent clocks is not shown in the diagram as they are agnostic to the unicast service.
+
+![GitHub Logo](images/gmbc.png)
+
+The figure below shows that each network element (except transparent clock) participate int he unicast negotiation. 
+
+![GitHub Logo](images/gmtcbc.png)
+
+Note: need to add DC-TC diagram
+
+Any clock receiving a PTP frame using multicast addressing is dropped. This would typically be the case if a clock has been mis-configured.
+
+
+### UNICAST master table:
+
+
+
+
+### Alternate Best Master clock Algorithm
+
+DC-PTP A-BMCA algorithm is under definition.  The profile is likely to be similar to the A-BMCA defined in telecom industry (G.8265.1)
+
+
+### Delay Measurement Mechanism
+
+The end-to-end delay request/delay response is used in this profile.  This mechanism is used between DC-BC and DC-GM across a set of DC-TC, and between DC-SC and DC-BC
+
+The peer-to-peer delay request/delay response is prohibited.
+
+### Clock Identity Format
+
+Clock Identifier is based on EUI-64 format.
+
+
+### 1-step and 2-step operation
+
+All clocks defined in this profile need to support 1-step and 2-step operation.  This applies to ingress ports and egress ports of a clock.
+
+### PTP message rate
+
+The table below defines the message rates
+
+Message	| Default value |	Range
+-------- | ------------- | -----
+Announce |	8 per second |	0 to -3
+Sync | 16 per second | 0 to -7
+Delay Request / Response | 16 per second | 0 to -7
+Signaling | Per PTP | Per PTP
+Duration Field | 2^32	| 2^32
+
