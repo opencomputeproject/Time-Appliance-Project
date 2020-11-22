@@ -248,7 +248,7 @@ Note: DC-TC are agnostic to clock classes
 
 DC-GM:  Clock based on IEEE1588 that is the root of time
 
-## Next steps / To do:*
+## Next steps / Todo list:
 
 * domain number, clock class, time source
 * TC clock to add ClockID
