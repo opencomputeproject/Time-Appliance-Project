@@ -177,3 +177,26 @@ Delay Request / Response | 16 per second | 0 to -7
 Signaling | Per PTP | Per PTP
 Duration Field | 2^32	| 2^32
 
+
+The value of logInterMessagePeriod is the logarithm, to base 2, of the requested mean period, in seconds, between the requested unicast messages.
+
+A clock in MASTER state must support the whole range.  A clock in SLAVE state should support the whole range but can support a subset of the range.
+
+The durationField is set to the maximum value of 4294967296 seconds.  It is the responsibility of a clock in SLAVE state to request unicast service in addition to cancel unicast service.   Once a unicast service is requested, a clock in MASTER state (eg., DC-GM, DC-BC) will continuously send PTP messages until requested to stop or if there is a failure.
+
+
+
+## PTP flags
+
+The table below defines the setting of various flags.
+
+This table is WIP.
+
+Flag | Value | Range
+---- | ----- | -----
+alternateMasterFlag	|	
+		
+		
+		
+		
+
