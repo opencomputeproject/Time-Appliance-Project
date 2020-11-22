@@ -78,11 +78,20 @@ profileName: PTP profile for data center application (DC-PTP Profile)
 profileVersion: 1.0
 profileIdentifier: TBD
 organizationName: eg., OCP
-sourceIdentification: This profile is specified by OCP and can be downloaded from https://www.opencompute.org (https://www.opencompute.org/)
+sourceIdentification: This profile is specified by OCP and can be downloaded from https://www.opencompute.org
 
 
 ### 4.2 Clock Types
 
 This profile allows for the following clocks to be used.
 
+Clock type	| Description |	Element
+------------|-------------|------
+DC-GM |	An ordinary clock that can have multiple PTP ports in MASTER state and zero PTP ports in SLAVE state. Also known as master-only with no port in SLAVE state.	| New
+------------|-------------|------
+DC-BC |	A boundary clock that can support multiple PTP ports in MASTER state and only 1 PTP port in SLAVE state. A DC-BC cannot become a DC-GM.	| RSW (Rack Switches)
+------------|-------------|------
+DC-TC |	An end-to-end transparent clock. | FSW (Fabric Switches) SSW (Spine Switches)
+------------|-------------|------
+DC-OC	An ordinary clock that can have 1 PTP port always in SLAVE.  Also known as slave-only with no port in MASTER state.	Server / NIC card
 
