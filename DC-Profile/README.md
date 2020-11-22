@@ -53,4 +53,36 @@ Note1:  This is work-in-progress. A detailed budget of the network limits will b
 Note2:  There as been talk to deploy the DC-GM into HGRID
 
 ![GitHub Logo](images/maxte.png)
-Format: ![Alt Text](url)
+
+## 3. Requirements Definition:
+
+* Communication between clocks must be IPv6 
+* Communication between each type of clocks must be unicast
+* Discovery protocols or clock selection algorithms should not rely on multicast or broadcast communication
+* There are no more than 3 hops between DC-BC and DC-GM and no more than 1 hop between DC-OC and DC-BC
+* The end-to-end accuracy of recovered time must be within +/- 1microseconds when compared to the primary reference time clock (eg., GPS)
+* Each network element is PTP-aware. The network supports full-timing support.
+* PTP Security is not considered, given Data Center nodes are in a well controlled environment
+* Under normal operations, a slave port (eg., DC-BC) might have visibility into multiple master ports (eg., DC-GM)  (source of time).  Under failure condition of a master or network failure, a slave should always have visibility to synchronize to 1 DC-GM.
+* Interior links are speed homogeneous, for example all switch links would be 100G in one generation, or all 200G in a future generation. Switch downlinks to servers may be heterogeneous and of different speeds than interior links and different speeds across racks and across servers
+* Scale must be considered, automated mechanisms to detect if the DC-OC, DC-BC are within specification. Logging and alarming capabilities of clock status i necessary
+* Clock must be resilient to link, switch, and DC-GM failures and satisfy the notion of protected capacity
+* Failover may or may not depend on control plane failover depending on whether the path from GM to BC has path diversity
+* Failover should consider that reachability tests can lead to sub-optimal paths, as such path length should be factored into failover, not just reachability
+
+## 4. PTP Profile
+
+### 4.1 PTP Profile
+
+profileName: PTP profile for data center application (DC-PTP Profile)
+profileVersion: 1.0
+profileIdentifier: TBD
+organizationName: eg., OCP
+sourceIdentification: This profile is specified by OCP and can be downloaded from https://www.opencompute.org (https://www.opencompute.org/)
+
+
+### 4.2 Clock Types
+
+This profile allows for the following clocks to be used.
+
+
