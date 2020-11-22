@@ -1,10 +1,10 @@
-## Data Center IEEE1588 PTP Profile 
+# Data Center IEEE1588 PTP Profile 
 
 (DC-PTP Profile)
 
 
 
-# Introduction
+## Introduction
 
 Note: This document is work-in-progress and the DC-PTP Profile will evolve based on discussions and decisions with the extended team. 
 
