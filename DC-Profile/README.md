@@ -88,7 +88,7 @@ This profile allows for the following clocks to be used.
 Clock type	| Description |	Element
 ------------|-------------|------
 DC-GM |	An ordinary clock that can have multiple PTP ports in MASTER state and zero PTP ports in SLAVE state. Also known as master-only with no port in SLAVE state.	| New
-
+------------ | ------------- | -------------
 DC-BC |	A boundary clock that can support multiple PTP ports in MASTER state and only 1 PTP port in SLAVE state. A DC-BC cannot become a DC-GM.	| RSW (Rack Switches)
 
 DC-TC |	An end-to-end transparent clock. | FSW (Fabric Switches) SSW (Spine Switches)
