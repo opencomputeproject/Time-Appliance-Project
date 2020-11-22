@@ -1,6 +1,6 @@
 # Time Card (The Heart of Open Source Grandmaster) 
 
-![GitHub Logo](Artwork/backgroud.png)
+![GitHub Logo](Artwork/background.png)
 
 # TAP Project
 
