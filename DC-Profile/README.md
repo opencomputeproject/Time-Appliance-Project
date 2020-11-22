@@ -241,3 +241,25 @@ clockClass | Value
 180 | DC-GM has exceeded half of the DC time error requirement
 255 | DC-SC
 
+Note: DC-TC are agnostic to clock classes
+
+
+## Terms & Acronyms:
+
+DC-GM:  Clock based on IEEE1588 that is the root of time
+
+## Next steps / To do:*
+
+* domain number, clock class, time source
+* TC clock to add ClockID
+* defaultDS data set
+* currentDS data set
+* parentDS data set
+* timePropertiesDS data set
+* portDS data set
+* error budget
+* GM specification
+* chrony & NTP
+* 802.3x between NIC and RSW and 1/2step operation
+
+
