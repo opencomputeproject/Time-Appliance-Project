@@ -85,7 +85,7 @@ sourceIdentification: This profile is specified by OCP and can be downloaded fro
 
 This profile allows for the following clocks to be used.
 
-Clock type	| Description |	Element
+Clock type | Description | Element
 ------------|-------------|------
 DC-GM |	An ordinary clock that can have multiple PTP ports in MASTER state and zero PTP ports in SLAVE state. Also known as master-only with no port in SLAVE state.	| New
 DC-BC |	A boundary clock that can support multiple PTP ports in MASTER state and only 1 PTP port in SLAVE state. A DC-BC cannot become a DC-GM.	| RSW (Rack Switches)
@@ -224,4 +224,20 @@ Transients |
 Fiber asymmetry |
 Internal clock error |
 
+### Grandmaster Requirements
+
+* TBR: DC-GM produces a time error within +/- x nsec with respect to ideal time reference
+* TBR: DC-GM produces a time error of +/- x nsec during a period of time Y seconds when there is loss of time reference
+
+### Clock Class
+
+The table below provides the clock class values during normal operating mode and failure mode.
+
+clockClass | Value
+---------- | ----------
+6 | DC-GM is traceable to primary reference time source and is in steady state
+7 | DC-GM has transitionned from steady state to holdover
+50 | DC-GM within holdover specification
+180 | DC-GM has exceeded half of the DC time error requirement
+255 | DC-SC
 
