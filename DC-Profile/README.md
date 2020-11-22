@@ -196,7 +196,32 @@ Flag | Value | Range
 ---- | ----- | -----
 alternateMasterFlag	|	
 		
+### PTP Management
+
+PTP request and reply management messages must be unicast.
+
+
+
+## ADDITIONAL REQUIREMENTS
+
+### Network Limits
+
+The end-to-end network limits consist in maintaining a bounded time error within +/-1microseconds across a network that consists of 1 DC-GM, 2 DC-TC, 1 DC-BC and 1 DC-SC.
+
+
+### Error Budget
+
+![GitHub Logo](images/errbudget.png)	
 		
-		
-		
+This table is WIP.
+
+Parameter | Value
+--------- | --------
+Reference time error |	
+PHY latency assymetry |
+Timestamping granularity |
+Transients |
+Fiber asymmetry |
+Internal clock error |
+
 
