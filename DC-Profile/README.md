@@ -12,7 +12,7 @@ The intent of this document is to define a new PTP (Precision Timing Protocol) p
 
 This document defines the PTP profile for time synchronization in a data center environment, providing time alignment across a set network elements, from a primary reference time clock to a large set of servers.
 
-# 1. Profile Definition
+## 1. Profile Definition
 
 
 A PTP profile is a set of required options, prohibited options, and the ranges and defaults of configurable attributes. According to IEEE 1588-2008, a profile should define the following:
@@ -40,7 +40,7 @@ There are additional details that must be specified.  Some of those might be out
 
 A profile that defines the overall synchronization topology and architecture, required options and configurable attributes is also necessary.
 
-# 2. High-Level Network Deployment Architecture
+## 2. High-Level Network Deployment Architecture
 
 
 The figure below shows a Hypothetical Reference Model (HRM) for the purpose of:
