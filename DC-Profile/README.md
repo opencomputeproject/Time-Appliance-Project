@@ -40,3 +40,15 @@ There are additional details that must be specified.  Some of those might be out
 
 A profile that defines the overall synchronization topology and architecture, required options and configurable attributes is also necessary.
 
+# 2. High-Level Network Deployment Architecture
+
+
+The figure below shows a Hypothetical Reference Model (HRM) for the purpose of:
+
+* defining where the different clocks reside and protocol aspects
+* establishing reasonable worst performance specification and network limits
+* defining demarcation interfaces and measurable interfaces
+
+Note1:  This is work-in-progress. A detailed budget of the network limits will be necessary
+Note2:  There as been talk to deploy the DC-GM into HGRID
+
