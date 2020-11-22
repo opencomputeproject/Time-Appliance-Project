@@ -52,3 +52,5 @@ The figure below shows a Hypothetical Reference Model (HRM) for the purpose of:
 Note1:  This is work-in-progress. A detailed budget of the network limits will be necessary
 Note2:  There as been talk to deploy the DC-GM into HGRID
 
+![GitHub Logo](/images/maxte.png)
+Format: ![Alt Text](url)
