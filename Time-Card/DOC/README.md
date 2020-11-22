@@ -2,8 +2,6 @@
 
 ![GitHub Logo](Artwork/background.jpg)
 
-# TAP Project
-
 ## Table of Contents
 1. [Abbreviations](#Abbreviations)
 1. [General](#General)
