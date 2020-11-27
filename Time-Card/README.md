@@ -19,6 +19,15 @@ The initial design of the Time card was the following napkin sketch:
 
 ![Initial design](images/idea.png)
 
+
+## Precision
+Time card has a 1PPS output which can be compared with 1PPS of the locked GNSS receiver.  
+Using Calnex Sentinel device we were able to compare 1PPS outputs with internal reference which we call a "True Time".  
+![Initial design](images/precision_pps.png)
+From our observation we see that PPS of the GNSS receiver is off from "True Time" between -25ns to -55ns (30ns amplitude).  
+Where Time Card PPS is off compared to GNSS by approximately 30ns.  
+Compared to "True Time" Time Card is actually off by just +5 to -45ns (50ns amplitude).
+
 ## What you will find in this repository
 
 * Bill of Materials (parts from Digikey)
