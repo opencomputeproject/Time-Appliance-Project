@@ -4,23 +4,23 @@ The FPGA bitstream can be configured to various options. Currently it is based o
 
 Check the [Readme.pdf](https://github.com/opencomputeproject/Time-Appliance-Project/blob/master/Time-Card/SOM/FPGA/Readme.pdf) for more details about the implementation.  <br />
 
-In the [Doc folder] (https://github.com/opencomputeproject/Time-Appliance-Project/tree/master/Time-Card/SOM/FPGA/Doc) are all relevant documents about the integrated IP Core (e.g. register description). <br />
+In the [Doc folder](https://github.com/opencomputeproject/Time-Appliance-Project/tree/master/Time-Card/SOM/FPGA/Doc) are all relevant documents about the integrated IP Core (e.g. register description). <br />
 
 ## The FPGA starts with a static configuration with following settings: ##
-    * PPS (including TOD) is used as correction input for the clock  
-    * PPS Slave Pulse detection on rising edge
-    * PPS Slave cable delay 0
-    * TOD Slave UART Baudrate is 115200
-    * TOD Slave UART polarity default
-    * TOD Slave in UBX Mode, all GNSS and no messages disabled
-    * PPS Master polarity rising edge
-    * PPS Master cable delay 0
-    * PPS Master pulse width 100 ms
-    * Clock, PPS Slave, TOD Slave and PPS Master are enabled
-    * All Timestampers are disabled
+* PPS (including TOD) is used as correction input for the clock  
+* PPS Slave Pulse detection on rising edge
+* PPS Slave cable delay 0
+* TOD Slave UART Baudrate is 115200
+* TOD Slave UART polarity default
+* TOD Slave in UBX Mode, all GNSS and no messages disabled
+* PPS Master polarity rising edge
+* PPS Master cable delay 0
+* PPS Master pulse width 100 ms
+* Clock, PPS Slave, TOD Slave and PPS Master are enabled
+* All Timestampers are disabled
 
 ## In the Binaries folder are the bitstreams for the SOM Module. ## 
-    * .bit to flash the FPGA (volatile)
-    * .bin to load the SPI flash
+* .bit to flash the FPGA (volatile)
+* .bin to load the SPI flash
     
 The version for AX7103 will be not longer maintained. 
