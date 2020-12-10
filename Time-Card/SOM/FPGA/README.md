@@ -6,6 +6,19 @@ Check the [Readme.pdf](https://github.com/opencomputeproject/Time-Appliance-Proj
 
 In the Doc folder are all relevant documents about the integrated IP Core (e.g. register description).
 
+The FPGA starts with a static configuration with following settings:
+    - PPS (including TOD) is used as correction input for the clock  
+    - PPS Slave Pulse detection on rising edge
+    - PPS Slave cable delay 0
+    - TOD Slave UART Baudrate is 115200
+    - TOD Slave UART polarity default
+    - TOD Slave in UBX Mode, all GNSS and no messages disabled
+    - PPS Master polarity rising edge
+    - PPS Master cable delay 0
+    - PPS Master pulse width 100 ms
+    - Clock, PPS Slave, TOD Slave and PPS Master are enabled
+    - All Timestampers are disabled
+
 In the Binaries folder are the bitstreams for the SOM Module. 
     - .bit to flash the FPGA (volatile)
     - .bin to load the SPI flash
