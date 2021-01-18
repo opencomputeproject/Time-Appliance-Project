@@ -56,7 +56,7 @@ GTM | Go-To-Market
 HW | Hardware
 NIC | Network Interface Card
 NTP | Network Time Protocol
-OCP | Open Compute Platform
+OCP | Open Compute Project
 OCXO | Oven-Controlled Oscillator
 OGM | Open GrandMaster
 PHC | PTP Hardware Clock
