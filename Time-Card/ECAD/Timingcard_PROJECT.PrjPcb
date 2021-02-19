@@ -207,10 +207,14 @@ ClassGenCCAutoRoomEnabled=1
 ClassGenNCAutoScope=None
 DItemRevisionGUID=
 GenerateClassCluster=0
-DocumentUniqueId=
+DocumentUniqueId=CUQOJSPX
 
 [GeneratedDocument1]
 DocumentPath=Project Outputs for Grandmaster\Design Rule Check - Timecard_PCB.html
+DItemRevisionGUID=
+
+[GeneratedDocument2]
+DocumentPath=Project Outputs for Timingcard_PROJECT\Design Rule Check - Timingcard_PCB.html
 DItemRevisionGUID=
 
 [Configuration1]
