@@ -1,6 +1,6 @@
 # Time Card (The Heart of Open Source Grandmaster) 
 
-![GitHub Logo](Artwork/background.jpg)
+![GitHub Logo](https://github.com/opencomputeproject/Time-Appliance-Project/blob/master/Time-Card/images/OCP%20logo.jpg?raw=true)
 
 ## Table of Contents
 1. [Abbreviations](#Abbreviations)
@@ -32,6 +32,7 @@
          1. [Software Implementation](#Software-Implementation)
       1. [Interfaces](#Interfaces)
          1. [LED](#LED)
+1. [License](#License)
 
 ## List of images
 List Of Images | Description
@@ -265,3 +266,12 @@ For example:
 * Solid green - card is powered, GNSS ok, 1PPS/10MHz output ok
 * Flashing green - card is in warm-up, acquiring satellites
 * Solid red - alarm / malfunction
+
+# License
+OCP encourages participants to share their proposals, specifications and designs with the community. This is to promote openness and encourage continuous and open feedback. It is important to remember that by providing feedback for any such documents, whether in written or verbal form, that the contributor or the contributor's organization grants OCP and its members irrevocable right to use this feedback for any purpose without any further obligation. 
+
+It is acknowledged that any such documentation and any ancillary materials that are provided to OCP in connection with this document, including without limitation any white papers, articles, photographs, studies, diagrams, contact information (together, “Materials”) are made available under the Creative Commons Attribution-ShareAlike 4.0 International License found here: https://creativecommons.org/licenses/by-sa/4.0/, or any later version, and without limiting the foregoing, OCP may make the Materials available under such terms.
+
+As a contributor to this document, all members represent that they have the authority to grant the rights and licenses herein.  They further represent and warrant that the Materials do not and will not violate the copyrights or misappropriate the trade secret rights of any third party, including without limitation rights in intellectual property.  The contributor(s) also represent that, to the extent the Materials include materials protected by copyright or trade secret rights that are owned or created by any third-party, they have obtained permission for its use consistent with the foregoing.  They will provide OCP evidence of such permission upon OCP’s request. This document and any "Materials" are published on the respective project's wiki page and are open to the public in accordance with OCP's Bylaws and IP Policy. This can be found at http://www.opencompute.org/participate/legal-documents/.  If you have any questions please contact OCP.
+
+This work is licensed under a [Creative Commons Attribution-ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-sa/4.0/).
