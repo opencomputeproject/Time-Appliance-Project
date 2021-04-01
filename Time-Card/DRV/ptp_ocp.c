@@ -3,6 +3,7 @@
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/pci.h>
+#include <linux/serial_8250.h>
 #include <linux/ptp_clock_kernel.h>
 
 static const struct pci_device_id ptp_ocp_pcidev_id[] = {
@@ -73,6 +74,8 @@ struct ptp_ocp {
 	struct tod_reg __iomem	*tod;
 	struct ptp_clock	*ptp;
 	struct ptp_clock_info	ptp_info;
+	int 			gnss_port;
+	int 			atomic_port;
 };
 
 static int
@@ -305,6 +308,80 @@ ptp_ocp_info(struct ptp_ocp *bp)
 }
 
 static int
+ptp_ocp_serial_line(struct ptp_ocp *bp, int vec, int offset)
+{
+	struct pci_dev *pdev = bp->pdev;
+	struct uart_8250_port uart;
+
+	memset(&uart, 0, sizeof(uart));
+	uart.port.dev = &pdev->dev;
+	uart.port.iotype = UPIO_MEM;
+	uart.port.regshift = 2;
+	uart.port.mapbase = pci_resource_start(pdev, 0) + offset;
+	uart.port.membase = bp->base + offset;;
+	uart.port.irq = pci_irq_vector(pdev, vec);
+	uart.port.uartclk = 50000000;
+	uart.port.flags = UPF_FIXED_TYPE;
+	uart.port.type = PORT_16550A;
+
+	return serial8250_register_8250_port(&uart);
+}
+
+static int
+ptp_ocp_register_serial(struct ptp_ocp *bp)
+{
+	struct pci_dev *pdev = bp->pdev;
+	int nvec, err;
+
+	bp->gnss_port = -1;
+	bp->atomic_port = -1;
+
+	pci_set_master(pdev);
+
+	nvec = pci_alloc_irq_vectors(pdev, 8, 8, PCI_IRQ_MSI);
+	if (nvec < 0) {
+		dev_err(&pdev->dev, "alloc_irq_vectors: %d\n", nvec);
+		return nvec;
+	}
+
+	/* This is the MSI vector mapping used.
+	 * 0: N/C
+	 * 1: TS0
+	 * 2: TS1
+	 * 3: GPS
+	 * 4: GPS2 (n/c)
+	 * 5: MAC
+	 * 6: I2C IMU
+	 * 7: I2C oscillator
+	 */
+
+	err = ptp_ocp_serial_line(bp, 3, 0x00160000 + 0x1000);
+	if (err < 0)
+		goto out;
+	bp->gnss_port = err;
+
+	err = ptp_ocp_serial_line(bp, 5, 0x00180000 + 0x1000);
+	if (err < 0)
+		goto out;
+	bp->atomic_port = err;
+
+	dev_err(&pdev->dev, "GNSS @ /dev/ttyS%d  115200\n", bp->gnss_port);
+	dev_err(&pdev->dev, "ATOMIC @ /dev/ttyS%d  57600\n", bp->atomic_port);
+
+	return 0;
+
+out:
+	dev_err(&pdev->dev, "Failure path, err: %d\n", err);
+
+	if (bp->gnss_port > 0)
+		serial8250_unregister_port(bp->gnss_port);
+	if (bp->atomic_port > 0)
+		serial8250_unregister_port(bp->atomic_port);
+	pci_free_irq_vectors(pdev);
+	return err;
+}
+
+static int
 ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 {
 	struct ptp_ocp *bp;
@@ -341,6 +418,10 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	bp->ptp_info = ptp_ocp_clock_info;
 	spin_lock_init(&bp->lock);
 
+	err = ptp_ocp_register_serial(bp);
+	if (err)
+		goto out;
+
 	err = ptp_ocp_check_clock(bp);
 	if (err)
 		goto out;
@@ -371,6 +452,9 @@ ptp_ocp_remove(struct pci_dev *pdev)
 {
 	struct ptp_ocp *bp = pci_get_drvdata(pdev);
 
+	serial8250_unregister_port(bp->gnss_port);
+	serial8250_unregister_port(bp->atomic_port);
+	pci_free_irq_vectors(pdev);
 	ptp_clock_unregister(bp->ptp);
 	pci_iounmap(pdev, bp->base);
 	pci_release_regions(pdev);
