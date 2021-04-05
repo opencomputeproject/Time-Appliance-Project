@@ -4,6 +4,9 @@
 #include <linux/init.h>
 #include <linux/pci.h>
 #include <linux/serial_8250.h>
+#include <linux/clkdev.h>
+#include <linux/clk-provider.h>
+#include <linux/platform_device.h>
 #include <linux/ptp_clock_kernel.h>
 
 static const struct pci_device_id ptp_ocp_pcidev_id[] = {
@@ -11,6 +14,57 @@ static const struct pci_device_id ptp_ocp_pcidev_id[] = {
 	{ 0 }
 };
 MODULE_DEVICE_TABLE(pci, ptp_ocp_pcidev_id);
+
+enum ocp_res_name {
+	OCP_RES_BRIDGE,
+	OCP_RES_CLOCK,
+	OCP_RES_TOD,
+	OCP_RES_GPS,
+	OCP_RES_MAC,
+	OCP_RES_OSC,
+	OCP_RES_IMU,
+};
+
+struct ocp_resource {
+	unsigned long offset;
+	int size;
+	int irq_vec;
+};
+
+/* This is the MSI vector mapping used.
+ * 0: N/C
+ * 1: TS0
+ * 2: TS1
+ * 3: GPS
+ * 4: GPS2 (n/c)
+ * 5: MAC
+ * 6: I2C IMU (inertial measurement unit)
+ * 7: I2C oscillator
+ */
+
+static struct ocp_resource ocp_resource[] = {
+	[OCP_RES_BRIDGE] = {
+		.offset = 0x00010000, .size = 0x01000,
+	},
+	[OCP_RES_CLOCK] = {
+		.offset = 0x01000000, .size = 0x10000,
+	},
+	[OCP_RES_TOD] = {
+		.offset = 0x01050000, .size = 0x10000,
+	},
+	[OCP_RES_IMU] = {
+		.offset = 0x00140000, .size = 0x10000, .irq_vec = 6,
+	},
+	[OCP_RES_OSC] = {
+		.offset = 0x00150000, .size = 0x10000, .irq_vec = 7,
+	},
+	[OCP_RES_GPS] = {
+		.offset = 0x00160000 + 0x1000, .irq_vec = 3,
+	},
+	[OCP_RES_MAC] = {
+		.offset = 0x00180000 + 0x1000, .irq_vec = 5,
+	},
+};
 
 #define OCP_REGISTER_OFFSET	0x01000000
 
@@ -74,8 +128,12 @@ struct ptp_ocp {
 	struct tod_reg __iomem	*tod;
 	struct ptp_clock	*ptp;
 	struct ptp_clock_info	ptp_info;
-	int 			gnss_port;
-	int 			atomic_port;
+	struct platform_device 	*osc_i2c;
+	struct platform_device 	*imu_i2c;
+	struct clk_hw		*i2c_clk;
+	int			n_irqs;
+	int 			gps_port;
+	int 			mac_port;	/* miniature atomic clock */
 };
 
 static int
@@ -307,21 +365,100 @@ ptp_ocp_info(struct ptp_ocp *bp)
 	ptp_ocp_tod_info(bp);
 }
 
+static void __iomem *
+__ptp_ocp_get_mem(struct ptp_ocp *bp, unsigned long start, int size)
+{
+	struct resource res = DEFINE_RES_MEM_NAMED(start, size, "ptp_ocp");
+
+	return devm_ioremap_resource(&bp->pdev->dev, &res);
+}
+
+static void __iomem *
+ptp_ocp_get_mem(struct ptp_ocp *bp, struct ocp_resource *r)
+{
+	unsigned long start;
+
+	start = pci_resource_start(bp->pdev, 0) + r->offset;
+	return __ptp_ocp_get_mem(bp, start, r->size);
+}
+
+static void
+ptp_ocp_set_irq_resource(struct resource *res, int irq)
+{
+	struct resource r = DEFINE_RES_IRQ(irq);
+	*res = r;
+}
+
+static void
+ptp_ocp_set_mem_resource(struct resource *res, unsigned long start, int size)
+{
+	struct resource r = DEFINE_RES_MEM(start, size);
+	*res = r;
+}
+
+/* XXX
+ * Can set platform data (xiic_i2c_platform_data),
+ *   which lists the devices on the I2C bus; these are added at reg time.
+ */
+static struct platform_device *
+ptp_ocp_i2c_bus(struct pci_dev *pdev, struct ocp_resource *r, int id)
+{
+	struct resource res[2];
+	unsigned long start;
+
+	start = pci_resource_start(pdev, 0) + r->offset;
+	ptp_ocp_set_mem_resource(&res[0], start, r->size);
+	ptp_ocp_set_irq_resource(&res[1], pci_irq_vector(pdev, r->irq_vec));
+
+	return platform_device_register_resndata(&pdev->dev, "xiic-i2c",
+						 id, res, 2, NULL, 0);
+}
+
 static int
-ptp_ocp_serial_line(struct ptp_ocp *bp, int vec, int offset)
+ptp_ocp_register_i2c(struct ptp_ocp *bp)
+{
+	struct pci_dev *pdev = bp->pdev;
+	struct platform_device *p;
+	struct clk_hw *clk;
+
+	clk = clk_hw_register_fixed_rate(&pdev->dev, "AXI", NULL, 0, 50000000);
+	if (IS_ERR(clk))
+		return PTR_ERR(clk);
+	bp->i2c_clk = clk;
+
+	devm_clk_hw_register_clkdev(&pdev->dev, clk, NULL, "xiic-i2c.0");
+	p = ptp_ocp_i2c_bus(bp->pdev, &ocp_resource[OCP_RES_OSC], 0);
+	if (IS_ERR(p))
+		return PTR_ERR(p);
+	bp->osc_i2c = p;
+
+	devm_clk_hw_register_clkdev(&pdev->dev, clk, NULL, "xiic-i2c.1");
+	p = ptp_ocp_i2c_bus(bp->pdev, &ocp_resource[OCP_RES_IMU], 1);
+	if (IS_ERR(p))
+		return PTR_ERR(p);
+	bp->imu_i2c = p;
+
+	return 0;
+}
+
+static int
+ptp_ocp_serial_line(struct ptp_ocp *bp, struct ocp_resource *r)
 {
 	struct pci_dev *pdev = bp->pdev;
 	struct uart_8250_port uart;
 
+	/* Setting UPF_IOREMAP and leaving port.membase unspecified lets
+	 * the the serial port device claim and release the pci resource.
+	 */
 	memset(&uart, 0, sizeof(uart));
 	uart.port.dev = &pdev->dev;
 	uart.port.iotype = UPIO_MEM;
 	uart.port.regshift = 2;
-	uart.port.mapbase = pci_resource_start(pdev, 0) + offset;
-	uart.port.membase = bp->base + offset;;
-	uart.port.irq = pci_irq_vector(pdev, vec);
+	uart.port.mapbase = pci_resource_start(pdev, 0) + r->offset;
+//	uart.port.membase = bp->base + r->offset;
+	uart.port.irq = pci_irq_vector(pdev, r->irq_vec);
 	uart.port.uartclk = 50000000;
-	uart.port.flags = UPF_FIXED_TYPE;
+	uart.port.flags = UPF_FIXED_TYPE | UPF_IOREMAP;
 	uart.port.type = PORT_16550A;
 
 	return serial8250_register_8250_port(&uart);
@@ -331,54 +468,46 @@ static int
 ptp_ocp_register_serial(struct ptp_ocp *bp)
 {
 	struct pci_dev *pdev = bp->pdev;
-	int nvec, err;
+	int err;
 
-	bp->gnss_port = -1;
-	bp->atomic_port = -1;
-
-	pci_set_master(pdev);
-
-	nvec = pci_alloc_irq_vectors(pdev, 8, 8, PCI_IRQ_MSI);
-	if (nvec < 0) {
-		dev_err(&pdev->dev, "alloc_irq_vectors: %d\n", nvec);
-		return nvec;
-	}
-
-	/* This is the MSI vector mapping used.
-	 * 0: N/C
-	 * 1: TS0
-	 * 2: TS1
-	 * 3: GPS
-	 * 4: GPS2 (n/c)
-	 * 5: MAC
-	 * 6: I2C IMU
-	 * 7: I2C oscillator
-	 */
-
-	err = ptp_ocp_serial_line(bp, 3, 0x00160000 + 0x1000);
+	err = ptp_ocp_serial_line(bp, &ocp_resource[OCP_RES_GPS]);
 	if (err < 0)
 		goto out;
-	bp->gnss_port = err;
+	bp->gps_port = err;
 
-	err = ptp_ocp_serial_line(bp, 5, 0x00180000 + 0x1000);
+	err = ptp_ocp_serial_line(bp, &ocp_resource[OCP_RES_MAC]);
 	if (err < 0)
 		goto out;
-	bp->atomic_port = err;
+	bp->mac_port = err;
 
-	dev_err(&pdev->dev, "GNSS @ /dev/ttyS%d  115200\n", bp->gnss_port);
-	dev_err(&pdev->dev, "ATOMIC @ /dev/ttyS%d  57600\n", bp->atomic_port);
+	dev_info(&pdev->dev, "GPS @ /dev/ttyS%d  115200\n", bp->gps_port);
+	dev_info(&pdev->dev, "MAC @ /dev/ttyS%d   57600\n", bp->mac_port);
 
 	return 0;
 
 out:
 	dev_err(&pdev->dev, "Failure path, err: %d\n", err);
-
-	if (bp->gnss_port > 0)
-		serial8250_unregister_port(bp->gnss_port);
-	if (bp->atomic_port > 0)
-		serial8250_unregister_port(bp->atomic_port);
-	pci_free_irq_vectors(pdev);
 	return err;
+}
+
+static void
+ptp_ocp_detach(struct ptp_ocp *bp)
+{
+
+	if (bp->gps_port > 0)
+		serial8250_unregister_port(bp->gps_port);
+	if (bp->mac_port > 0)
+		serial8250_unregister_port(bp->mac_port);
+	if (bp->osc_i2c)
+		platform_device_unregister(bp->osc_i2c);
+	if (bp->imu_i2c)
+		platform_device_unregister(bp->imu_i2c);
+	if (bp->i2c_clk)
+		clk_hw_unregister_fixed_rate(bp->i2c_clk);
+	if (bp->n_irqs)
+		pci_free_irq_vectors(bp->pdev);
+	if (bp->ptp)
+		ptp_clock_unregister(bp->ptp);
 }
 
 static int
@@ -401,26 +530,44 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 		goto out_free;
 	}
 
-	err = pci_request_regions(pdev, KBUILD_MODNAME);
-	if (err) {
-		dev_err(&pdev->dev, "pci_request_region\n");
-		goto out_disable;
-	}
-
-	bp->base = pci_ioremap_bar(pdev, 0);
-	if (!bp->base) {
-		dev_err(&pdev->dev, "io_remap bar0\n");
-		err = -ENOMEM;
+	bp->reg = ptp_ocp_get_mem(bp, &ocp_resource[OCP_RES_CLOCK]);
+	if (!bp->reg)
 		goto out;
-	}
-	bp->reg = bp->base + OCP_REGISTER_OFFSET;
-	bp->tod = bp->base + TOD_REGISTER_OFFSET;
+
+	bp->tod = ptp_ocp_get_mem(bp, &ocp_resource[OCP_RES_TOD]);
+	if (!bp->tod)
+		goto out;
+
 	bp->ptp_info = ptp_ocp_clock_info;
 	spin_lock_init(&bp->lock);
+	bp->gps_port = -1;
+	bp->mac_port = -1;
 
-	err = ptp_ocp_register_serial(bp);
-	if (err)
+	/* XXX  --  temporary compat mode.
+	 * Older FPGA firmware only returns 2 irq's, not 8.
+	 * allow this - if 8 IRQ's are not returned, skip the
+	 * serial devices and just register the clock.
+	 */
+	err = pci_alloc_irq_vectors(pdev, 1, 8, PCI_IRQ_MSI);
+	if (err < 0) {
+		dev_err(&pdev->dev, "alloc_irq_vectors err: %d\n", err);
 		goto out;
+	}
+	bp->n_irqs = err;
+	pci_set_master(pdev);
+
+	if (bp->n_irqs != 8) {
+		dev_err(&pdev->dev, "Only %d IRQs, no I2C or serial\n",
+			bp->n_irqs);
+	} else {
+		err = ptp_ocp_register_serial(bp);
+		if (err)
+			goto out;
+
+		err = ptp_ocp_register_i2c(bp);
+		if (err)
+			goto out;
+	}
 
 	err = ptp_ocp_check_clock(bp);
 	if (err)
@@ -428,8 +575,9 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 
 	bp->ptp = ptp_clock_register(&bp->ptp_info, &pdev->dev);
 	if (IS_ERR(bp->ptp)) {
-		dev_err(&pdev->dev, "ptp_clock_register\n");
 		err = PTR_ERR(bp->ptp);
+		dev_err(&pdev->dev, "ptp_clock_register: %d\n", err);
+		bp->ptp = 0;
 		goto out;
 	}
 
@@ -438,7 +586,7 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	return 0;
 
 out:
-	pci_release_regions(pdev);
+	ptp_ocp_detach(bp);
 out_disable:
 	pci_disable_device(pdev);
 out_free:
@@ -452,12 +600,7 @@ ptp_ocp_remove(struct pci_dev *pdev)
 {
 	struct ptp_ocp *bp = pci_get_drvdata(pdev);
 
-	serial8250_unregister_port(bp->gnss_port);
-	serial8250_unregister_port(bp->atomic_port);
-	pci_free_irq_vectors(pdev);
-	ptp_clock_unregister(bp->ptp);
-	pci_iounmap(pdev, bp->base);
-	pci_release_regions(pdev);
+	ptp_ocp_detach(bp);
 	pci_disable_device(pdev);
 	pci_set_drvdata(pdev, NULL);
 	kfree(bp);
