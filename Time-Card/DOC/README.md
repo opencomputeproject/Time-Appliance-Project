@@ -129,7 +129,7 @@ The philosophy behind this fragmentation is very clear, and each decision, modif
 ### Software
 * Linux/*nix operating system
 * [ocp_ptp driver](https://github.com/opencomputeproject/Time-Appliance-Project/tree/master/Time-Card/DRV) (included in Linux kernel 5.2 and higher)
-* ptp4l serves PTP on NIC
+* Linuxptp package with ptp4l serves PTP on NIC and phc2sys to copy clock values
 * Chrony/NTPd reading `/dev/ptpX` of a NIC
 ## NIC
 ### Form-Factor
