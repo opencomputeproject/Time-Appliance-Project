@@ -128,6 +128,7 @@ The philosophy behind this fragmentation is very clear, and each decision, modif
 * 2x PCIe Gen3.0/Gen4.0 slots
 ### Software
 * Linux/*nix operating system
+* [ocp_ptp driver](https://github.com/opencomputeproject/Time-Appliance-Project/tree/master/Time-Card/DRV) (included in Linux kernel 5.2 and higher)
 * ptp4l serves PTP on NIC
 * Chrony/NTPd reading `/dev/ptpX` of a NIC
 ## NIC
