@@ -66,8 +66,6 @@ static struct ocp_resource ocp_resource[] = {
 	},
 };
 
-#define OCP_REGISTER_OFFSET	0x01000000
-
 struct ocp_reg {
 	u32	ctrl;
 	u32	status;
@@ -106,8 +104,6 @@ struct tod_reg {
 	u32	utc_status;
 	u32	leap;
 };
-
-#define TOD_REGISTER_OFFSET	0x01050000
 
 #define TOD_CTRL_PROTOCOL	BIT(28)
 #define TOD_CTRL_DISABLE_FMT_A	BIT(17)
@@ -420,23 +416,32 @@ ptp_ocp_register_i2c(struct ptp_ocp *bp)
 	struct pci_dev *pdev = bp->pdev;
 	struct platform_device *p;
 	struct clk_hw *clk;
+	char buf[32];
+	int id;
 
-	clk = clk_hw_register_fixed_rate(&pdev->dev, "AXI", NULL, 0, 50000000);
+	id = pci_dev_id(bp->pdev) << 1;
+
+	sprintf(buf, "AXI.%d", id);
+	clk = clk_hw_register_fixed_rate(&pdev->dev, buf, NULL, 0, 50000000);
 	if (IS_ERR(clk))
 		return PTR_ERR(clk);
 	bp->i2c_clk = clk;
 
-	devm_clk_hw_register_clkdev(&pdev->dev, clk, NULL, "xiic-i2c.0");
-	p = ptp_ocp_i2c_bus(bp->pdev, &ocp_resource[OCP_RES_OSC], 0);
+	sprintf(buf, "xiic-i2c.%d", id);
+	devm_clk_hw_register_clkdev(&pdev->dev, clk, NULL, buf);
+	p = ptp_ocp_i2c_bus(bp->pdev, &ocp_resource[OCP_RES_OSC], id);
 	if (IS_ERR(p))
 		return PTR_ERR(p);
 	bp->osc_i2c = p;
+	id++;
 
-	devm_clk_hw_register_clkdev(&pdev->dev, clk, NULL, "xiic-i2c.1");
-	p = ptp_ocp_i2c_bus(bp->pdev, &ocp_resource[OCP_RES_IMU], 1);
+	sprintf(buf, "xiic-i2c.%d", id);
+	devm_clk_hw_register_clkdev(&pdev->dev, clk, NULL, buf);
+	p = ptp_ocp_i2c_bus(bp->pdev, &ocp_resource[OCP_RES_IMU], id);
 	if (IS_ERR(p))
 		return PTR_ERR(p);
 	bp->imu_i2c = p;
+	id++;
 
 	return 0;
 }
@@ -587,7 +592,6 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 
 out:
 	ptp_ocp_detach(bp);
-out_disable:
 	pci_disable_device(pdev);
 out_free:
 	kfree(bp);
