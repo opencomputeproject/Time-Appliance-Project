@@ -1,16 +1,19 @@
 set -euo pipefail
 
+DIST="$(awk -F= '/^NAME/{print tolower($2)}' /etc/os-release|awk 'gsub(/[" ]/,x) + 1')"
+
 KVER=`uname -r`
 
-if [[ -n "command -v apt-get" ]]; then
+if [ "$DIST" == "ubuntu" ]; then
    KDIR=/usr/src/linux-headers-${KVER}
+fi
 
-elif [[ -n "command -v yum" ]]; then
+if [ "$DIST" == "centoslinux" ]; then
    KDIR=/usr/src/kernels/${KVER}
-
 fi
 
 make -C $KDIR M=$PWD
 
 ln -sf ${PWD}/ptp_ocp.ko /lib/modules/${KVER}
 depmod -a
+
