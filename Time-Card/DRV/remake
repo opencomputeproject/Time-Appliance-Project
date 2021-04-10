@@ -1,7 +1,14 @@
 set -euo pipefail
 
 KVER=`uname -r`
-KDIR=/usr/src/kernels/${KVER}
+
+if [[ -n "command -v apt-get" ]]; then
+   KDIR=/usr/src/linux-headers-${KVER}
+
+elif [[ -n "command -v yum" ]]; then
+   KDIR=/usr/src/kernels/${KVER}
+
+fi
 
 make -C $KDIR M=$PWD
 
