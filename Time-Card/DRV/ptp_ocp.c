@@ -8,6 +8,8 @@
 #include <linux/clk-provider.h>
 #include <linux/platform_device.h>
 #include <linux/ptp_clock_kernel.h>
+#include <net/devlink.h>
+#include <linux/i2c.h>
 
 static const struct pci_device_id ptp_ocp_pcidev_id[] = {
 	{ PCI_DEVICE(0x1d9b, 0x0400) },
@@ -23,6 +25,8 @@ enum ocp_res_name {
 	OCP_RES_MAC,
 	OCP_RES_OSC,
 	OCP_RES_IMU,
+	OCP_RES_TS0,
+	OCP_RES_TS1,
 };
 
 struct ocp_resource {
@@ -48,6 +52,12 @@ static struct ocp_resource ocp_resource[] = {
 	},
 	[OCP_RES_CLOCK] = {
 		.offset = 0x01000000, .size = 0x10000,
+	},
+	[OCP_RES_TS0] = {
+		.offset = 0x01010000, .size = 0x10000,
+	},
+	[OCP_RES_TS1] = {
+		.offset = 0x01020000, .size = 0x10000,
 	},
 	[OCP_RES_TOD] = {
 		.offset = 0x01050000, .size = 0x10000,
@@ -116,12 +126,43 @@ struct tod_reg {
 #define TOD_STATUS_UTC_VALID	BIT(8)
 #define TOD_STATUS_LEAP_VALID	BIT(16)
 
+struct ts_reg {
+	u32	enable;
+	u32	error;
+	u32	__pad0;
+	u32	version;
+	u32	__pad1[60];
+	u32	ctrl;
+	u32	status;
+	u32	__pad2[2];
+	u32	intr;
+	u32	intr_mask;
+	u32	__pad3[2];
+	u32	delay_req_rx_ns;
+	u32	delay_req_rx_sec;
+	u32	delay_req_tx_ns;
+	u32	delay_req_tx_sec;
+	u32	path_delay_req_rx_ns;
+	u32	path_delay_req_rx_sec;
+	u32	path_delay_req_tx_ns;
+	u32	path_delay_req_tx_sec;
+	u32	path_delay_resp_rx_ns;
+	u32	path_delay_resp_rx_sec;
+	u32	path_delay_resp_tx_ns;
+	u32	path_delay_resp_tx_sec;
+	u32	sync_rx_ns;
+	u32	sync_rx_sec;
+	u32	sync_tx_ns;
+	u32	sync_tx_sec;
+};
+
 struct ptp_ocp {
 	struct pci_dev		*pdev;
 	spinlock_t		lock;
-	void __iomem		*base;
 	struct ocp_reg __iomem	*reg;
 	struct tod_reg __iomem	*tod;
+	struct ts_reg __iomem	*ts0;
+	struct ts_reg __iomem	*ts1;
 	struct ptp_clock	*ptp;
 	struct ptp_clock_info	ptp_info;
 	struct platform_device 	*osc_i2c;
@@ -130,6 +171,8 @@ struct ptp_ocp {
 	int			n_irqs;
 	int 			gps_port;
 	int 			mac_port;	/* miniature atomic clock */
+	u8			serial[6];
+	bool			has_serial;
 };
 
 static int
@@ -343,6 +386,77 @@ ptp_ocp_tod_info(struct ptp_ocp *bp)
 		reg & TOD_STATUS_LEAP_VALID ? 1 : 0);
 }
 
+static int
+ptp_ocp_firstchild(struct device *dev, void *data)
+{
+	return 1;
+}
+
+static int
+ptp_ocp_read_eeprom(struct i2c_adapter *adap, u8 addr, u8 reg, u8 sz, u8 *data)
+{
+	struct i2c_msg msgs[2] = {
+		{
+			.addr = addr,
+			.len = 1,
+			.buf = &reg,
+		},
+		{
+			.addr = addr,
+			.flags = I2C_M_RD,
+			.len = 2,
+			.buf = data,
+		},
+	};
+	int err;
+	u8 len;
+
+	/* xiic-i2c for some stupid reason only does 2 byte reads. */
+	while (sz) {
+		len = min_t(u8, sz, 2);
+		msgs[1].len = len;
+		err = i2c_transfer(adap, msgs, 2);
+		if (err != msgs[1].len)
+			return err;
+		msgs[1].buf += len;
+		reg += len;
+		sz -= len;
+	}
+	return 0;
+}
+
+static void
+ptp_ocp_board_info(struct ptp_ocp *bp)
+{
+	struct i2c_adapter *adap;
+	struct device *dev;
+	int err;
+
+	dev = device_find_child(&bp->osc_i2c->dev, NULL, ptp_ocp_firstchild);
+	if (!dev) {
+		dev_err(&bp->pdev->dev, "can't find I2C adapter\n");
+		return;
+	}
+
+	adap = i2c_verify_adapter(dev);
+	if (!adap) {
+		dev_err(&bp->pdev->dev, "device '%s' isn't an I2C adapter\n",
+			dev_name(dev));
+		goto out;
+	}
+
+	err = ptp_ocp_read_eeprom(adap, 0x58, 0x9A, 6, bp->serial);
+	if (err) {
+		dev_err(&bp->pdev->dev, "could not read eeprom: %d\n", err);
+		goto out;
+	}
+
+	bp->has_serial = true;
+
+out:
+	put_device(dev);
+}
+
 static void
 ptp_ocp_info(struct ptp_ocp *bp)
 {
@@ -360,6 +474,88 @@ ptp_ocp_info(struct ptp_ocp *bp)
 
 	ptp_ocp_tod_info(bp);
 }
+
+static const struct devlink_param ptp_ocp_devlink_params[] = {
+};
+
+static void
+ptp_ocp_devlink_set_params_init_values(struct devlink *devlink)
+{
+}
+
+static int
+ptp_ocp_devlink_register(struct devlink *devlink, struct device *dev)
+{
+	int err;
+
+	err = devlink_register(devlink, dev);
+	if (err)
+		return err;
+
+	err = devlink_params_register(devlink, ptp_ocp_devlink_params,
+				      ARRAY_SIZE(ptp_ocp_devlink_params));
+	ptp_ocp_devlink_set_params_init_values(devlink);
+	if (err)
+		goto out;
+	devlink_params_publish(devlink);
+
+	return 0;
+
+out:
+	devlink_unregister(devlink);
+	return err;
+}
+
+static void
+ptp_ocp_devlink_unregister(struct devlink *devlink)
+{
+	devlink_params_unregister(devlink, ptp_ocp_devlink_params,
+				  ARRAY_SIZE(ptp_ocp_devlink_params));
+	devlink_unregister(devlink);
+}
+
+static int
+ptp_ocp_devlink_flash_update(struct devlink *devlink,
+			     struct devlink_flash_update_params *params,
+			     struct netlink_ext_ack *extack)
+{
+	struct ptp_ocp *bp = devlink_priv(devlink);
+
+	dev_info(&bp->pdev->dev, "flash update\n");
+
+	return 0;
+}
+
+static int
+ptp_ocp_devlink_info_get(struct devlink *devlink, struct devlink_info_req *req,
+			 struct netlink_ext_ack *extack)
+{
+	struct ptp_ocp *bp = devlink_priv(devlink);
+	char buf[32];
+	int err;
+
+	err = devlink_info_driver_name_put(req, KBUILD_MODNAME);
+	if (err)
+		return err;
+
+	if (!bp->has_serial)
+		ptp_ocp_board_info(bp);
+
+	if (bp->has_serial) {
+		sprintf(buf, "%pM", bp->serial);
+		err = devlink_info_serial_number_put(req, buf);
+		if (err)
+			return err;
+	}
+
+	return 0;
+}
+
+static const struct devlink_ops ptp_ocp_devlink_ops = {
+	.flash_update = ptp_ocp_devlink_flash_update,
+	.info_get = ptp_ocp_devlink_info_get,
+};
+
 
 static void __iomem *
 __ptp_ocp_get_mem(struct ptp_ocp *bp, unsigned long start, int size)
@@ -395,6 +591,15 @@ ptp_ocp_set_mem_resource(struct resource *res, unsigned long start, int size)
 /* XXX
  * Can set platform data (xiic_i2c_platform_data),
  *   which lists the devices on the I2C bus; these are added at reg time.
+ *
+ * Expected devices:
+ *  IMU:
+ *    0x4A: BNO080 - SPI connection. (no linux driver for this)
+ *  OSC:
+ *    0x30: unknown, returns all 0xff
+ *    0x50: unknown, returns all 0xff
+ *    0x58: extended eeprom.  Looks like OUI data at addr 0x9A; so 24mac402 ?
+ *          can only read 2 bytes at a time.  timeout otherwise.
  */
 static struct platform_device *
 ptp_ocp_i2c_bus(struct pci_dev *pdev, struct ocp_resource *r, int id)
@@ -518,21 +723,34 @@ ptp_ocp_detach(struct ptp_ocp *bp)
 static int
 ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 {
+	struct devlink *devlink;
 	struct ptp_ocp *bp;
 	int err;
 
-	bp = kzalloc(sizeof(*bp), GFP_KERNEL);
-	if (!bp) {
-		dev_err(&pdev->dev, "kzalloc\n");
+	devlink = devlink_alloc(&ptp_ocp_devlink_ops, sizeof(*bp));
+	if (!devlink) {
+		dev_err(&pdev->dev, "devlink_alloc failed\n");
 		return -ENOMEM;
 	}
+
+	err = ptp_ocp_devlink_register(devlink, &pdev->dev);
+	if (err)
+		goto out_free;
+
+	bp = devlink_priv(devlink);
+
+	bp->ptp_info = ptp_ocp_clock_info;
+	spin_lock_init(&bp->lock);
+	bp->gps_port = -1;
+	bp->mac_port = -1;
 	bp->pdev = pdev;
+
 	pci_set_drvdata(pdev, bp);
 
 	err = pci_enable_device(pdev);
 	if (err) {
 		dev_err(&pdev->dev, "pci_enable_device\n");
-		goto out_free;
+		goto out_unregister;
 	}
 
 	bp->reg = ptp_ocp_get_mem(bp, &ocp_resource[OCP_RES_CLOCK]);
@@ -543,17 +761,20 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	if (!bp->tod)
 		goto out;
 
-	bp->ptp_info = ptp_ocp_clock_info;
-	spin_lock_init(&bp->lock);
-	bp->gps_port = -1;
-	bp->mac_port = -1;
+	bp->ts0 = ptp_ocp_get_mem(bp, &ocp_resource[OCP_RES_TS0]);
+	if (!bp->ts0)
+		goto out;
+
+	bp->ts1 = ptp_ocp_get_mem(bp, &ocp_resource[OCP_RES_TS1]);
+	if (!bp->ts1)
+		goto out;
 
 	/* XXX  --  temporary compat mode.
 	 * Older FPGA firmware only returns 2 irq's, not 8.
 	 * allow this - if 8 IRQ's are not returned, skip the
 	 * serial devices and just register the clock.
 	 */
-	err = pci_alloc_irq_vectors(pdev, 1, 8, PCI_IRQ_MSI);
+	err = pci_alloc_irq_vectors(pdev, 1, 8, PCI_IRQ_MSI | PCI_IRQ_MSIX);
 	if (err < 0) {
 		dev_err(&pdev->dev, "alloc_irq_vectors err: %d\n", err);
 		goto out;
@@ -593,8 +814,11 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 out:
 	ptp_ocp_detach(bp);
 	pci_disable_device(pdev);
+out_unregister:
+	pci_set_drvdata(pdev, NULL);
+	ptp_ocp_devlink_unregister(devlink);
 out_free:
-	kfree(bp);
+	devlink_free(devlink);
 
 	return err;
 }
@@ -603,11 +827,14 @@ static void
 ptp_ocp_remove(struct pci_dev *pdev)
 {
 	struct ptp_ocp *bp = pci_get_drvdata(pdev);
+	struct devlink *devlink = priv_to_devlink(bp);
 
 	ptp_ocp_detach(bp);
 	pci_disable_device(pdev);
 	pci_set_drvdata(pdev, NULL);
-	kfree(bp);
+
+	ptp_ocp_devlink_unregister(devlink);
+	devlink_free(devlink);
 }
 
 static struct pci_driver ptp_ocp_driver = {
