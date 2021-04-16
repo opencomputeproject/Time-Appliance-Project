@@ -8,7 +8,7 @@ if [ "$DIST" == "ubuntu" ]; then
    KDIR=/usr/src/linux-headers-${KVER}
 fi
 
-if [ "$DIST" == "centoslinux" or "$DIST" == "centosstream" ]; then
+if [ "$DIST" == "centoslinux" ] || [ "$DIST" == "centosstream" ]; then
    KDIR=/usr/src/kernels/${KVER}
 fi
 
