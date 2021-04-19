@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # code written by Ahmad Byagowi for demonstration purposes of the BNO055 chip over the i2c bus
 
@@ -120,6 +120,8 @@ magnetometer
 }
 
 all(){
+euler
+echo ""
 linear 
 echo ""
 gravity
