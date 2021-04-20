@@ -89,15 +89,26 @@ struct ocp_reg {
 	u32	__pad1[2];
 	u32	offset_ns;
 	u32	offset_window_ns;
+	u32	__pad2[2];
+	u32	drift_ns;
+	u32	drift_window_ns;
+	u32	__pad3[6];
+	u32	servo_offset_p;
+	u32	servo_offset_i;
+	u32	servo_drift_p;
+	u32	servo_drift_i;
 };
 
 #define OCP_CTRL_ENABLE		BIT(0)
 #define OCP_CTRL_ADJUST_TIME	BIT(1)
 #define OCP_CTRL_ADJUST_OFFSET	BIT(2)
+#define OCP_CTRL_ADJUST_DRIFT	BIT(3)
+#define OCP_CTRL_ADJUST_SERVO	BIT(8)
 #define OCP_CTRL_READ_TIME_REQ	BIT(30)
 #define OCP_CTRL_READ_TIME_DONE	BIT(31)
 
 #define OCP_STATUS_IN_SYNC	BIT(0)
+#define OCP_STATUS_IN_HOLDOVER	BIT(1)
 
 #define OCP_SELECT_CLK_NONE	0
 #define OCP_SELECT_CLK_REG 	6
@@ -168,6 +179,7 @@ struct ptp_ocp {
 	struct platform_device 	*osc_i2c;
 	struct platform_device 	*imu_i2c;
 	struct clk_hw		*i2c_clk;
+	struct timer_list	watchdog;
 	int			n_irqs;
 	int 			gps_port;
 	int 			mac_port;	/* miniature atomic clock */
@@ -308,8 +320,41 @@ static const struct ptp_clock_info ptp_ocp_clock_info = {
 	.adjfine	= ptp_ocp_null_adjfine,
 };
 
+static void
+__ptp_ocp_clear_drift_locked(struct ptp_ocp *bp)
+{
+	u32 ctrl, select;
+
+	select = ioread32(&bp->reg->select);
+	iowrite32(OCP_SELECT_CLK_REG, &bp->reg->select);
+
+	iowrite32(0, &bp->reg->drift_ns);
+
+	ctrl = ioread32(&bp->reg->ctrl);
+	ctrl |= OCP_CTRL_ADJUST_DRIFT;
+	iowrite32(ctrl, &bp->reg->ctrl);
+
+	/* restore clock selection */
+	iowrite32(select >> 16, &bp->reg->select);
+}
+
+static void
+ptp_ocp_watchdog(struct timer_list *t)
+{
+	struct ptp_ocp *bp = from_timer(bp, t, watchdog);
+	unsigned long flags;
+
+	if (ioread32(&bp->reg->status) & OCP_STATUS_IN_HOLDOVER) {
+		spin_lock_irqsave(&bp->lock, flags);
+		__ptp_ocp_clear_drift_locked(bp);
+		spin_unlock_irqrestore(&bp->lock, flags);
+	}
+
+	mod_timer(&bp->watchdog, jiffies + HZ);
+}
+
 static int
-ptp_ocp_check_clock(struct ptp_ocp *bp)
+ptp_ocp_init_clock(struct ptp_ocp *bp)
 {
 	struct timespec64 ts;
 	bool sync;
@@ -318,6 +363,16 @@ ptp_ocp_check_clock(struct ptp_ocp *bp)
 	/* make sure clock is enabled */
 	ctrl = ioread32(&bp->reg->ctrl);
 	ctrl |= OCP_CTRL_ENABLE;
+	iowrite32(ctrl, &bp->reg->ctrl);
+
+	/* offset_p:i 1/8, offset_i: 1/16, drift_p: 1/8, drift_i: 0 */
+	iowrite32(0x2000, &bp->reg->servo_offset_p);
+	iowrite32(0x1000, &bp->reg->servo_offset_i);
+	iowrite32(0x2000, &bp->reg->servo_drift_p);
+	iowrite32(0,      &bp->reg->servo_drift_i);
+
+	/* latch servo values */
+	ctrl |= OCP_CTRL_ADJUST_SERVO;
 	iowrite32(ctrl, &bp->reg->ctrl);
 
 	if ((ioread32(&bp->reg->ctrl) & OCP_CTRL_ENABLE) == 0) {
@@ -334,6 +389,9 @@ ptp_ocp_check_clock(struct ptp_ocp *bp)
 		dev_info(&bp->pdev->dev, "Time: %lld.%ld, %s\n",
 			 ts.tv_sec, ts.tv_nsec,
 			 sync ? "in-sync" : "UNSYNCED");
+
+	timer_setup(&bp->watchdog, ptp_ocp_watchdog, 0);
+	mod_timer(&bp->watchdog, jiffies + HZ);
 
 	return 0;
 }
@@ -704,6 +762,8 @@ static void
 ptp_ocp_detach(struct ptp_ocp *bp)
 {
 
+	if (timer_pending(&bp->watchdog))
+		del_timer_sync(&bp->watchdog);
 	if (bp->gps_port > 0)
 		serial8250_unregister_port(bp->gps_port);
 	if (bp->mac_port > 0)
@@ -795,7 +855,7 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 			goto out;
 	}
 
-	err = ptp_ocp_check_clock(bp);
+	err = ptp_ocp_init_clock(bp);
 	if (err)
 		goto out;
 
