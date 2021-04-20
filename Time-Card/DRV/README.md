@@ -1,6 +1,6 @@
 # Driver
 
-Driver is based on a kernel module for CentOS 8. 
+Driver is based on a kernel module for CentOS and Ubunutu. 
 Kernel 5.2+ is recommended
 
 ## Instruction
