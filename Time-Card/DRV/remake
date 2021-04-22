@@ -3,17 +3,30 @@ set -euo pipefail
 DIST="$(awk -F= '/^NAME/{print tolower($2)}' /etc/os-release|awk 'gsub(/[" ]/,x) + 1')"
 
 KVER=`uname -r`
+INSTALL=1
 
-if [ "$DIST" == "ubuntu" ]; then
-   KDIR=/usr/src/linux-headers-${KVER}
+case "$DIST" in
+    ubuntu)
+        KDIR=/usr/src/linux-headers-${KVER}
+        ;;
+    centos*)
+        KDIR=/usr/src/kernels/${KVER}
+        ;;
+esac
+
+if [ -e ./ksrc ]; then
+    KDIR=./ksrc
+    INSTALL=0
 fi
 
-if [ "$DIST" == "centoslinux" ] || [ "$DIST" == "centosstream" ]; then
-   KDIR=/usr/src/kernels/${KVER}
+if [ ! -d "${KDIR:-}" ]; then
+    echo "Could not locate kernel source for distribution '$DIST'"
+    exit 1
 fi
 
 make -C $KDIR M=$PWD
 
-ln -sf ${PWD}/ptp_ocp.ko /lib/modules/${KVER}
-depmod -a
-
+if [ $INSTALL ]; then
+    ln -sf ${PWD}/ptp_ocp.ko /lib/modules/${KVER}
+    depmod -a
+fi
