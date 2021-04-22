@@ -21,6 +21,7 @@ enum ocp_res_name {
 	OCP_RES_BRIDGE,
 	OCP_RES_CLOCK,
 	OCP_RES_TOD,
+	OCP_RES_PPS,
 	OCP_RES_GPS,
 	OCP_RES_MAC,
 	OCP_RES_OSC,
@@ -58,6 +59,9 @@ static struct ocp_resource ocp_resource[] = {
 	},
 	[OCP_RES_TS1] = {
 		.offset = 0x01020000, .size = 0x10000,
+	},
+	[OCP_RES_PPS] = {
+		.offset = 0x01040000, .size = 0x10000,
 	},
 	[OCP_RES_TOD] = {
 		.offset = 0x01050000, .size = 0x10000,
@@ -167,11 +171,20 @@ struct ts_reg {
 	u32	sync_tx_sec;
 };
 
+struct pps_reg {
+	u32	ctrl;
+	u32	status;
+};
+
+#define PPS_STATUS_FILTER_ERR	BIT(0)
+#define PPS_STATUS_SUPERV_ERR	BIT(1)
+
 struct ptp_ocp {
 	struct pci_dev		*pdev;
 	spinlock_t		lock;
 	struct ocp_reg __iomem	*reg;
 	struct tod_reg __iomem	*tod;
+	struct pps_reg __iomem	*pps;
 	struct ts_reg __iomem	*ts0;
 	struct ts_reg __iomem	*ts1;
 	struct ptp_clock	*ptp;
@@ -184,6 +197,7 @@ struct ptp_ocp {
 	int 			gps_port;
 	int 			mac_port;	/* miniature atomic clock */
 	u8			serial[6];
+	bool			missing_pps;
 	bool			has_serial;
 };
 
@@ -343,12 +357,21 @@ ptp_ocp_watchdog(struct timer_list *t)
 {
 	struct ptp_ocp *bp = from_timer(bp, t, watchdog);
 	unsigned long flags;
+	u32 status;
 
-	if (ioread32(&bp->reg->status) & OCP_STATUS_IN_HOLDOVER) {
-		spin_lock_irqsave(&bp->lock, flags);
-		__ptp_ocp_clear_drift_locked(bp);
-		spin_unlock_irqrestore(&bp->lock, flags);
-	}
+	status = ioread32(&bp->pps->status);
+
+	if (status & PPS_STATUS_SUPERV_ERR) {
+		iowrite32(status, &bp->pps->status);
+		if (!bp->missing_pps) {
+			spin_lock_irqsave(&bp->lock, flags);
+			__ptp_ocp_clear_drift_locked(bp);
+			spin_unlock_irqrestore(&bp->lock, flags);
+			bp->missing_pps = true;
+		}
+
+	} else if (bp->missing_pps)
+		bp->missing_pps = false;
 
 	mod_timer(&bp->watchdog, jiffies + HZ);
 }
@@ -827,6 +850,10 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 
 	bp->ts1 = ptp_ocp_get_mem(bp, &ocp_resource[OCP_RES_TS1]);
 	if (!bp->ts1)
+		goto out;
+
+	bp->pps = ptp_ocp_get_mem(bp, &ocp_resource[OCP_RES_PPS]);
+	if (!bp->pps)
 		goto out;
 
 	/* XXX  --  temporary compat mode.
