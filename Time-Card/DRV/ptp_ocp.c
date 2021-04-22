@@ -192,14 +192,17 @@ struct ptp_ocp {
 	struct platform_device 	*osc_i2c;
 	struct platform_device 	*imu_i2c;
 	struct clk_hw		*i2c_clk;
+	struct devlink_health_reporter *health;
 	struct timer_list	watchdog;
+	time64_t		gps_lost;
 	int			n_irqs;
 	int 			gps_port;
 	int 			mac_port;	/* miniature atomic clock */
 	u8			serial[6];
-	bool			missing_pps;
 	bool			has_serial;
 };
+
+static void ptp_ocp_health_update(struct ptp_ocp *bp);
 
 static int
 __ptp_ocp_gettime_locked(struct ptp_ocp *bp, struct timespec64 *ts,
@@ -363,15 +366,18 @@ ptp_ocp_watchdog(struct timer_list *t)
 
 	if (status & PPS_STATUS_SUPERV_ERR) {
 		iowrite32(status, &bp->pps->status);
-		if (!bp->missing_pps) {
+		if (!bp->gps_lost) {
 			spin_lock_irqsave(&bp->lock, flags);
 			__ptp_ocp_clear_drift_locked(bp);
 			spin_unlock_irqrestore(&bp->lock, flags);
-			bp->missing_pps = true;
+			bp->gps_lost = ktime_get_real_seconds();
+			ptp_ocp_health_update(bp);
 		}
 
-	} else if (bp->missing_pps)
-		bp->missing_pps = false;
+	} else if (bp->gps_lost) {
+		bp->gps_lost = 0;
+		ptp_ocp_health_update(bp);
+	}
 
 	mod_timer(&bp->watchdog, jiffies + HZ);
 }
@@ -474,7 +480,7 @@ ptp_ocp_firstchild(struct device *dev, void *data)
 }
 
 static int
-ptp_ocp_read_eeprom(struct i2c_adapter *adap, u8 addr, u8 reg, u8 sz, u8 *data)
+ptp_ocp_read_i2c(struct i2c_adapter *adap, u8 addr, u8 reg, u8 sz, u8 *data)
 {
 	struct i2c_msg msgs[2] = {
 		{
@@ -526,7 +532,7 @@ ptp_ocp_board_info(struct ptp_ocp *bp)
 		goto out;
 	}
 
-	err = ptp_ocp_read_eeprom(adap, 0x58, 0x9A, 6, bp->serial);
+	err = ptp_ocp_read_i2c(adap, 0x58, 0x9A, 6, bp->serial);
 	if (err) {
 		dev_err(&bp->pdev->dev, "could not read eeprom: %d\n", err);
 		goto out;
@@ -637,6 +643,57 @@ static const struct devlink_ops ptp_ocp_devlink_ops = {
 	.info_get = ptp_ocp_devlink_info_get,
 };
 
+static int
+ptp_ocp_health_diagnose(struct devlink_health_reporter *reporter,
+			struct devlink_fmsg *fmsg,
+			struct netlink_ext_ack *extack)
+{
+	struct ptp_ocp *bp = devlink_health_reporter_priv(reporter);
+	char buf[32];
+	int err;
+
+	if (!bp->gps_lost)
+		return 0;
+
+	sprintf(buf, "%ptT", &bp->gps_lost);
+	err = devlink_fmsg_string_pair_put(fmsg, "Lost sync at", buf);
+	if (err)
+		return err;
+
+	return 0;
+}
+
+static void
+ptp_ocp_health_update(struct ptp_ocp *bp)
+{
+	int state;
+
+	state = bp->gps_lost ? DEVLINK_HEALTH_REPORTER_STATE_ERROR
+			     : DEVLINK_HEALTH_REPORTER_STATE_HEALTHY;
+
+	if (bp->gps_lost)
+		devlink_health_report(bp->health, "No GPS signal", NULL);
+
+	devlink_health_reporter_state_update(bp->health, state);
+}
+
+static const struct devlink_health_reporter_ops ptp_ocp_health_ops = {
+	.name = "gps_sync",
+	.diagnose = ptp_ocp_health_diagnose,
+};
+
+static void
+ptp_ocp_devlink_health_register(struct devlink *devlink)
+{
+	struct ptp_ocp *bp = devlink_priv(devlink);
+	struct devlink_health_reporter *r;
+
+	r = devlink_health_reporter_create(devlink, &ptp_ocp_health_ops, 0, bp);
+	if (IS_ERR(r))
+		dev_err(&bp->pdev->dev, "Failed to create reporter, err %ld\n",
+			PTR_ERR(r));
+	bp->health = r;
+}
 
 static void __iomem *
 __ptp_ocp_get_mem(struct ptp_ocp *bp, unsigned long start, int size)
@@ -801,6 +858,8 @@ ptp_ocp_detach(struct ptp_ocp *bp)
 		pci_free_irq_vectors(bp->pdev);
 	if (bp->ptp)
 		ptp_clock_unregister(bp->ptp);
+        if (bp->health)
+		devlink_health_reporter_destroy(bp->health);
 }
 
 static int
@@ -895,6 +954,7 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	}
 
 	ptp_ocp_info(bp);
+	ptp_ocp_devlink_health_register(devlink);
 
 	return 0;
 
