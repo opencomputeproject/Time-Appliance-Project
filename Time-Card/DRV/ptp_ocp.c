@@ -394,10 +394,11 @@ ptp_ocp_init_clock(struct ptp_ocp *bp)
 	ctrl |= OCP_CTRL_ENABLE;
 	iowrite32(ctrl, &bp->reg->ctrl);
 
-	/* offset_p:i 1/8, offset_i: 1/16, drift_p: 1/8, drift_i: 0 */
+	/* NO DRIFT Correction */
+	/* offset_p:i 1/8, offset_i: 1/16, drift_p: 0, drift_i: 0 */
 	iowrite32(0x2000, &bp->reg->servo_offset_p);
 	iowrite32(0x1000, &bp->reg->servo_offset_i);
-	iowrite32(0x2000, &bp->reg->servo_drift_p);
+	iowrite32(0,      &bp->reg->servo_drift_p);
 	iowrite32(0,      &bp->reg->servo_drift_i);
 
 	/* latch servo values */
