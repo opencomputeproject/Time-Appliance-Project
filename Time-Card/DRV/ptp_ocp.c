@@ -115,7 +115,7 @@ struct ocp_reg {
 #define OCP_STATUS_IN_HOLDOVER	BIT(1)
 
 #define OCP_SELECT_CLK_NONE	0
-#define OCP_SELECT_CLK_REG 	6
+#define OCP_SELECT_CLK_REG 	0xfe
 
 struct tod_reg {
 	u32	ctrl;
