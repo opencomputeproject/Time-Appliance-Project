@@ -8,88 +8,18 @@
 #include <linux/clk-provider.h>
 #include <linux/platform_device.h>
 #include <linux/ptp_clock_kernel.h>
+#include <linux/spi/spi.h>
 #include <linux/spi/xilinx_spi.h>
 #include <net/devlink.h>
 #include <linux/i2c.h>
 
-static const struct pci_device_id ptp_ocp_pcidev_id[] = {
-	{ PCI_DEVICE(0x1d9b, 0x0400) },
-	{ 0 }
-};
-MODULE_DEVICE_TABLE(pci, ptp_ocp_pcidev_id);
+#ifndef PCI_VENDOR_ID_FACEBOOK
+#define PCI_VENDOR_ID_FACEBOOK 0x1d9b
+#endif
 
-enum ocp_res_name {
-	OCP_RES_BRIDGE,
-	OCP_RES_CLOCK,
-	OCP_RES_TOD,
-	OCP_RES_PPS,
-	OCP_RES_GPS,
-	OCP_RES_MAC,
-	OCP_RES_OSC,
-	OCP_RES_IMU,
-	OCP_RES_HWICAP,
-	OCP_RES_FLASH,
-	OCP_RES_TS0,
-	OCP_RES_TS1,
-};
-
-struct ocp_resource {
-	unsigned long offset;
-	int size;
-	int irq_vec;
-};
-
-/* This is the MSI vector mapping used.
- * 0: N/C
- * 1: TS0
- * 2: TS1
- * 3: GPS
- * 4: GPS2 (n/c)
- * 5: MAC
- * 6: SPI IMU (inertial measurement unit)
- * 7: I2C oscillator
- * 8: HWICAP
- * 9: SPI Flash
- */
-
-static struct ocp_resource ocp_resource[] = {
-	[OCP_RES_BRIDGE] = {
-		.offset = 0x00010000, .size = 0x01000,
-	},
-	[OCP_RES_CLOCK] = {
-		.offset = 0x01000000, .size = 0x10000,
-	},
-	[OCP_RES_TS0] = {
-		.offset = 0x01010000, .size = 0x10000,
-	},
-	[OCP_RES_TS1] = {
-		.offset = 0x01020000, .size = 0x10000,
-	},
-	[OCP_RES_PPS] = {
-		.offset = 0x01040000, .size = 0x10000,
-	},
-	[OCP_RES_TOD] = {
-		.offset = 0x01050000, .size = 0x10000,
-	},
-	[OCP_RES_IMU] = {
-		.offset = 0x00140000, .size = 0x10000, .irq_vec = 6,
-	},
-	[OCP_RES_OSC] = {
-		.offset = 0x00150000, .size = 0x10000, .irq_vec = 7,
-	},
-	[OCP_RES_GPS] = {
-		.offset = 0x00160000 + 0x1000, .irq_vec = 3,
-	},
-	[OCP_RES_MAC] = {
-		.offset = 0x00180000 + 0x1000, .irq_vec = 5,
-	},
-	[OCP_RES_HWICAP] = {
-		.offset = 0x00300000, .size = 0x10000, .irq_vec = 8,
-	},
-	[OCP_RES_FLASH] = {
-		.offset = 0x00310000, .size = 0x10000, .irq_vec = 9,
-	},
-};
+#ifndef PCI_DEVICE_ID_FACEBOOK_TIMECARD
+#define PCI_DEVICE_ID_FACEBOOK_TIMECARD 0x0400
+#endif
 
 struct ocp_reg {
 	u32	ctrl;
@@ -192,6 +122,7 @@ struct pps_reg {
 
 struct ptp_ocp {
 	struct pci_dev		*pdev;
+	struct ocp_resource	*res;
 	spinlock_t		lock;
 	struct ocp_reg __iomem	*reg;
 	struct tod_reg __iomem	*tod;
@@ -215,7 +146,128 @@ struct ptp_ocp {
 	bool			has_serial;
 };
 
+struct ocp_resource {
+	unsigned long offset;
+	int size;
+	int irq_vec;
+	int (*setup)(struct ptp_ocp *bp, struct ocp_resource *res);
+	void *extra;
+	unsigned long bp_offset;
+};
+
 static void ptp_ocp_health_update(struct ptp_ocp *bp);
+static int ptp_ocp_register_mem(struct ptp_ocp *bp, struct ocp_resource *res);
+static int ptp_ocp_register_i2c(struct ptp_ocp *bp, struct ocp_resource *res);
+static int ptp_ocp_register_spi(struct ptp_ocp *bp, struct ocp_resource *res);
+static int ptp_ocp_register_serial(struct ptp_ocp *bp,
+				   struct ocp_resource *res);
+
+
+#define bp_assign_entry(bp, res, val) ({				\
+	uintptr_t addr = (uintptr_t)(bp) + (res)->bp_offset;		\
+	*(typeof(val) *)addr = val;					\
+})
+
+#define OCP_RES_LOCATION(member) \
+	.bp_offset = offsetof(struct ptp_ocp, member)
+
+#define OCP_MEM_RESOURCE(member) \
+	OCP_RES_LOCATION(member), .setup = ptp_ocp_register_mem
+
+#define OCP_SERIAL_RESOURCE(member) \
+	OCP_RES_LOCATION(member), .setup = ptp_ocp_register_serial
+
+#define OCP_I2C_RESOURCE(member) \
+	OCP_RES_LOCATION(member), .setup = ptp_ocp_register_i2c
+
+#define OCP_SPI_RESOURCE(member) \
+	OCP_RES_LOCATION(member), .setup = ptp_ocp_register_spi
+
+/* This is the MSI vector mapping used.
+ * 0: N/C
+ * 1: TS0
+ * 2: TS1
+ * 3: GPS
+ * 4: GPS2 (n/c)
+ * 5: MAC
+ * 6: SPI IMU (inertial measurement unit)
+ * 7: I2C oscillator
+ * 8: HWICAP
+ * 9: SPI Flash
+ */
+
+static struct spi_board_info ocp_spi_flash = {
+	.modalias = "spi-nor",
+	.bus_num = 1,			/* offset from PCI */
+#if 0
+	.platform_data
+	.properties
+	.controller_data
+	.bus_num
+	.chip_select
+	.mode
+#endif
+};
+
+static struct ocp_resource ocp_fb_resource[] = {
+	{
+		OCP_MEM_RESOURCE(reg),
+		.offset = 0x01000000, .size = 0x10000,
+	},
+	{
+		OCP_MEM_RESOURCE(ts0),
+		.offset = 0x01010000, .size = 0x10000,
+	},
+	{
+		OCP_MEM_RESOURCE(ts1),
+		.offset = 0x01020000, .size = 0x10000,
+	},
+	{
+		OCP_MEM_RESOURCE(pps),
+		.offset = 0x01040000, .size = 0x10000,
+	},
+	{
+		OCP_MEM_RESOURCE(tod),
+		.offset = 0x01050000, .size = 0x10000,
+	},
+#if 0
+	{
+		OCP_SPI_RESOURCE(spi_imu),
+		.offset = 0x00140000, .size = 0x10000, .irq_vec = 6,
+		/* IMU is a BNO085, needs out of tree linux driver BNO055 */
+	},
+#endif
+	{
+		OCP_I2C_RESOURCE(i2c_osc),
+		.offset = 0x00150000, .size = 0x10000, .irq_vec = 7,
+	},
+	{
+		OCP_SERIAL_RESOURCE(gps_port),
+		.offset = 0x00160000 + 0x1000, .irq_vec = 3,
+	},
+	{
+		OCP_SERIAL_RESOURCE(mac_port),
+		.offset = 0x00180000 + 0x1000, .irq_vec = 5,
+	},
+#if 0
+	{
+		OCP_HWICAP_RESOURCE(hwicap),
+		.offset = 0x00300000, .size = 0x10000, .irq_vec = 8,
+	},
+#endif
+	{
+		OCP_SPI_RESOURCE(spi_flash),
+		.offset = 0x00310000, .size = 0x10000, .irq_vec = 9,
+		.extra = &ocp_spi_flash,
+	},
+	{ }
+};
+
+static const struct pci_device_id ptp_ocp_pcidev_id[] = {
+	{ PCI_DEVICE_DATA(FACEBOOK, TIMECARD, &ocp_fb_resource) },
+	{ 0 }
+};
+MODULE_DEVICE_TABLE(pci, ptp_ocp_pcidev_id);
 
 static int
 __ptp_ocp_gettime_locked(struct ptp_ocp *bp, struct timespec64 *ts,
@@ -740,16 +792,21 @@ ptp_ocp_set_mem_resource(struct resource *res, unsigned long start, int size)
 	*res = r;
 }
 
-static struct xspi_platform_data spi_pxdata = {
-	.num_chipselect = 1,
-	.bits_per_word = 8,
-};
-
 static struct platform_device *
 ptp_ocp_spi_bus(struct pci_dev *pdev, struct ocp_resource *r, int id)
 {
+	struct xspi_platform_data spi_pxdata = {
+		.num_chipselect = 1,
+		.bits_per_word = 8,
+	};
 	struct resource res[2];
 	unsigned long start;
+
+	if (r->extra) {
+		spi_pxdata.devices = r->extra;
+		spi_pxdata.num_devices = 1;
+		id += spi_pxdata.devices->bus_num;
+	}
 
 	start = pci_resource_start(pdev, 0) + r->offset;
 	ptp_ocp_set_mem_resource(&res[0], start, r->size);
@@ -760,31 +817,30 @@ ptp_ocp_spi_bus(struct pci_dev *pdev, struct ocp_resource *r, int id)
 }
 
 static int
-ptp_ocp_register_spi(struct ptp_ocp *bp)
+ptp_ocp_register_spi(struct ptp_ocp *bp, struct ocp_resource *res)
 {
 	struct platform_device *p;
-	int maxirq;
 	int id;
 
-	maxirq = max_t(int, ocp_resource[OCP_RES_FLASH].irq_vec,
-			    ocp_resource[OCP_RES_IMU].irq_vec);
-	if (bp->n_irqs <= maxirq) {
-		dev_err(&bp->pdev->dev, "Not enough irqs for SPI devices\n");
+	/* XXX hack to work around old FPGA */
+	if (bp->n_irqs < 10) {
+		dev_err(&bp->pdev->dev, "FPGA does not have SPI devices\n");
+		return 0;
+	}
+
+	if (res->irq_vec > bp->n_irqs) {
+		dev_err(&bp->pdev->dev, "spi device irq %d out of range\n",
+			res->irq_vec);
 		return 0;
 	}
 
 	id = pci_dev_id(bp->pdev) << 1;
 
-	p = ptp_ocp_spi_bus(bp->pdev, &ocp_resource[OCP_RES_FLASH], id);
+	p = ptp_ocp_spi_bus(bp->pdev, res, id);
 	if (IS_ERR(p))
 		return PTR_ERR(p);
-	bp->spi_flash = p;
 
-	id++;
-	p = ptp_ocp_spi_bus(bp->pdev, &ocp_resource[OCP_RES_IMU], id);
-	if (IS_ERR(p))
-		return PTR_ERR(p);
-	bp->spi_imu = p;
+	bp_assign_entry(bp, res, p);
 
 	return 0;
 }
@@ -795,8 +851,6 @@ ptp_ocp_register_spi(struct ptp_ocp *bp)
  *   which lists the devices on the I2C bus; these are added at reg time.
  *
  * Expected devices:
- *  IMU:
- *    0x4A: BNO080 - SPI connection. (no linux driver for this)
  *  OSC:
  *    0x30: unknown, returns all 0xff
  *    0x50: unknown, returns all 0xff
@@ -818,7 +872,7 @@ ptp_ocp_i2c_bus(struct pci_dev *pdev, struct ocp_resource *r, int id)
 }
 
 static int
-ptp_ocp_register_i2c(struct ptp_ocp *bp)
+ptp_ocp_register_i2c(struct ptp_ocp *bp, struct ocp_resource *res)
 {
 	struct pci_dev *pdev = bp->pdev;
 	struct platform_device *p;
@@ -826,8 +880,9 @@ ptp_ocp_register_i2c(struct ptp_ocp *bp)
 	char buf[32];
 	int id;
 
-	if (bp->n_irqs <= ocp_resource[OCP_RES_OSC].irq_vec) {
-		dev_err(&bp->pdev->dev, "Not enough irqs for I2C device\n");
+	if (res->irq_vec > bp->n_irqs) {
+		dev_err(&bp->pdev->dev, "i2c device irq %d out of range\n",
+			res->irq_vec);
 		return 0;
 	}
 
@@ -841,10 +896,11 @@ ptp_ocp_register_i2c(struct ptp_ocp *bp)
 
 	sprintf(buf, "xiic-i2c.%d", id);
 	devm_clk_hw_register_clkdev(&pdev->dev, clk, NULL, buf);
-	p = ptp_ocp_i2c_bus(bp->pdev, &ocp_resource[OCP_RES_OSC], id);
+	p = ptp_ocp_i2c_bus(bp->pdev, res, id);
 	if (IS_ERR(p))
 		return PTR_ERR(p);
-	bp->i2c_osc = p;
+
+	bp_assign_entry(bp, res, p);
 
 	return 0;
 }
@@ -873,37 +929,63 @@ ptp_ocp_serial_line(struct ptp_ocp *bp, struct ocp_resource *r)
 }
 
 static int
-ptp_ocp_register_serial(struct ptp_ocp *bp)
+ptp_ocp_register_serial(struct ptp_ocp *bp, struct ocp_resource *res)
 {
-	struct pci_dev *pdev = bp->pdev;
-	int maxirq;
-	int err;
+	int port;
 
-	maxirq = max_t(int, ocp_resource[OCP_RES_GPS].irq_vec,
-			    ocp_resource[OCP_RES_MAC].irq_vec);
-	if (bp->n_irqs <= maxirq) {
-		dev_err(&bp->pdev->dev, "Not enough irqs for serial devices\n");
+	if (res->irq_vec > bp->n_irqs) {
+		dev_err(&bp->pdev->dev, "serial device irq %d out of range\n",
+			res->irq_vec);
 		return 0;
 	}
 
-	err = ptp_ocp_serial_line(bp, &ocp_resource[OCP_RES_GPS]);
-	if (err < 0)
-		goto out;
-	bp->gps_port = err;
+	port = ptp_ocp_serial_line(bp, res);
+	if (port < 0)
+		return port;
 
-	err = ptp_ocp_serial_line(bp, &ocp_resource[OCP_RES_MAC]);
-	if (err < 0)
-		goto out;
-	bp->mac_port = err;
-
-	dev_info(&pdev->dev, "GPS @ /dev/ttyS%d  115200\n", bp->gps_port);
-	dev_info(&pdev->dev, "MAC @ /dev/ttyS%d   57600\n", bp->mac_port);
+	bp_assign_entry(bp, res, port);
 
 	return 0;
+}
 
-out:
-	dev_err(&pdev->dev, "Failure path, err: %d\n", err);
+static int
+ptp_ocp_register_mem(struct ptp_ocp *bp, struct ocp_resource *res)
+{
+	void __iomem *mem, **ptr;
+
+	mem = ptp_ocp_get_mem(bp, res);
+	if (!mem)
+		return -EINVAL;
+
+	ptr = (void __iomem *)((uintptr_t)bp + res->bp_offset);
+	*ptr = mem;
+
+	return 0;
+}
+
+static int
+ptp_ocp_register_resources(struct ptp_ocp *bp)
+{
+	struct ocp_resource *res;
+	int err = 0;
+
+	for (res = bp->res; res->setup; res++) {
+		err = res->setup(bp, res);
+		if (err)
+			break;
+	}
 	return err;
+}
+
+static void
+ptp_resource_summary(struct ptp_ocp *bp)
+{
+	struct device *dev = &bp->pdev->dev;
+
+	if (bp->gps_port > 0)
+		dev_info(dev, "GPS @ /dev/ttyS%d  115200\n", bp->gps_port);
+	if (bp->mac_port > 0)
+		dev_info(dev, "MAC @ /dev/ttyS%d   57600\n", bp->mac_port);
 }
 
 static void
@@ -956,6 +1038,7 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	bp->gps_port = -1;
 	bp->mac_port = -1;
 	bp->pdev = pdev;
+	bp->res = (struct ocp_resource *)id->driver_data;
 
 	pci_set_drvdata(pdev, bp);
 
@@ -964,26 +1047,6 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 		dev_err(&pdev->dev, "pci_enable_device\n");
 		goto out_unregister;
 	}
-
-	bp->reg = ptp_ocp_get_mem(bp, &ocp_resource[OCP_RES_CLOCK]);
-	if (!bp->reg)
-		goto out;
-
-	bp->tod = ptp_ocp_get_mem(bp, &ocp_resource[OCP_RES_TOD]);
-	if (!bp->tod)
-		goto out;
-
-	bp->ts0 = ptp_ocp_get_mem(bp, &ocp_resource[OCP_RES_TS0]);
-	if (!bp->ts0)
-		goto out;
-
-	bp->ts1 = ptp_ocp_get_mem(bp, &ocp_resource[OCP_RES_TS1]);
-	if (!bp->ts1)
-		goto out;
-
-	bp->pps = ptp_ocp_get_mem(bp, &ocp_resource[OCP_RES_PPS]);
-	if (!bp->pps)
-		goto out;
 
 	/* XXX  --  temporary compat mode.
 	 * Older FPGA firmware only returns 2 irq's.
@@ -998,15 +1061,7 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	bp->n_irqs = err;
 	pci_set_master(pdev);
 
-	err = ptp_ocp_register_serial(bp);
-	if (err)
-		goto out;
-
-	err = ptp_ocp_register_i2c(bp);
-	if (err)
-		goto out;
-
-	err = ptp_ocp_register_spi(bp);
+	err = ptp_ocp_register_resources(bp);
 	if (err)
 		goto out;
 
@@ -1023,6 +1078,7 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	}
 
 	ptp_ocp_info(bp);
+	ptp_resource_summary(bp);
 	ptp_ocp_devlink_health_register(devlink);
 
 	return 0;
