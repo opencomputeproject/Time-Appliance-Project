@@ -8,6 +8,7 @@
 #include <linux/clk-provider.h>
 #include <linux/platform_device.h>
 #include <linux/ptp_clock_kernel.h>
+#include <linux/spi/xilinx_spi.h>
 #include <net/devlink.h>
 #include <linux/i2c.h>
 
@@ -26,6 +27,8 @@ enum ocp_res_name {
 	OCP_RES_MAC,
 	OCP_RES_OSC,
 	OCP_RES_IMU,
+	OCP_RES_HWICAP,
+	OCP_RES_FLASH,
 	OCP_RES_TS0,
 	OCP_RES_TS1,
 };
@@ -43,8 +46,10 @@ struct ocp_resource {
  * 3: GPS
  * 4: GPS2 (n/c)
  * 5: MAC
- * 6: I2C IMU (inertial measurement unit)
+ * 6: SPI IMU (inertial measurement unit)
  * 7: I2C oscillator
+ * 8: HWICAP
+ * 9: SPI Flash
  */
 
 static struct ocp_resource ocp_resource[] = {
@@ -77,6 +82,12 @@ static struct ocp_resource ocp_resource[] = {
 	},
 	[OCP_RES_MAC] = {
 		.offset = 0x00180000 + 0x1000, .irq_vec = 5,
+	},
+	[OCP_RES_HWICAP] = {
+		.offset = 0x00300000, .size = 0x10000, .irq_vec = 8,
+	},
+	[OCP_RES_FLASH] = {
+		.offset = 0x00310000, .size = 0x10000, .irq_vec = 9,
 	},
 };
 
@@ -187,10 +198,12 @@ struct ptp_ocp {
 	struct pps_reg __iomem	*pps;
 	struct ts_reg __iomem	*ts0;
 	struct ts_reg __iomem	*ts1;
+	void __iomem		*hwicap;
 	struct ptp_clock	*ptp;
 	struct ptp_clock_info	ptp_info;
-	struct platform_device 	*osc_i2c;
-	struct platform_device 	*imu_i2c;
+	struct platform_device 	*i2c_osc;
+	struct platform_device 	*spi_imu;
+	struct platform_device	*spi_flash;
 	struct clk_hw		*i2c_clk;
 	struct devlink_health_reporter *health;
 	struct timer_list	watchdog;
@@ -520,7 +533,7 @@ ptp_ocp_board_info(struct ptp_ocp *bp)
 	struct device *dev;
 	int err;
 
-	dev = device_find_child(&bp->osc_i2c->dev, NULL, ptp_ocp_firstchild);
+	dev = device_find_child(&bp->i2c_osc->dev, NULL, ptp_ocp_firstchild);
 	if (!dev) {
 		dev_err(&bp->pdev->dev, "can't find I2C adapter\n");
 		return;
@@ -727,6 +740,56 @@ ptp_ocp_set_mem_resource(struct resource *res, unsigned long start, int size)
 	*res = r;
 }
 
+static struct xspi_platform_data spi_pxdata = {
+	.num_chipselect = 1,
+	.bits_per_word = 8,
+};
+
+static struct platform_device *
+ptp_ocp_spi_bus(struct pci_dev *pdev, struct ocp_resource *r, int id)
+{
+	struct resource res[2];
+	unsigned long start;
+
+	start = pci_resource_start(pdev, 0) + r->offset;
+	ptp_ocp_set_mem_resource(&res[0], start, r->size);
+	ptp_ocp_set_irq_resource(&res[1], pci_irq_vector(pdev, r->irq_vec));
+
+	return platform_device_register_resndata(&pdev->dev,
+		"xilinx_spi", id, res, 2, &spi_pxdata, sizeof(spi_pxdata));
+}
+
+static int
+ptp_ocp_register_spi(struct ptp_ocp *bp)
+{
+	struct platform_device *p;
+	int maxirq;
+	int id;
+
+	maxirq = max_t(int, ocp_resource[OCP_RES_FLASH].irq_vec,
+			    ocp_resource[OCP_RES_IMU].irq_vec);
+	if (bp->n_irqs <= maxirq) {
+		dev_err(&bp->pdev->dev, "Not enough irqs for SPI devices\n");
+		return 0;
+	}
+
+	id = pci_dev_id(bp->pdev) << 1;
+
+	p = ptp_ocp_spi_bus(bp->pdev, &ocp_resource[OCP_RES_FLASH], id);
+	if (IS_ERR(p))
+		return PTR_ERR(p);
+	bp->spi_flash = p;
+
+	id++;
+	p = ptp_ocp_spi_bus(bp->pdev, &ocp_resource[OCP_RES_IMU], id);
+	if (IS_ERR(p))
+		return PTR_ERR(p);
+	bp->spi_imu = p;
+
+	return 0;
+}
+
+
 /* XXX
  * Can set platform data (xiic_i2c_platform_data),
  *   which lists the devices on the I2C bus; these are added at reg time.
@@ -763,7 +826,12 @@ ptp_ocp_register_i2c(struct ptp_ocp *bp)
 	char buf[32];
 	int id;
 
-	id = pci_dev_id(bp->pdev) << 1;
+	if (bp->n_irqs <= ocp_resource[OCP_RES_OSC].irq_vec) {
+		dev_err(&bp->pdev->dev, "Not enough irqs for I2C device\n");
+		return 0;
+	}
+
+	id = pci_dev_id(bp->pdev);
 
 	sprintf(buf, "AXI.%d", id);
 	clk = clk_hw_register_fixed_rate(&pdev->dev, buf, NULL, 0, 50000000);
@@ -776,16 +844,7 @@ ptp_ocp_register_i2c(struct ptp_ocp *bp)
 	p = ptp_ocp_i2c_bus(bp->pdev, &ocp_resource[OCP_RES_OSC], id);
 	if (IS_ERR(p))
 		return PTR_ERR(p);
-	bp->osc_i2c = p;
-	id++;
-
-	sprintf(buf, "xiic-i2c.%d", id);
-	devm_clk_hw_register_clkdev(&pdev->dev, clk, NULL, buf);
-	p = ptp_ocp_i2c_bus(bp->pdev, &ocp_resource[OCP_RES_IMU], id);
-	if (IS_ERR(p))
-		return PTR_ERR(p);
-	bp->imu_i2c = p;
-	id++;
+	bp->i2c_osc = p;
 
 	return 0;
 }
@@ -817,7 +876,15 @@ static int
 ptp_ocp_register_serial(struct ptp_ocp *bp)
 {
 	struct pci_dev *pdev = bp->pdev;
+	int maxirq;
 	int err;
+
+	maxirq = max_t(int, ocp_resource[OCP_RES_GPS].irq_vec,
+			    ocp_resource[OCP_RES_MAC].irq_vec);
+	if (bp->n_irqs <= maxirq) {
+		dev_err(&bp->pdev->dev, "Not enough irqs for serial devices\n");
+		return 0;
+	}
 
 	err = ptp_ocp_serial_line(bp, &ocp_resource[OCP_RES_GPS]);
 	if (err < 0)
@@ -849,10 +916,12 @@ ptp_ocp_detach(struct ptp_ocp *bp)
 		serial8250_unregister_port(bp->gps_port);
 	if (bp->mac_port > 0)
 		serial8250_unregister_port(bp->mac_port);
-	if (bp->osc_i2c)
-		platform_device_unregister(bp->osc_i2c);
-	if (bp->imu_i2c)
-		platform_device_unregister(bp->imu_i2c);
+	if (bp->spi_imu)
+		platform_device_unregister(bp->spi_imu);
+	if (bp->spi_flash)
+		platform_device_unregister(bp->spi_flash);
+	if (bp->i2c_osc)
+		platform_device_unregister(bp->i2c_osc);
 	if (bp->i2c_clk)
 		clk_hw_unregister_fixed_rate(bp->i2c_clk);
 	if (bp->n_irqs)
@@ -917,11 +986,11 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 		goto out;
 
 	/* XXX  --  temporary compat mode.
-	 * Older FPGA firmware only returns 2 irq's, not 8.
-	 * allow this - if 8 IRQ's are not returned, skip the
-	 * serial devices and just register the clock.
+	 * Older FPGA firmware only returns 2 irq's.
+	 * allow this - if not all of the IRQ's are returned, skip the
+	 * extra devices and just register the clock.
 	 */
-	err = pci_alloc_irq_vectors(pdev, 1, 8, PCI_IRQ_MSI | PCI_IRQ_MSIX);
+	err = pci_alloc_irq_vectors(pdev, 1, 10, PCI_IRQ_MSI | PCI_IRQ_MSIX);
 	if (err < 0) {
 		dev_err(&pdev->dev, "alloc_irq_vectors err: %d\n", err);
 		goto out;
@@ -929,18 +998,17 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	bp->n_irqs = err;
 	pci_set_master(pdev);
 
-	if (bp->n_irqs != 8) {
-		dev_err(&pdev->dev, "Only %d IRQs, no I2C or serial\n",
-			bp->n_irqs);
-	} else {
-		err = ptp_ocp_register_serial(bp);
-		if (err)
-			goto out;
+	err = ptp_ocp_register_serial(bp);
+	if (err)
+		goto out;
 
-		err = ptp_ocp_register_i2c(bp);
-		if (err)
-			goto out;
-	}
+	err = ptp_ocp_register_i2c(bp);
+	if (err)
+		goto out;
+
+	err = ptp_ocp_register_spi(bp);
+	if (err)
+		goto out;
 
 	err = ptp_ocp_init_clock(bp);
 	if (err)
