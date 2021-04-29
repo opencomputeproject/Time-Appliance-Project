@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+
 # Inspired by https://portal.u-blox.com/s/question/0D52p00008HKCh8CAH/ublox-8-configuration-using-hex-commands
 # ex: ./ubxgen.py -c ./timingCardUBXG9_PPS_NetTimeLogic-PassiveAntenna115200.txt -t /dev/ttyS2 | bash -x
 import argparse
@@ -29,8 +30,10 @@ with open(args.cfg, "r") as f:
         cmd = linesplit[1]
         cs0 = 0
         cs1 = 0
-
         ubx = r"\xb5\x62"
+
+        if linesplit[0] == "CFG-VALGET":
+            cmd = cmd.replace("06 8B", "06 8A", 1)
 
         for d in cmd.split(" "):
             i = int(d, base=16)
