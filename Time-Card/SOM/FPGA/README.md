@@ -20,7 +20,8 @@ In the [Doc folder](https://github.com/opencomputeproject/Time-Appliance-Project
 * All Timestampers are disabled
 
 ## In the Binaries folder are the bitstreams for the SOM Module. ## 
-* .bit to flash the FPGA (volatile)
-* .bin to load the SPI flash
+* TimeCard.bit to flash the FPGA (volatile)
+* Production_TimeCard.bin to load the SPI flash via JTAG (Golden Image + Update Image)
+* TimeCard.bin to updated the SPI flash via SPI starting @ 0x00400000 (Update Image only)
     
 The version for AX7103 will be not longer maintained. 
