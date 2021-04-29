@@ -21,3 +21,12 @@ Project\ Outputs*/
 # Access lock file for dbLib sources
 **/*.ldb
 
+
+### Driver ###
+Time-Card/DRV/*.cmd
+Time-Card/DRV/*.o
+Time-Card/DRV/*.mod
+Time-Card/DRV/*.ko
+Time-Card/DRV/*.mod.c
+Time-Card/DRV/*.order
+Time-Card/DRV/*.symvers
