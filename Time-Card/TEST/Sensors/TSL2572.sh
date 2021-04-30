@@ -22,12 +22,12 @@ TSL2572_CMDS_WHOAMI=0x92
 TSL2572_CMDS_STATUS=0x93
 
 #initialize
-function init_lightsensor(){
+function init_light(){
 i2cget -y $I2CBUS $DEVADDR $TSL2572_CMDS_WHOAMI
 }
 
 #enable sensor
-function enable_lightsensor(){
+function enable_light(){
 TSL2572_GAIN=$1
 if [ "$1" -eq "$TSL2572_GAIN_1X" ];then
 i2cset -y $I2CBUS $DEVADDR $TSL2572_CMDS_CONTROL 0x00
@@ -86,5 +86,5 @@ printf "Light = %.3f Lux\n" $(echo $val / $cpl | bc -l)
 }
 
 
-enable_lightsensor 120
+enable_light 120
 light
