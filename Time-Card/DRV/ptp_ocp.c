@@ -12,6 +12,7 @@
 #include <linux/spi/xilinx_spi.h>
 #include <net/devlink.h>
 #include <linux/i2c.h>
+#include <linux/mtd/mtd.h>
 
 #ifndef PCI_VENDOR_ID_FACEBOOK
 #define PCI_VENDOR_ID_FACEBOOK 0x1d9b
@@ -56,7 +57,7 @@ struct ocp_reg {
 #define OCP_STATUS_IN_HOLDOVER	BIT(1)
 
 #define OCP_SELECT_CLK_NONE	0
-#define OCP_SELECT_CLK_REG 	0xfe
+#define OCP_SELECT_CLK_REG	0xfe
 
 struct tod_reg {
 	u32	ctrl;
@@ -120,6 +121,10 @@ struct pps_reg {
 #define PPS_STATUS_FILTER_ERR	BIT(0)
 #define PPS_STATUS_SUPERV_ERR	BIT(1)
 
+struct img_reg {
+	u32	version;
+};
+
 struct ptp_ocp {
 	struct pci_dev		*pdev;
 	struct ocp_resource	*res;
@@ -129,19 +134,19 @@ struct ptp_ocp {
 	struct pps_reg __iomem	*pps;
 	struct ts_reg __iomem	*ts0;
 	struct ts_reg __iomem	*ts1;
-	void __iomem		*hwicap;
+	struct img_reg __iomem	*image;
 	struct ptp_clock	*ptp;
 	struct ptp_clock_info	ptp_info;
-	struct platform_device 	*i2c_osc;
-	struct platform_device 	*spi_imu;
+	struct platform_device	*i2c_osc;
+	struct platform_device	*spi_imu;
 	struct platform_device	*spi_flash;
 	struct clk_hw		*i2c_clk;
 	struct devlink_health_reporter *health;
 	struct timer_list	watchdog;
 	time64_t		gps_lost;
 	int			n_irqs;
-	int 			gps_port;
-	int 			mac_port;	/* miniature atomic clock */
+	int			gps_port;
+	int			mac_port;	/* miniature atomic clock */
 	u8			serial[6];
 	bool			has_serial;
 };
@@ -199,14 +204,6 @@ static int ptp_ocp_register_serial(struct ptp_ocp *bp,
 static struct spi_board_info ocp_spi_flash = {
 	.modalias = "spi-nor",
 	.bus_num = 1,			/* offset from PCI */
-#if 0
-	.platform_data
-	.properties
-	.controller_data
-	.bus_num
-	.chip_select
-	.mode
-#endif
 };
 
 static struct ocp_resource ocp_fb_resource[] = {
@@ -230,6 +227,10 @@ static struct ocp_resource ocp_fb_resource[] = {
 		OCP_MEM_RESOURCE(tod),
 		.offset = 0x01050000, .size = 0x10000,
 	},
+	{
+		OCP_MEM_RESOURCE(image),
+		.offset = 0x00020000, .size = 0x1000,
+	},
 #if 0
 	{
 		OCP_SPI_RESOURCE(spi_imu),
@@ -249,12 +250,6 @@ static struct ocp_resource ocp_fb_resource[] = {
 		OCP_SERIAL_RESOURCE(mac_port),
 		.offset = 0x00180000 + 0x1000, .irq_vec = 5,
 	},
-#if 0
-	{
-		OCP_HWICAP_RESOURCE(hwicap),
-		.offset = 0x00300000, .size = 0x10000, .irq_vec = 8,
-	},
-#endif
 	{
 		OCP_SPI_RESOURCE(spi_flash),
 		.offset = 0x00310000, .size = 0x10000, .irq_vec = 9,
@@ -271,7 +266,7 @@ MODULE_DEVICE_TABLE(pci, ptp_ocp_pcidev_id);
 
 static int
 __ptp_ocp_gettime_locked(struct ptp_ocp *bp, struct timespec64 *ts,
-		         struct ptp_system_timestamp *sts)
+			 struct ptp_system_timestamp *sts)
 {
 	u32 ctrl, time_sec, time_ns;
 	int i;
@@ -463,8 +458,8 @@ ptp_ocp_init_clock(struct ptp_ocp *bp)
 	/* offset_p:i 1/8, offset_i: 1/16, drift_p: 0, drift_i: 0 */
 	iowrite32(0x2000, &bp->reg->servo_offset_p);
 	iowrite32(0x1000, &bp->reg->servo_offset_i);
-	iowrite32(0,      &bp->reg->servo_drift_p);
-	iowrite32(0,      &bp->reg->servo_drift_i);
+	iowrite32(0,	  &bp->reg->servo_drift_p);
+	iowrite32(0,	  &bp->reg->servo_drift_i);
 
 	/* latch servo values */
 	ctrl |= OCP_CTRL_ADJUST_SERVO;
@@ -587,7 +582,7 @@ ptp_ocp_board_info(struct ptp_ocp *bp)
 
 	dev = device_find_child(&bp->i2c_osc->dev, NULL, ptp_ocp_firstchild);
 	if (!dev) {
-		dev_err(&bp->pdev->dev, "can't find I2C adapter\n");
+		dev_err(&bp->pdev->dev, "Can't find I2C adapter\n");
 		return;
 	}
 
@@ -667,16 +662,90 @@ ptp_ocp_devlink_unregister(struct devlink *devlink)
 	devlink_unregister(devlink);
 }
 
+static struct device *
+ptp_ocp_find_flash(struct ptp_ocp *bp)
+{
+	struct device *dev, *last;
+
+	last = NULL;
+	dev = &bp->spi_flash->dev;
+
+	while ((dev = device_find_child(dev, NULL, ptp_ocp_firstchild))) {
+		if (!strcmp("mtd", dev_bus_name(dev)))
+			break;
+		put_device(last);
+		last = dev;
+	}
+	put_device(last);
+
+	return dev;
+}
+
+static int
+ptp_ocp_devlink_flash(struct devlink *devlink, struct device *dev,
+		      const struct firmware *fw)
+{
+	struct mtd_info *mtd = dev_get_drvdata(dev);
+	size_t off, len, resid, wrote;
+	struct erase_info erase;
+	size_t base, blksz;
+	int err;
+
+	off = 0;
+	base = 1024 * 4096;		/* Timecard.bin start address */
+	blksz = 4096;
+	resid = fw->size;
+
+	while (resid) {
+		devlink_flash_update_status_notify(devlink, "Flashing",
+						   NULL, off, fw->size);
+
+		len = min_t(size_t, resid, blksz);
+		erase.addr = base + off;
+		erase.len = blksz;
+
+		err = mtd_erase(mtd, &erase);
+		if (err)
+			goto out;
+
+		err = mtd_write(mtd, base + off, len, &wrote, &fw->data[off]);
+		if (err)
+			goto out;
+
+		off += blksz;
+		resid -= len;
+	}
+
+out:
+	return err;
+}
+
 static int
 ptp_ocp_devlink_flash_update(struct devlink *devlink,
 			     struct devlink_flash_update_params *params,
 			     struct netlink_ext_ack *extack)
 {
 	struct ptp_ocp *bp = devlink_priv(devlink);
+	struct device *dev;
+	const char *msg;
+	int err;
 
-	dev_info(&bp->pdev->dev, "flash update\n");
+	dev = ptp_ocp_find_flash(bp);
+	if (!dev) {
+		dev_err(&bp->pdev->dev, "Can't find Flash SPI adapter\n");
+		return -ENODEV;
+	}
 
-	return 0;
+	devlink_flash_update_status_notify(devlink, "Preparing to flash",
+					   NULL, 0, 0);
+
+	err = ptp_ocp_devlink_flash(devlink, dev, params->fw);
+
+	msg = err ? "Flash error" : "Flash complete";
+	devlink_flash_update_status_notify(devlink, msg, NULL, 0, 0);
+
+	put_device(dev);
+	return err;
 }
 
 static int
@@ -690,6 +759,19 @@ ptp_ocp_devlink_info_get(struct devlink *devlink, struct devlink_info_req *req,
 	err = devlink_info_driver_name_put(req, KBUILD_MODNAME);
 	if (err)
 		return err;
+
+	if (bp->image) {
+		u32 ver = bp->image->version;
+		if (ver & 0xffff) {
+			sprintf(buf, "%d", ver);
+			err = devlink_info_version_running_put(req,
+					"timecard", buf);
+		} else {
+			sprintf(buf, "%d", ver >> 16);
+			err = devlink_info_version_running_put(req,
+					"golden flash", buf);
+		}
+	}
 
 	if (!bp->has_serial)
 		ptp_ocp_board_info(bp);
@@ -855,7 +937,7 @@ ptp_ocp_register_spi(struct ptp_ocp *bp, struct ocp_resource *res)
  *    0x30: unknown, returns all 0xff
  *    0x50: unknown, returns all 0xff
  *    0x58: extended eeprom.  Looks like OUI data at addr 0x9A; so 24mac402 ?
- *          can only read 2 bytes at a time.  timeout otherwise.
+ *	    can only read 2 bytes at a time.  timeout otherwise.
  */
 static struct platform_device *
 ptp_ocp_i2c_bus(struct pci_dev *pdev, struct ocp_resource *r, int id)
@@ -982,6 +1064,16 @@ ptp_resource_summary(struct ptp_ocp *bp)
 {
 	struct device *dev = &bp->pdev->dev;
 
+	if (bp->image) {
+		u32 ver = bp->image->version;
+		dev_info(dev, "version %x\n", ver);
+		if (ver & 0xffff)
+			dev_info(dev, "regular image, version %d\n",
+				 ver & 0xffff);
+		else
+			dev_info(dev, "golden image, version %d\n",
+				 ver >> 16);
+	}
 	if (bp->gps_port > 0)
 		dev_info(dev, "GPS @ /dev/ttyS%d  115200\n", bp->gps_port);
 	if (bp->mac_port > 0)
@@ -1010,7 +1102,7 @@ ptp_ocp_detach(struct ptp_ocp *bp)
 		pci_free_irq_vectors(bp->pdev);
 	if (bp->ptp)
 		ptp_clock_unregister(bp->ptp);
-        if (bp->health)
+	if (bp->health)
 		devlink_health_reporter_destroy(bp->health);
 }
 
@@ -1048,7 +1140,7 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 		goto out_unregister;
 	}
 
-	/* XXX  --  temporary compat mode.
+	/* XXX	--  temporary compat mode.
 	 * Older FPGA firmware only returns 2 irq's.
 	 * allow this - if not all of the IRQ's are returned, skip the
 	 * extra devices and just register the clock.
