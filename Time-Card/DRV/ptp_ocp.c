@@ -13,6 +13,7 @@
 #include <net/devlink.h>
 #include <linux/i2c.h>
 #include <linux/mtd/mtd.h>
+#include <linux/proc_fs.h>
 
 #ifndef PCI_VENDOR_ID_FACEBOOK
 #define PCI_VENDOR_ID_FACEBOOK 0x1d9b
@@ -140,15 +141,19 @@ struct ptp_ocp {
 	struct platform_device	*i2c_osc;
 	struct platform_device	*spi_imu;
 	struct platform_device	*spi_flash;
+	struct proc_dir_entry	*i2c_pde;
 	struct clk_hw		*i2c_clk;
 	struct devlink_health_reporter *health;
+	struct proc_dir_entry 	*proc;
 	struct timer_list	watchdog;
 	time64_t		gps_lost;
+	int			id;
 	int			n_irqs;
 	int			gps_port;
 	int			mac_port;	/* miniature atomic clock */
 	u8			serial[6];
 	bool			has_serial;
+	bool			pending_image;
 };
 
 struct ocp_resource {
@@ -263,6 +268,9 @@ static const struct pci_device_id ptp_ocp_pcidev_id[] = {
 	{ 0 }
 };
 MODULE_DEVICE_TABLE(pci, ptp_ocp_pcidev_id);
+
+static DEFINE_MUTEX(ptp_ocp_lock);
+static DEFINE_IDR(ptp_ocp_idr);
 
 static int
 __ptp_ocp_gettime_locked(struct ptp_ocp *bp, struct timespec64 *ts,
@@ -574,7 +582,7 @@ ptp_ocp_read_i2c(struct i2c_adapter *adap, u8 addr, u8 reg, u8 sz, u8 *data)
 }
 
 static void
-ptp_ocp_board_info(struct ptp_ocp *bp)
+ptp_ocp_get_serial_number(struct ptp_ocp *bp)
 {
 	struct i2c_adapter *adap;
 	struct device *dev;
@@ -715,7 +723,6 @@ ptp_ocp_devlink_flash(struct devlink *devlink, struct device *dev,
 		off += blksz;
 		resid -= len;
 	}
-
 out:
 	return err;
 }
@@ -744,6 +751,8 @@ ptp_ocp_devlink_flash_update(struct devlink *devlink,
 	msg = err ? "Flash error" : "Flash complete";
 	devlink_flash_update_status_notify(devlink, msg, NULL, 0, 0);
 
+	bp->pending_image = true;
+
 	put_device(dev);
 	return err;
 }
@@ -760,6 +769,13 @@ ptp_ocp_devlink_info_get(struct devlink *devlink, struct devlink_info_req *req,
 	if (err)
 		return err;
 
+	if (bp->pending_image) {
+		err = devlink_info_version_stored_put(req,
+						      "timecard", "pending");
+		if (err)
+			return err;
+	}
+
 	if (bp->image) {
 		u32 ver = bp->image->version;
 		if (ver & 0xffff) {
@@ -771,10 +787,12 @@ ptp_ocp_devlink_info_get(struct devlink *devlink, struct devlink_info_req *req,
 			err = devlink_info_version_running_put(req,
 					"golden flash", buf);
 		}
+		if (err)
+			return err;
 	}
 
 	if (!bp->has_serial)
-		ptp_ocp_board_info(bp);
+		ptp_ocp_get_serial_number(bp);
 
 	if (bp->has_serial) {
 		sprintf(buf, "%pM", bp->serial);
@@ -927,7 +945,6 @@ ptp_ocp_register_spi(struct ptp_ocp *bp, struct ocp_resource *res)
 	return 0;
 }
 
-
 /* XXX
  * Can set platform data (xiic_i2c_platform_data),
  *   which lists the devices on the I2C bus; these are added at reg time.
@@ -1059,6 +1076,88 @@ ptp_ocp_register_resources(struct ptp_ocp *bp)
 	return err;
 }
 
+static int
+ptp_ocp_proc_serial(struct seq_file *seq, void *v)
+{
+	struct ptp_ocp *bp = seq->private;
+
+	if (!bp->has_serial)
+		ptp_ocp_get_serial_number(bp);
+
+	seq_printf(seq, "%pM\n", bp->serial);
+	return 0;
+}
+
+static int
+ptp_ocp_proc_gps_sync(struct seq_file *seq, void *v)
+{
+	struct ptp_ocp *bp = seq->private;
+
+	if (bp->gps_lost)
+		seq_printf(seq, "LOST @ %ptT\n", &bp->gps_lost);
+	else
+		seq_printf(seq, "SYNC\n");
+	return 0;
+}
+
+static int
+ptp_ocp_procfs_init(struct ptp_ocp *bp)
+{
+	char buf[32];
+	int err;
+
+	mutex_lock(&ptp_ocp_lock);
+	err = idr_alloc(&ptp_ocp_idr, bp, 0, 0, GFP_KERNEL);
+	mutex_unlock(&ptp_ocp_lock);
+	if (err < 0) {
+		dev_err(&bp->pdev->dev, "idr_alloc failed: %d\n", err);
+		return err;
+	}
+	bp->id = err;
+
+	sprintf(buf, "driver/ocp%d", bp->id);
+	bp->proc = proc_mkdir(buf, NULL);
+
+	return 0;
+}
+
+static int
+ptp_ocp_procfs_complete(struct ptp_ocp *bp)
+{
+	char buf[32];
+
+	if (bp->gps_port != -1) {
+		sprintf(buf, "/dev/ttyS%d", bp->gps_port);
+		proc_symlink("ttyGPS", bp->proc, buf);
+	}
+	if (bp->mac_port != -1) {
+		sprintf(buf, "/dev/ttyS%d", bp->mac_port);
+		proc_symlink("ttyMAC", bp->proc, buf);
+	}
+	sprintf(buf, "/dev/ptp%d", ptp_clock_index(bp->ptp));
+	proc_symlink("ptp", bp->proc, buf);
+
+	proc_create_single_data("serial",
+				0, bp->proc, ptp_ocp_proc_serial, bp);
+	proc_create_single_data("gps_state",
+				0, bp->proc, ptp_ocp_proc_gps_sync, bp);
+
+	return 0;
+}
+
+static int
+ptp_ocp_procfs_del(struct ptp_ocp *bp)
+{
+
+	mutex_lock(&ptp_ocp_lock);
+	idr_remove(&ptp_ocp_idr, bp->id);
+	mutex_unlock(&ptp_ocp_lock);
+
+	proc_remove(bp->proc);
+
+	return 0;
+}
+
 static void
 ptp_resource_summary(struct ptp_ocp *bp)
 {
@@ -1074,9 +1173,9 @@ ptp_resource_summary(struct ptp_ocp *bp)
 			dev_info(dev, "golden image, version %d\n",
 				 ver >> 16);
 	}
-	if (bp->gps_port > 0)
+	if (bp->gps_port != -1)
 		dev_info(dev, "GPS @ /dev/ttyS%d  115200\n", bp->gps_port);
-	if (bp->mac_port > 0)
+	if (bp->mac_port != -1)
 		dev_info(dev, "MAC @ /dev/ttyS%d   57600\n", bp->mac_port);
 }
 
@@ -1086,9 +1185,11 @@ ptp_ocp_detach(struct ptp_ocp *bp)
 
 	if (timer_pending(&bp->watchdog))
 		del_timer_sync(&bp->watchdog);
-	if (bp->gps_port > 0)
+	if (bp->id != -1)
+		ptp_ocp_procfs_del(bp);
+	if (bp->gps_port != -1)
 		serial8250_unregister_port(bp->gps_port);
-	if (bp->mac_port > 0)
+	if (bp->mac_port != -1)
 		serial8250_unregister_port(bp->mac_port);
 	if (bp->spi_imu)
 		platform_device_unregister(bp->spi_imu);
@@ -1129,6 +1230,7 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	spin_lock_init(&bp->lock);
 	bp->gps_port = -1;
 	bp->mac_port = -1;
+	bp->id = -1;
 	bp->pdev = pdev;
 	bp->res = (struct ocp_resource *)id->driver_data;
 
@@ -1153,6 +1255,10 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	bp->n_irqs = err;
 	pci_set_master(pdev);
 
+	err = ptp_ocp_procfs_init(bp);
+	if (err)
+		goto out;
+
 	err = ptp_ocp_register_resources(bp);
 	if (err)
 		goto out;
@@ -1168,6 +1274,10 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 		bp->ptp = 0;
 		goto out;
 	}
+
+	err = ptp_ocp_procfs_complete(bp);
+	if (err)
+		goto out;
 
 	ptp_ocp_info(bp);
 	ptp_resource_summary(bp);
@@ -1208,18 +1318,63 @@ static struct pci_driver ptp_ocp_driver = {
 	.remove		= ptp_ocp_remove,
 };
 
+static int
+ptp_ocp_i2c_notifier_call(struct notifier_block *nb,
+			  unsigned long action, void *data)
+{
+	struct device *dev = data;
+	struct ptp_ocp *bp;
+	char buf[32];
+	bool add;
+
+	switch (action) {
+	case BUS_NOTIFY_ADD_DEVICE:
+	case BUS_NOTIFY_DEL_DEVICE:
+		add = action == BUS_NOTIFY_ADD_DEVICE;
+		break;
+	default:
+		return 0;
+	}
+
+	if (!i2c_verify_adapter(dev))
+		return 0;
+
+	sprintf(buf, "/sys/bus/i2c/devices/%s", dev_name(dev));
+
+	while ((dev = dev->parent))
+		if (dev->driver && !strcmp(dev->driver->name, KBUILD_MODNAME))
+			goto found;
+	return 0;
+
+found:
+	bp = dev_get_drvdata(dev);
+	if (add)
+		bp->i2c_pde = proc_symlink("i2c", bp->proc, buf);
+	else {
+		proc_remove(bp->i2c_pde);
+		bp->i2c_pde = 0;
+	}
+
+	return 0;
+}
+
+static struct notifier_block ptp_ocp_i2c_notifier = {
+	.notifier_call = ptp_ocp_i2c_notifier_call,
+};
+
 static int __init
 ptp_ocp_init(void)
 {
 	int err;
 
-	err = pci_register_driver(&ptp_ocp_driver);
-	return err;
+	err = bus_register_notifier(&i2c_bus_type, &ptp_ocp_i2c_notifier);
+	return pci_register_driver(&ptp_ocp_driver);
 }
 
 static void __exit
 ptp_ocp_fini(void)
 {
+	bus_unregister_notifier(&i2c_bus_type, &ptp_ocp_i2c_notifier);
 	pci_unregister_driver(&ptp_ocp_driver);
 }
 
