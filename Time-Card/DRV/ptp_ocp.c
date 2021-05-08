@@ -1,3 +1,5 @@
+#define DEBUG
+
 #include <linux/err.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -14,6 +16,9 @@
 #include <linux/i2c.h>
 #include <linux/mtd/mtd.h>
 #include <linux/proc_fs.h>
+#include <linux/spinlock.h>
+#include <linux/miscdevice.h>
+#include <linux/poll.h>
 
 #ifndef PCI_VENDOR_ID_FACEBOOK
 #define PCI_VENDOR_ID_FACEBOOK 0x1d9b
@@ -21,6 +26,14 @@
 
 #ifndef PCI_DEVICE_ID_FACEBOOK_TIMECARD
 #define PCI_DEVICE_ID_FACEBOOK_TIMECARD 0x0400
+#endif
+
+#ifndef PCI_VENDOR_ID_OROLIA
+#define PCI_VENDOR_ID_OROLIA 0x1ad7
+#endif
+
+#ifndef PCI_DEVICE_ID_OROLIA_ARTCARD
+#define PCI_DEVICE_ID_OROLIA_ARTCARD 0xa000
 #endif
 
 struct ocp_reg {
@@ -126,6 +139,30 @@ struct img_reg {
 	u32	version;
 };
 
+#define PHASEMETER_DEVICE_NAME "phase_error_gnss_mRO50"
+
+#define PHASEMETER_OFFSET 0x4
+#define PHASEMETER_IRQ_ENABLE 0x8
+#define PHASEMETER_IRQ_ACK_OFFSET 0x28
+
+#define to_phasemeter_device(p) container_of(p, struct phasemeter_device, misc)
+
+struct phasemeter_device {
+	void __iomem *reg;
+	/* in ns */
+	s32 phase_error;
+	atomic_t data_available;
+	/* the device can be opened only once */
+	bool in_use;
+	struct wait_queue_head data_wait_queue;
+	struct miscdevice misc;
+
+	/* lock for in_use, data_available, phase_error and the _reg fields */
+	spinlock_t lock;
+};
+
+#define PPS_DEVICE_IRQ_ACK 0x10
+
 struct ptp_ocp {
 	struct pci_dev		*pdev;
 	struct ocp_resource	*res;
@@ -143,6 +180,9 @@ struct ptp_ocp {
 	struct platform_device	*spi_flash;
 	struct proc_dir_entry	*i2c_pde;
 	struct clk_hw		*i2c_clk;
+	struct pps_device	*pps_device;
+	void __iomem		*pps_device_reg;
+	struct phasemeter_device *phasemeter;
 	struct devlink_health_reporter *health;
 	struct proc_dir_entry	*proc;
 	struct timer_list	watchdog;
@@ -171,6 +211,8 @@ static int ptp_ocp_register_i2c(struct ptp_ocp *bp, struct ocp_resource *res);
 static int ptp_ocp_register_spi(struct ptp_ocp *bp, struct ocp_resource *res);
 static int ptp_ocp_register_serial(struct ptp_ocp *bp,
 				   struct ocp_resource *res);
+static int ptp_ocp_register_pps(struct ptp_ocp *bp, struct ocp_resource * res);
+static int ptp_ocp_register_phasemeter(struct ptp_ocp *bp, struct ocp_resource *res);
 
 
 #define bp_assign_entry(bp, res, val) ({				\
@@ -193,6 +235,12 @@ static int ptp_ocp_register_serial(struct ptp_ocp *bp,
 #define OCP_SPI_RESOURCE(member) \
 	OCP_RES_LOCATION(member), .setup = ptp_ocp_register_spi
 
+#define OCP_PPS_RESOURCE(member) \
+	OCP_RES_LOCATION(member), .setup = ptp_ocp_register_pps
+
+#define OCP_PHASEMETER_RESOURCE(member) \
+	OCP_RES_LOCATION(member), .setup = ptp_ocp_register_phasemeter
+
 /* This is the MSI vector mapping used.
  * 0: N/C
  * 1: TS0
@@ -204,6 +252,8 @@ static int ptp_ocp_register_serial(struct ptp_ocp *bp,
  * 7: I2C oscillator
  * 8: HWICAP
  * 9: SPI Flash
+ * 10: Phasemeter
+ * 11: PPS
  */
 
 static struct spi_board_info ocp_spi_flash = {
@@ -263,8 +313,31 @@ static struct ocp_resource ocp_fb_resource[] = {
 	{ }
 };
 
+#define MSI_VECTOR_PHASEMETER 10
+#define MSI_VECTOR_PPS 11
+static struct ocp_resource ocp_o2s_resource[] = {
+	{
+		OCP_MEM_RESOURCE(reg),
+		.offset = 0x01000000, .size = 0x10000,
+	},
+	{
+		OCP_SERIAL_RESOURCE(gps_port),
+		.offset = 0x00160000 + 0x1000, .irq_vec = 3,
+	},
+	{
+		OCP_PHASEMETER_RESOURCE(phasemeter),
+		.offset = 0x00320000, .size = 0x30, .irq_vec = MSI_VECTOR_PHASEMETER
+	},
+	{
+		OCP_PPS_RESOURCE(pps),
+		.offset = 0x00330000, .size = 0x20, .irq_vec = MSI_VECTOR_PPS
+	},
+	{}
+};
+
 static const struct pci_device_id ptp_ocp_pcidev_id[] = {
 	{ PCI_DEVICE_DATA(FACEBOOK, TIMECARD, &ocp_fb_resource) },
+	{ PCI_DEVICE_DATA(OROLIA, ARTCARD, &ocp_o2s_resource) },
 	{ 0 }
 };
 MODULE_DEVICE_TABLE(pci, ptp_ocp_pcidev_id);
@@ -664,8 +737,9 @@ ptp_ocp_info(struct ptp_ocp *bp)
 		version >> 24, (version >> 16) & 0xff, version & 0xffff,
 		ptp_ocp_clock_name_from_val(select >> 16),
 		ptp_clock_index(bp->ptp));
-
-	ptp_ocp_tod_info(bp);
+	
+	if (bp->tod)
+		ptp_ocp_tod_info(bp);
 }
 
 static const struct devlink_param ptp_ocp_devlink_params[] = {
@@ -1084,11 +1158,274 @@ ptp_ocp_register_serial(struct ptp_ocp *bp, struct ocp_resource *res)
 	return 0;
 }
 
+static struct pps_source_info pps_ktimer_info = {
+	.name = "ocp-pps",
+	.path = "/dev/pps-ocp-clock",
+	.mode = PPS_CAPTUREASSERT | PPS_OFFSETASSERT |
+			PPS_CANWAIT | PPS_TSFMT_TSPEC,
+	.owner = THIS_MODULE,
+};
+
+irqreturn_t pps_irq_handler(int irq, void *dev_id) {
+	struct ptp_ocp *bp;
+	struct pps_event_time ts;
+
+	/* Get the time stamp first */
+	pps_get_ts(&ts);
+
+	bp = (struct ptp_ocp *) dev_id;
+
+	pps_event(bp->pps_device, &ts, PPS_CAPTUREASSERT, NULL);
+	iowrite32(0, bp->pps_device_reg + PPS_DEVICE_IRQ_ACK);
+
+	return IRQ_HANDLED;
+}
+
+static int
+ptp_ocp_register_pps(struct ptp_ocp *bp, struct ocp_resource *res)
+{
+	int err;
+
+	bp->pps_device_reg = ptp_ocp_get_mem(bp, res);
+	err = pci_request_irq(bp->pdev, res->irq_vec, pps_irq_handler, 0, bp, KBUILD_MODNAME);
+	if (err < 0) {
+		printk(KERN_ALERT "%s: request_irq failed with %d\n",
+		__func__, err);
+		return -EINVAL;
+	}
+
+	bp->pps_device = pps_register_source(&pps_ktimer_info, PPS_CAPTUREASSERT | PPS_OFFSETASSERT);
+	if (bp->pps_device == NULL) {
+		return -EINVAL;
+	}
+	/* Activate PPS IRQ */
+	iowrite32(1, bp->pps_device_reg);
+	return 0;
+}
+
+static irqreturn_t
+phasemeter_irq_handler(int irq, void* dev_id)
+{
+	struct ptp_ocp *bp;
+	struct phasemeter_device *phasemeter;
+	unsigned long flags;
+
+	bp = (struct ptp_ocp *) dev_id;
+	phasemeter = bp->phasemeter;
+
+	spin_lock_irqsave(&phasemeter->lock, flags);
+
+	phasemeter->phase_error = readl(phasemeter->reg);
+	if (unlikely(abs(phasemeter->phase_error) > 500000000)) {
+		pr_info("[%s] phase error is too big, reset issued\n",
+			phasemeter->misc.name);
+		writel(0, phasemeter->reg);
+	} else {
+		atomic_set(&phasemeter->data_available, true);
+		wake_up_interruptible(&phasemeter->data_wait_queue);
+	}
+
+	/* Phasemeter ACK interrupt */
+	iowrite32(0, phasemeter->reg + PHASEMETER_IRQ_ACK_OFFSET);
+	spin_unlock_irqrestore(&phasemeter->lock, flags);
+
+	return IRQ_HANDLED;
+}
+
+static int
+phasemeter_device_open(struct inode *inode, struct file *file)
+{
+	struct miscdevice *misc;
+	struct phasemeter_device *phasemeter;
+	unsigned long flags;
+	int ret;
+
+	misc = file->private_data;
+	phasemeter = to_phasemeter_device(misc);
+
+	spin_lock_irqsave(&phasemeter->lock, flags);
+	ret = phasemeter->in_use ? -EBUSY : 0;
+	phasemeter->in_use = true;
+	spin_unlock_irqrestore(&phasemeter->lock, flags);
+
+	return ret;
+}
+
+static int
+phasemeter_device_release(struct inode *inode, struct file *file)
+{
+	struct miscdevice *misc;
+	struct phasemeter_device *phasemeter;
+	unsigned long flags;
+
+	misc = file->private_data;
+	phasemeter = to_phasemeter_device(misc);
+
+	spin_lock_irqsave(&phasemeter->lock, flags);
+	phasemeter->in_use = false;
+	spin_unlock_irqrestore(&phasemeter->lock, flags);
+
+	return 0;
+}
+
+static ssize_t
+phasemeter_device_read(struct file *file, char *buf,
+		size_t nbytes, loff_t *ppos)
+{
+	ssize_t n;
+	s32 data;
+	struct miscdevice *misc;
+	struct phasemeter_device *phasemeter;
+	unsigned long flags;
+	bool nonblock;
+	int ret;
+
+	misc = file->private_data;
+	phasemeter = to_phasemeter_device(misc);
+	nonblock = file->f_flags & O_NONBLOCK;
+	if (!atomic_read(&phasemeter->data_available) && nonblock)
+		return -EAGAIN;
+
+	while (true) {
+		ret = wait_event_interruptible(phasemeter->data_wait_queue,
+				atomic_read(&phasemeter->data_available));
+		if (ret == -ERESTARTSYS)
+			return ret;
+
+		spin_lock_irqsave(&phasemeter->lock, flags);
+
+		if (atomic_read(&phasemeter->data_available))
+			break;
+
+		spin_unlock_irqrestore(&phasemeter->lock, flags);
+	}
+
+	data = phasemeter->phase_error;
+	atomic_set(&phasemeter->data_available, false);
+	spin_unlock_irqrestore(&phasemeter->lock, flags);
+
+	n = put_user(data, (s32 *)buf);
+	if (n != 0) {
+		pr_warn("read: copy to user failed.\n");
+		return -EFAULT;
+	}
+	return sizeof(data);
+}
+
+static ssize_t
+phasemeter_device_write(struct file *file, const char __user *buf,
+		size_t count, loff_t *ppos)
+{
+	ssize_t n;
+	s32 phase_correction;
+	struct miscdevice *misc;
+	struct phasemeter_device *phasemeter;
+	unsigned long flags;
+
+	if (count != sizeof(phase_correction))
+		return -EINVAL;
+
+	misc = file->private_data;
+	phasemeter = to_phasemeter_device(misc);
+
+	n = get_user(phase_correction, (s32 *)buf);
+	if (n != 0) {
+		pr_warn("read: copy to user failed.\n");
+		return -EFAULT;
+	}
+
+	spin_lock_irqsave(&phasemeter->lock, flags);
+	/* phase correction unit is 5 nanoseconds */
+	writel(phase_correction, phasemeter->reg + PHASEMETER_OFFSET);
+	spin_unlock_irqrestore(&phasemeter->lock, flags);
+
+	return sizeof(phase_correction);
+}
+
+static unsigned int
+phasemeter_device_poll(struct file *file, poll_table *wait)
+{
+	unsigned int mask;
+	struct miscdevice *misc;
+	struct phasemeter_device *phasemeter;
+
+	misc = file->private_data;
+	phasemeter = to_phasemeter_device(misc);
+
+	/* device is always writable */
+	mask = POLLOUT | POLLWRNORM;
+	poll_wait(file, &phasemeter->data_wait_queue, wait);
+	if (atomic_read(&phasemeter->data_available))
+		mask |= POLLIN | POLLRDNORM;
+
+	return mask;
+}
+
+const struct file_operations phasemeter_device_fops = {
+		.owner = THIS_MODULE,
+		.open = phasemeter_device_open,
+		.release = phasemeter_device_release,
+		.read = phasemeter_device_read,
+		.write = phasemeter_device_write,
+		.poll = phasemeter_device_poll,
+};
+
+static int
+ptp_ocp_register_phasemeter(struct ptp_ocp *bp, struct ocp_resource *res)
+{
+	struct phasemeter_device * phasemeter;
+	int err;
+
+	/* Register misc device for phasemeter */
+	phasemeter = devm_kzalloc(&bp->pdev->dev, sizeof(*phasemeter), GFP_KERNEL);
+	if (phasemeter == NULL)
+		return -ENOMEM;
+
+	phasemeter->reg = ptp_ocp_get_mem(bp, res);
+	atomic_set(&phasemeter->data_available, false);
+	phasemeter->in_use = false;
+	init_waitqueue_head(&phasemeter->data_wait_queue);
+	spin_lock_init(&phasemeter->lock);
+
+	phasemeter->misc = (struct miscdevice) {
+		.minor = MISC_DYNAMIC_MINOR,
+		.name = PHASEMETER_DEVICE_NAME,
+		.fops = &phasemeter_device_fops,
+		.parent = &bp->pdev->dev,
+	};
+
+	dev_info(&bp->pdev->dev, "Phasemeter device at %s", phasemeter->misc.name);
+
+	err = misc_register(&phasemeter->misc);
+	if (err) {
+		kfree(phasemeter);
+		phasemeter = NULL;
+		dev_err(&bp->pdev->dev, "misc_register: %d\n", err);
+		return -ENOMEM;
+	}
+
+	err = pci_request_irq(bp->pdev, res->irq_vec, phasemeter_irq_handler, 0, bp, KBUILD_MODNAME);
+	if (err < 0) {
+		printk(KERN_ALERT "%s: request_irq failed with %d\n",
+		__func__, err);
+		misc_deregister(&phasemeter->misc);
+		kfree(phasemeter);
+		phasemeter = NULL;
+		return -ENOMEM;
+	}
+
+	/* Activate Phasemeter IRQ */
+	iowrite32(1, phasemeter->reg + PHASEMETER_IRQ_ENABLE);
+
+	bp->phasemeter = phasemeter;
+
+	return 0;
+}
+
 static int
 ptp_ocp_register_mem(struct ptp_ocp *bp, struct ocp_resource *res)
 {
 	void __iomem *mem, **ptr;
-
 	mem = ptp_ocp_get_mem(bp, res);
 	if (!mem)
 		return -EINVAL;
@@ -1292,6 +1629,16 @@ ptp_ocp_detach(struct ptp_ocp *bp)
 		platform_device_unregister(bp->i2c_osc);
 	if (bp->i2c_clk)
 		clk_hw_unregister_fixed_rate(bp->i2c_clk);
+	if (bp->pps_device) {
+		iowrite32(0, bp->pps_device_reg);
+		pps_unregister_source(bp->pps_device);
+		free_irq(pci_irq_vector(bp->pdev, MSI_VECTOR_PPS), bp);
+	}
+	if (bp->phasemeter) {
+		iowrite32(0, bp->phasemeter->reg + PHASEMETER_IRQ_ENABLE);
+		misc_deregister(&bp->phasemeter->misc);
+		free_irq(pci_irq_vector(bp->pdev, MSI_VECTOR_PHASEMETER), bp);
+	}
 	if (bp->n_irqs)
 		pci_free_irq_vectors(bp->pdev);
 	if (bp->ptp)
@@ -1305,6 +1652,7 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 {
 	struct devlink *devlink;
 	struct ptp_ocp *bp;
+	struct pci_device_id *card_id;
 	int err;
 
 	devlink = devlink_alloc(&ptp_ocp_devlink_ops, sizeof(*bp));
@@ -1319,13 +1667,15 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 
 	bp = devlink_priv(devlink);
 
+	card_id = pci_match_id(id, pdev);
+
 	bp->ptp_info = ptp_ocp_clock_info;
 	spin_lock_init(&bp->lock);
 	bp->gps_port = -1;
 	bp->mac_port = -1;
 	bp->id = -1;
 	bp->pdev = pdev;
-	bp->res = (struct ocp_resource *)id->driver_data;
+	bp->res = (struct ocp_resource *)card_id->driver_data;
 
 	pci_set_drvdata(pdev, bp);
 
@@ -1340,7 +1690,7 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	 * allow this - if not all of the IRQ's are returned, skip the
 	 * extra devices and just register the clock.
 	 */
-	err = pci_alloc_irq_vectors(pdev, 1, 10, PCI_IRQ_MSI | PCI_IRQ_MSIX);
+	err = pci_alloc_irq_vectors(pdev, 1, 16, PCI_IRQ_MSI);
 	if (err < 0) {
 		dev_err(&pdev->dev, "alloc_irq_vectors err: %d\n", err);
 		goto out;
