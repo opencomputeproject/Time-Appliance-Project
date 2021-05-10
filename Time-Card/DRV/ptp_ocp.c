@@ -12,6 +12,7 @@
 #include <linux/ptp_clock_kernel.h>
 #include <linux/spi/spi.h>
 #include <linux/spi/xilinx_spi.h>
+#include <linux/spi/altera.h>
 #include <net/devlink.h>
 #include <linux/i2c.h>
 #include <linux/mtd/mtd.h>
@@ -209,6 +210,7 @@ static void ptp_ocp_health_update(struct ptp_ocp *bp);
 static int ptp_ocp_register_mem(struct ptp_ocp *bp, struct ocp_resource *res);
 static int ptp_ocp_register_i2c(struct ptp_ocp *bp, struct ocp_resource *res);
 static int ptp_ocp_register_spi(struct ptp_ocp *bp, struct ocp_resource *res);
+static int ptp_ocp_register_spi_altera(struct ptp_ocp *bp, struct ocp_resource *res);
 static int ptp_ocp_register_serial(struct ptp_ocp *bp,
 				   struct ocp_resource *res);
 static int ptp_ocp_register_pps(struct ptp_ocp *bp, struct ocp_resource * res);
@@ -234,6 +236,9 @@ static int ptp_ocp_register_phasemeter(struct ptp_ocp *bp, struct ocp_resource *
 
 #define OCP_SPI_RESOURCE(member) \
 	OCP_RES_LOCATION(member), .setup = ptp_ocp_register_spi
+
+#define OCP_SPI_ALTERA_RESOURCE(member) \
+	OCP_RES_LOCATION(member), .setup = ptp_ocp_register_spi_altera
 
 #define OCP_PPS_RESOURCE(member) \
 	OCP_RES_LOCATION(member), .setup = ptp_ocp_register_pps
@@ -323,6 +328,11 @@ static struct ocp_resource ocp_o2s_resource[] = {
 	{
 		OCP_SERIAL_RESOURCE(gps_port),
 		.offset = 0x00160000 + 0x1000, .irq_vec = 3,
+	},
+	{
+		OCP_SPI_ALTERA_RESOURCE(spi_flash),
+		.offset = 0x00310000, .size = 0x10000, .irq_vec = 9,
+		.extra = &ocp_spi_flash,
 	},
 	{
 		OCP_PHASEMETER_RESOURCE(phasemeter),
@@ -1048,6 +1058,59 @@ ptp_ocp_register_spi(struct ptp_ocp *bp, struct ocp_resource *res)
 	id = pci_dev_id(bp->pdev) << 1;
 
 	p = ptp_ocp_spi_bus(bp->pdev, res, id);
+	if (IS_ERR(p))
+		return PTR_ERR(p);
+
+	bp_assign_entry(bp, res, p);
+
+	return 0;
+}
+
+static struct platform_device *
+ptp_ocp_spi_altera_bus(struct pci_dev *pdev, struct ocp_resource *r, int id)
+{
+	struct altera_spi_platform_data spi_altr_data = {
+		.num_chipselect = 1,
+		.num_devices = 1,
+	};
+	struct resource res[2];
+	unsigned long start;
+
+	if (r->extra) {
+		spi_altr_data.devices = r->extra;
+		spi_altr_data.num_devices = 1;
+		id += spi_altr_data.devices->bus_num;
+	}
+
+	start = pci_resource_start(pdev, 0) + r->offset;
+	ptp_ocp_set_mem_resource(&res[0], start, r->size);
+	ptp_ocp_set_irq_resource(&res[1], pci_irq_vector(pdev, r->irq_vec));
+
+	return platform_device_register_resndata(&pdev->dev,
+		"spi_altera", id, res, 2, &spi_altr_data, sizeof(spi_altr_data));
+}
+
+static int
+ptp_ocp_register_spi_altera(struct ptp_ocp *bp, struct ocp_resource *res)
+{
+	struct platform_device *p;
+	int id;
+
+	/* XXX hack to work around old FPGA */
+	if (bp->n_irqs < 10) {
+		dev_err(&bp->pdev->dev, "FPGA does not have SPI devices\n");
+		return 0;
+	}
+
+	if (res->irq_vec > bp->n_irqs) {
+		dev_err(&bp->pdev->dev, "spi device irq %d out of range\n",
+			res->irq_vec);
+		return 0;
+	}
+
+	id = pci_dev_id(bp->pdev) << 1;
+
+	p = ptp_ocp_spi_altera_bus(bp->pdev, res, id);
 	if (IS_ERR(p))
 		return PTR_ERR(p);
 
