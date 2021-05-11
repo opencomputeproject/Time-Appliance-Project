@@ -144,7 +144,7 @@ struct ptp_ocp {
 	struct proc_dir_entry	*i2c_pde;
 	struct clk_hw		*i2c_clk;
 	struct devlink_health_reporter *health;
-	struct proc_dir_entry 	*proc;
+	struct proc_dir_entry	*proc;
 	struct timer_list	watchdog;
 	time64_t		gps_lost;
 	int			id;
@@ -271,6 +271,46 @@ MODULE_DEVICE_TABLE(pci, ptp_ocp_pcidev_id);
 
 static DEFINE_MUTEX(ptp_ocp_lock);
 static DEFINE_IDR(ptp_ocp_idr);
+
+static struct {
+	const char *name;
+	int value;
+} ptp_ocp_clock[] = {
+	{ .name = "NONE",	.value = 0 },
+	{ .name = "TOD",	.value = 1 },
+	{ .name = "IRIG",	.value = 2 },
+	{ .name = "PPS",	.value = 3 },
+	{ .name = "PTP",	.value = 4 },
+	{ .name = "RTC",	.value = 5 },
+	{ .name = "DCF",	.value = 6 },
+	{ .name = "REGS",	.value = 0xfe },
+	{ .name = "EXT",	.value = 0xff },
+};
+
+static const char *
+ptp_ocp_clock_name_from_val(int val)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(ptp_ocp_clock); i++)
+		if (ptp_ocp_clock[i].value == val)
+			return ptp_ocp_clock[i].name;
+	return NULL;
+}
+
+static int
+ptp_ocp_clock_val_from_name(const char *name)
+{
+	const char *clk;
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(ptp_ocp_clock); i++) {
+		clk = ptp_ocp_clock[i].name;
+		if (!strncasecmp(name, clk, strlen(clk)))
+			return ptp_ocp_clock[i].value;
+	}
+	return -EINVAL;
+}
 
 static int
 __ptp_ocp_gettime_locked(struct ptp_ocp *bp, struct timespec64 *ts,
@@ -616,16 +656,13 @@ out:
 static void
 ptp_ocp_info(struct ptp_ocp *bp)
 {
-	static const char *clock_name[] = {
-		"NO", "TOD", "IRIG", "PPS", "PTP", "RTC", "REGS", "EXT"
-	};
 	u32 version, select;
 
 	version = ioread32(&bp->reg->version);
 	select = ioread32(&bp->reg->select);
 	dev_info(&bp->pdev->dev, "Version %d.%d.%d, clock %s, device ptp%d\n",
 		version >> 24, (version >> 16) & 0xff, version & 0xffff,
-		clock_name[select & 7],
+		ptp_ocp_clock_name_from_val(select >> 16),
 		ptp_clock_index(bp->ptp));
 
 	ptp_ocp_tod_info(bp);
@@ -1121,6 +1158,60 @@ ptp_ocp_procfs_init(struct ptp_ocp *bp)
 	return 0;
 }
 
+static ssize_t
+ptp_ocp_proc_source_write(struct file *file, const char __user *user_buf,
+			  size_t nbytes, loff_t *ppos)
+{
+	struct ptp_ocp *bp = PDE_DATA(file_inode(file));
+	unsigned long flags;
+	char buf[16];
+	size_t sz;
+	int val;
+
+	sz = min_t(ssize_t, nbytes, sizeof(buf) - 1);
+	if (copy_from_user(buf, user_buf, sz))
+		return -EFAULT;
+	buf[sz] = 0;
+
+	val = ptp_ocp_clock_val_from_name(buf);
+	if (val < 0)
+		return val;
+
+	spin_lock_irqsave(&bp->lock, flags);
+	iowrite32(val, &bp->reg->select);
+	spin_unlock_irqrestore(&bp->lock, flags);
+
+	return nbytes;
+}
+
+static int
+ptp_ocp_proc_source_show(struct seq_file *seq, void *v)
+{
+	struct ptp_ocp *bp = seq->private;
+	const char *p;
+	u32 select;
+
+	select = ioread32(&bp->reg->select);
+	p = ptp_ocp_clock_name_from_val(select >> 16);
+	seq_printf(seq, "%s\n", p);
+
+	return 0;
+}
+
+static int
+ptp_ocp_proc_source_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, ptp_ocp_proc_source_show, PDE_DATA(inode));
+}
+
+static const struct proc_ops ptp_ocp_proc_source_ops = {
+	.proc_open	= ptp_ocp_proc_source_open,
+	.proc_read	= seq_read,
+	.proc_lseek	= seq_lseek,
+	.proc_write	= ptp_ocp_proc_source_write,
+	.proc_release	= single_release,
+};
+
 static int
 ptp_ocp_procfs_complete(struct ptp_ocp *bp)
 {
@@ -1141,6 +1232,8 @@ ptp_ocp_procfs_complete(struct ptp_ocp *bp)
 				0, bp->proc, ptp_ocp_proc_serial, bp);
 	proc_create_single_data("gps_state",
 				0, bp->proc, ptp_ocp_proc_gps_sync, bp);
+	proc_create_data("clock_source",
+			 0644, bp->proc, &ptp_ocp_proc_source_ops, bp);
 
 	return 0;
 }
