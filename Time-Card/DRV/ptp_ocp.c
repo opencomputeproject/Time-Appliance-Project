@@ -1769,9 +1769,9 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	if (err)
 		goto out;
 
-	err = ptp_ocp_init_clock(bp);
-	if (err)
-		goto out;
+	// err = ptp_ocp_init_clock(bp);
+	// if (err)
+	// 	goto out;
 
 	bp->ptp = ptp_clock_register(&bp->ptp_info, &pdev->dev);
 	if (IS_ERR(bp->ptp)) {
