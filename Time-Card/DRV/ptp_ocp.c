@@ -20,6 +20,10 @@
 #include <linux/spinlock.h>
 #include <linux/miscdevice.h>
 #include <linux/poll.h>
+#include <linux/device.h>
+#include <linux/cdev.h>
+
+#include "oscillator_mRO50_ioctl.h"
 
 #ifndef PCI_VENDOR_ID_FACEBOOK
 #define PCI_VENDOR_ID_FACEBOOK 0x1d9b
@@ -133,6 +137,13 @@ struct pps_reg {
 	u32	status;
 };
 
+struct oscillator_reg {
+	u32 ctrl;
+	u32 value;
+	u32 adjust;
+	u32 temp;
+};
+
 #define PPS_STATUS_FILTER_ERR	BIT(0)
 #define PPS_STATUS_SUPERV_ERR	BIT(1)
 
@@ -164,6 +175,27 @@ struct phasemeter_device {
 
 #define PPS_DEVICE_IRQ_ACK 0x10
 
+#define OSC_CTRL_ENABLE				(1 << 0)
+#define OSC_CTRL_LOCK				(1 << 1)
+#define OSC_CTRL_READ_CMD			(1 << 2)
+#define OSC_CTRL_READ_TYPE_COARSE	(1 << 3)
+#define OSC_CTRL_READ_TYPE_FINE		~(1 << 3)
+#define OSC_CTRL_READ_DONE			(1 << 4)
+#define OSC_CTRL_ADJUST_CMD			(1 << 5)
+#define OSC_CTRL_ADJUST_TYPE_COARSE	(1 << 6)
+#define OSC_CTRL_ADJUST_TYPE_FINE	~(1 << 6)
+
+struct oscillator_device {
+	struct oscillator_reg __iomem *reg;
+	struct cdev cdev;
+	struct mutex lock;
+};
+
+static int oscillator_major = 0;
+static int oscillator_minor = 0;
+
+static struct class *oscillator_class;
+
 struct ptp_ocp {
 	struct pci_dev		*pdev;
 	struct ocp_resource	*res;
@@ -184,6 +216,7 @@ struct ptp_ocp {
 	struct pps_device	*pps_device;
 	void __iomem		*pps_device_reg;
 	struct phasemeter_device *phasemeter;
+	struct oscillator_device *osc;
 	struct devlink_health_reporter *health;
 	struct proc_dir_entry	*proc;
 	struct timer_list	watchdog;
@@ -215,6 +248,8 @@ static int ptp_ocp_register_serial(struct ptp_ocp *bp,
 				   struct ocp_resource *res);
 static int ptp_ocp_register_pps(struct ptp_ocp *bp, struct ocp_resource * res);
 static int ptp_ocp_register_phasemeter(struct ptp_ocp *bp, struct ocp_resource *res);
+static int ptp_ocp_register_oscillator(struct ptp_ocp *bp, struct ocp_resource *res);
+
 
 
 #define bp_assign_entry(bp, res, val) ({				\
@@ -245,6 +280,9 @@ static int ptp_ocp_register_phasemeter(struct ptp_ocp *bp, struct ocp_resource *
 
 #define OCP_PHASEMETER_RESOURCE(member) \
 	OCP_RES_LOCATION(member), .setup = ptp_ocp_register_phasemeter
+
+#define OCP_OSCILLATOR_RESOURCE(member) \
+	OCP_RES_LOCATION(member), .setup = ptp_ocp_register_oscillator
 
 /* This is the MSI vector mapping used.
  * 0: N/C
@@ -341,6 +379,10 @@ static struct ocp_resource ocp_o2s_resource[] = {
 	{
 		OCP_PPS_RESOURCE(pps),
 		.offset = 0x00330000, .size = 0x20, .irq_vec = MSI_VECTOR_PPS
+	},
+	{
+		OCP_OSCILLATOR_RESOURCE(osc),
+		.offset = 0x00340000, .size = 0x20
 	},
 	{}
 };
@@ -1221,6 +1263,8 @@ ptp_ocp_register_serial(struct ptp_ocp *bp, struct ocp_resource *res)
 	return 0;
 }
 
+
+/* PPS */
 static struct pps_source_info pps_ktimer_info = {
 	.name = "ocp-pps",
 	.path = "/dev/pps-ocp-clock",
@@ -1266,6 +1310,7 @@ ptp_ocp_register_pps(struct ptp_ocp *bp, struct ocp_resource *res)
 	return 0;
 }
 
+/* Phasemeter */
 static irqreturn_t
 phasemeter_irq_handler(int irq, void* dev_id)
 {
@@ -1485,6 +1530,208 @@ ptp_ocp_register_phasemeter(struct ptp_ocp *bp, struct ocp_resource *res)
 	return 0;
 }
 
+/* Oscillator */
+int
+oscillator_open(struct inode * inode, struct file * filp)
+{
+	u32 ctrl;
+	struct oscillator_device *osc = NULL;
+	struct oscillator_reg *osc_reg;
+
+	osc = container_of(inode->i_cdev, struct oscillator_device, cdev);
+	osc_reg = (struct oscillator_reg *) osc->reg;
+
+	mutex_lock(&osc->lock);
+	ctrl = ioread32(&osc_reg->ctrl);
+	ctrl |= OSC_CTRL_ENABLE;
+	iowrite32(ctrl, &osc_reg->ctrl);
+	mutex_unlock(&osc->lock);
+
+	filp->private_data = osc;
+	return 0;
+}
+
+int
+oscillator_release(struct inode * inode, struct file * filp)
+{
+	u32 ctrl;
+	struct oscillator_device *osc = NULL;
+	struct oscillator_reg *osc_reg;
+
+	osc = container_of(inode->i_cdev, struct oscillator_device, cdev);
+	osc_reg = (struct oscillator_reg *) osc->reg;
+	
+	mutex_lock(&osc->lock);
+	ctrl = ioread32(&osc_reg->ctrl);
+	ctrl &= ~(OSC_CTRL_ENABLE);
+	iowrite32(ctrl, &osc_reg->ctrl);
+	mutex_unlock(&osc->lock);
+
+	return 0;
+}
+
+static int
+__read_oscillator_locked(struct oscillator_reg *reg, u32 ctrl, u32 *buf)
+{
+	int timeout;
+
+	timeout = 0;
+	ctrl |= OSC_CTRL_READ_CMD;
+	iowrite32(ctrl, &reg->ctrl);
+	do {
+		ctrl = ioread32(&reg->ctrl);
+		timeout++;
+		udelay(1000);
+		if (timeout > 1000) {
+			break;
+		}
+	} while (!(ctrl & OSC_CTRL_READ_DONE));
+
+	if (timeout > 1000)
+		return -ETIMEDOUT;
+	
+	*buf = ioread32(&reg->value);
+	return 0;
+}
+
+static int
+__write_oscillator_locked(struct oscillator_reg *reg, u32 ctrl, u32 adjust)
+{
+	int timeout;
+
+	timeout = 0;
+	ctrl |= OSC_CTRL_ADJUST_CMD;
+
+	iowrite32(adjust, &reg->adjust);
+	iowrite32(ctrl, &reg->ctrl);
+	do {
+		ctrl = ioread32(&reg->ctrl);
+		udelay(1000);
+		timeout++;
+		if (timeout > 1000)
+			break;
+	} while (!(ctrl & OSC_CTRL_ADJUST_CMD));
+
+	if (timeout > 1000)
+		return -ETIMEDOUT;
+
+	return sizeof(adjust);
+}
+
+static long
+oscillator_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+{
+	struct oscillator_device *osc;
+	struct oscillator_reg *osc_reg;
+	u32 ctrl;
+	u32 adjust;
+	u32 freq_value;
+	u32 temp_value;
+	int ret;
+
+	ret = 0;
+	osc = filp->private_data;
+	osc_reg = (struct oscillator_reg *) osc->reg;
+
+	mutex_lock(&osc->lock);
+	ctrl = ioread32(&osc_reg->ctrl);
+
+	switch(cmd){
+		case MRO50_READ_FINE:
+			ctrl &= OSC_CTRL_READ_TYPE_FINE;
+			ret = __read_oscillator_locked(osc_reg, ctrl, &freq_value);
+			if (ret == 0)
+				put_user(freq_value, (u32 *) arg);
+			break;
+		case MRO50_READ_COARSE:
+			ctrl |= OSC_CTRL_READ_TYPE_COARSE;
+			ret = __read_oscillator_locked(osc_reg, ctrl, &freq_value);
+			if (ret == 0)
+				put_user(freq_value, (u32 *) arg);
+			break;
+		case MRO50_ADJUST_FINE:
+			get_user(adjust, (u32 *) arg);
+			ctrl &= OSC_CTRL_ADJUST_TYPE_FINE;
+			ret = __write_oscillator_locked(osc_reg, ctrl, adjust);
+			break;
+		case MRO50_ADJUST_COARSE:
+			get_user(adjust, (u32 *) arg);
+			ctrl |= OSC_CTRL_ADJUST_TYPE_COARSE;
+			ret = __write_oscillator_locked(osc_reg, ctrl, adjust);
+			break;
+		case MRO50_READ_TEMP:
+			temp_value = ioread32(&osc_reg->temp);
+			put_user(temp_value, (u32 *) arg);
+			break;
+		default:
+			mutex_unlock(&osc->lock);
+			return -ENOTTY;
+	}
+	mutex_unlock(&osc->lock);
+	return ret;
+}
+
+struct file_operations oscillator_fops = {
+	open:		oscillator_open,
+	release:	oscillator_release,
+	read:		NULL,
+	write:		NULL,
+	.unlocked_ioctl = oscillator_ioctl,
+};
+
+static int
+ptp_ocp_register_oscillator(struct ptp_ocp *bp, struct ocp_resource *res)
+{
+	struct oscillator_device *osc;
+	struct device * dev;
+	int err;
+	dev_t devno = 0;
+
+	osc = devm_kzalloc(&bp->pdev->dev, sizeof(*osc), GFP_KERNEL);
+	if (osc == NULL)
+		return -ENOMEM;
+	
+	osc->reg = ptp_ocp_get_mem(bp, res);
+	mutex_init(&osc->lock);
+
+	err = alloc_chrdev_region(&devno, oscillator_major, oscillator_minor, "oscillator-mRO50");
+	if (err < 0) {
+		dev_err(&bp->pdev->dev, "alloc_chrdev_region failed: %d\n", err);
+		return err;
+	}
+	oscillator_major = MAJOR(devno);
+	oscillator_minor = MINOR(devno);
+
+	oscillator_class = class_create(THIS_MODULE, "oscillator_class");
+	if (IS_ERR(oscillator_class)) {
+		dev_err(&bp->pdev->dev, "class_create failed: %d\n", err);
+		unregister_chrdev_region(MKDEV(oscillator_major, oscillator_minor), 1);
+		return PTR_ERR(oscillator_class);
+	}
+
+	cdev_init(&osc->cdev, &oscillator_fops);
+	osc->cdev.owner = THIS_MODULE;
+	osc->cdev.ops = &oscillator_fops;
+	err = cdev_add(&osc->cdev, devno, 1);
+
+	dev = device_create(
+		oscillator_class,
+		&bp->pdev->dev,
+		devno,
+		osc->reg,
+		"oscillator_mRO50"
+	);
+	if (IS_ERR(dev)) {
+		dev_err(&bp->pdev->dev, "device_create failed: %d\n", err);
+		class_destroy(oscillator_class);
+		unregister_chrdev_region(devno, 1);
+		return -1;
+	}
+
+	bp->osc = osc;
+	return 0;
+}
+
 static int
 ptp_ocp_register_mem(struct ptp_ocp *bp, struct ocp_resource *res)
 {
@@ -1701,6 +1948,17 @@ ptp_ocp_detach(struct ptp_ocp *bp)
 		iowrite32(0, bp->phasemeter->reg + PHASEMETER_IRQ_ENABLE);
 		misc_deregister(&bp->phasemeter->misc);
 		free_irq(pci_irq_vector(bp->pdev, MSI_VECTOR_PHASEMETER), bp);
+	}
+	if (bp->osc) {
+		unregister_chrdev_region(
+			MKDEV(oscillator_major, oscillator_minor), 1
+		);
+		device_destroy(
+			oscillator_class,
+			MKDEV(oscillator_major, oscillator_minor)
+		);
+		cdev_del(&bp->osc->cdev);
+		class_destroy(oscillator_class);
 	}
 	if (bp->n_irqs)
 		pci_free_irq_vectors(bp->pdev);
