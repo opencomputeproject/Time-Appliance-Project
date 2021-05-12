@@ -1663,6 +1663,9 @@ oscillator_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			temp_value = ioread32(&osc_reg->temp);
 			put_user(temp_value, (u32 *) arg);
 			break;
+		case MRO50_READ_CTRL:
+			put_user(ctrl, (u32 *) arg);
+			break;
 		default:
 			mutex_unlock(&osc->lock);
 			return -ENOTTY;
