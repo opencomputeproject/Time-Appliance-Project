@@ -10,6 +10,7 @@
 #include <linux/ptp_clock_kernel.h>
 #include <linux/spi/spi.h>
 #include <linux/spi/xilinx_spi.h>
+#include <linux/spi/altera.h>
 #include <net/devlink.h>
 #include <linux/i2c.h>
 #include <linux/mtd/mtd.h>
@@ -21,6 +22,14 @@
 
 #ifndef PCI_DEVICE_ID_FACEBOOK_TIMECARD
 #define PCI_DEVICE_ID_FACEBOOK_TIMECARD 0x0400
+#endif
+
+#ifndef PCI_VENDOR_ID_OROLIA
+#define PCI_VENDOR_ID_OROLIA 0x1ad7
+#endif
+
+#ifndef PCI_DEVICE_ID_OROLIA_ARTCARD
+#define PCI_DEVICE_ID_OROLIA_ARTCARD 0xa000
 #endif
 
 struct ocp_reg {
@@ -87,31 +96,20 @@ struct tod_reg {
 struct ts_reg {
 	u32	enable;
 	u32	error;
-	u32	__pad0;
+	u32	polarity;
 	u32	version;
-	u32	__pad1[60];
-	u32	ctrl;
-	u32	status;
-	u32	__pad2[2];
+	u32	__pad0[4];
+	u32	cable_delay;
+	u32	__pad1[3];
 	u32	intr;
 	u32	intr_mask;
-	u32	__pad3[2];
-	u32	delay_req_rx_ns;
-	u32	delay_req_rx_sec;
-	u32	delay_req_tx_ns;
-	u32	delay_req_tx_sec;
-	u32	path_delay_req_rx_ns;
-	u32	path_delay_req_rx_sec;
-	u32	path_delay_req_tx_ns;
-	u32	path_delay_req_tx_sec;
-	u32	path_delay_resp_rx_ns;
-	u32	path_delay_resp_rx_sec;
-	u32	path_delay_resp_tx_ns;
-	u32	path_delay_resp_tx_sec;
-	u32	sync_rx_ns;
-	u32	sync_rx_sec;
-	u32	sync_tx_ns;
-	u32	sync_tx_sec;
+	u32	event_count;
+	u32	__pad2[1];
+	u32	ts_count;
+	u32	time_ns;
+	u32	time_sec;
+	u32	data_width;
+	u32	data;
 };
 
 struct pps_reg {
@@ -126,15 +124,39 @@ struct img_reg {
 	u32	version;
 };
 
+struct ptp_ocp_flash_info {
+	const char *name;
+	int pci_offset;
+	int data_size;
+	void *data;
+};
+
+struct ptp_ocp_ext_info {
+	const char *name;
+	int index;
+	irqreturn_t (*irq_fcn)(int irq, void *priv);
+	int (*enable)(void *priv, bool enable);
+};
+
+struct ptp_ocp_ext_src {
+	void __iomem 		*mem;
+	struct ptp_ocp		*bp;
+	struct ptp_ocp_ext_info	*info;
+	int			irq_vec;
+};
+
 struct ptp_ocp {
 	struct pci_dev		*pdev;
-	struct ocp_resource	*res;
+	struct ocp_resource	*res_tbl;
 	spinlock_t		lock;
 	struct ocp_reg __iomem	*reg;
 	struct tod_reg __iomem	*tod;
-	struct pps_reg __iomem	*pps;
-	struct ts_reg __iomem	*ts0;
-	struct ts_reg __iomem	*ts1;
+	struct pps_reg __iomem	*pps_monitor;
+	struct ptp_ocp_ext_src	*pps;
+	struct ptp_ocp_ext_src	*phasemeter;
+	struct ptp_ocp_ext_src	*ts0;
+	struct ptp_ocp_ext_src	*ts1;
+	struct ocp_art_osc_reg __iomem	*osc;
 	struct img_reg __iomem	*image;
 	struct ptp_clock	*ptp;
 	struct ptp_clock_info	ptp_info;
@@ -152,6 +174,7 @@ struct ptp_ocp {
 	int			gps_port;
 	int			mac_port;	/* miniature atomic clock */
 	u8			serial[6];
+	int			flash_start;
 	bool			has_serial;
 	bool			pending_image;
 };
@@ -160,18 +183,24 @@ struct ocp_resource {
 	unsigned long offset;
 	int size;
 	int irq_vec;
-	int (*setup)(struct ptp_ocp *bp, struct ocp_resource *res);
+	int (*setup)(struct ptp_ocp *bp, struct ocp_resource *r);
 	void *extra;
 	unsigned long bp_offset;
 };
 
 static void ptp_ocp_health_update(struct ptp_ocp *bp);
-static int ptp_ocp_register_mem(struct ptp_ocp *bp, struct ocp_resource *res);
-static int ptp_ocp_register_i2c(struct ptp_ocp *bp, struct ocp_resource *res);
-static int ptp_ocp_register_spi(struct ptp_ocp *bp, struct ocp_resource *res);
-static int ptp_ocp_register_serial(struct ptp_ocp *bp,
-				   struct ocp_resource *res);
-
+static int ptp_ocp_register_mem(struct ptp_ocp *bp, struct ocp_resource *r);
+static int ptp_ocp_register_i2c(struct ptp_ocp *bp, struct ocp_resource *r);
+static int ptp_ocp_register_spi(struct ptp_ocp *bp, struct ocp_resource *r);
+static int ptp_ocp_register_serial(struct ptp_ocp *bp, struct ocp_resource *r);
+static int ptp_ocp_register_ext(struct ptp_ocp *bp, struct ocp_resource *r);
+static int ptp_ocp_fb_board_init(struct ptp_ocp *bp, struct ocp_resource *r);
+static irqreturn_t ptp_ocp_ts_irq(int irq, void *priv);
+static irqreturn_t ptp_ocp_phase_irq(int irq, void *priv);
+static irqreturn_t ptp_ocp_pps_irq(int irq, void *priv);
+static int ptp_ocp_ts_enable(void *priv, bool enable);
+static int ptp_ocp_phase_enable(void *priv, bool enable);
+static int ptp_ocp_pps_enable(void *priv, bool enable);
 
 #define bp_assign_entry(bp, res, val) ({				\
 	uintptr_t addr = (uintptr_t)(bp) + (res)->bp_offset;		\
@@ -193,6 +222,9 @@ static int ptp_ocp_register_serial(struct ptp_ocp *bp,
 #define OCP_SPI_RESOURCE(member) \
 	OCP_RES_LOCATION(member), .setup = ptp_ocp_register_spi
 
+#define OCP_EXT_RESOURCE(member) \
+	OCP_RES_LOCATION(member), .setup = ptp_ocp_register_ext
+
 /* This is the MSI vector mapping used.
  * 0: N/C
  * 1: TS0
@@ -204,12 +236,9 @@ static int ptp_ocp_register_serial(struct ptp_ocp *bp,
  * 7: I2C oscillator
  * 8: HWICAP
  * 9: SPI Flash
+ * 10: phasemeter
+ * 11: PPS
  */
-
-static struct spi_board_info ocp_spi_flash = {
-	.modalias = "spi-nor",
-	.bus_num = 1,			/* offset from PCI */
-};
 
 static struct ocp_resource ocp_fb_resource[] = {
 	{
@@ -217,15 +246,25 @@ static struct ocp_resource ocp_fb_resource[] = {
 		.offset = 0x01000000, .size = 0x10000,
 	},
 	{
-		OCP_MEM_RESOURCE(ts0),
-		.offset = 0x01010000, .size = 0x10000,
+		OCP_EXT_RESOURCE(ts0),
+		.offset = 0x01010000, .size = 0x10000, .irq_vec = 1,
+		.extra = &(struct ptp_ocp_ext_info) {
+			.name = "ts0", .index = 1,
+			.irq_fcn = ptp_ocp_ts_irq,
+			.enable = ptp_ocp_ts_enable,
+		},
 	},
 	{
-		OCP_MEM_RESOURCE(ts1),
-		.offset = 0x01020000, .size = 0x10000,
+		OCP_EXT_RESOURCE(ts1),
+		.offset = 0x01020000, .size = 0x10000, .irq_vec = 2,
+		.extra = &(struct ptp_ocp_ext_info) {
+			.name = "ts1", .index = 2,
+			.irq_fcn = ptp_ocp_ts_irq,
+			.enable = ptp_ocp_ts_enable,
+		},
 	},
 	{
-		OCP_MEM_RESOURCE(pps),
+		OCP_MEM_RESOURCE(pps_monitor),
 		.offset = 0x01040000, .size = 0x10000,
 	},
 	{
@@ -258,13 +297,98 @@ static struct ocp_resource ocp_fb_resource[] = {
 	{
 		OCP_SPI_RESOURCE(spi_flash),
 		.offset = 0x00310000, .size = 0x10000, .irq_vec = 9,
-		.extra = &ocp_spi_flash,
+		.extra = &(struct ptp_ocp_flash_info) {
+			.name = "xilinx_spi", .pci_offset = 0,
+			.data_size = sizeof(struct xspi_platform_data),
+			.data = &(struct xspi_platform_data) {
+				.num_chipselect = 1,
+				.bits_per_word = 8,
+				.num_devices = 1,
+				.devices = &(struct spi_board_info) {
+					.modalias = "spi-nor",
+				},
+			},
+		},
+	},
+	{
+		.setup = ptp_ocp_fb_board_init,
+	},
+	{ }
+};
+
+struct ocp_art_osc_reg {
+	u32	ctrl;
+	u32	value;
+	u32	adjust;
+	u32	temp;
+};
+
+struct ocp_art_pps_reg {
+	u32	enable;
+	u32	__pad0[3];
+	u32	intr;
+};
+
+struct ocp_phase_reg {
+	u32	phase_error;
+	u32	phase_offset;
+	u32	enable;
+	u32	__pad1[8];
+	u32	intr;
+};
+
+static struct ocp_resource ocp_art_resource[] = {
+	{
+		OCP_MEM_RESOURCE(reg),
+		.offset = 0x01000000, .size = 0x10000,
+	},
+	{
+		OCP_SERIAL_RESOURCE(gps_port),
+		.offset = 0x00160000 + 0x1000, .irq_vec = 3,
+	},
+	{
+		OCP_EXT_RESOURCE(phasemeter),
+		.offset = 0x00320000, .size = 0x30, .irq_vec = 10,
+		.extra = &(struct ptp_ocp_ext_info) {
+			.name = "phasemeter", .index = 0,
+			.irq_fcn = ptp_ocp_phase_irq,
+			.enable = ptp_ocp_phase_enable,
+		},
+	},
+	{
+		OCP_EXT_RESOURCE(pps),
+		.offset = 0x00330000, .size = 0x20, .irq_vec = 11,
+		.extra = &(struct ptp_ocp_ext_info) {
+			.name = "pps",
+			.irq_fcn = ptp_ocp_pps_irq,
+			.enable = ptp_ocp_pps_enable,
+		},
+	},
+	{
+		OCP_MEM_RESOURCE(osc),
+		.offset = 0x00340000, .size = 0x20,
+	},
+	{
+		OCP_SPI_RESOURCE(spi_flash),
+		.offset = 0x00310000, .size = 0x10000, .irq_vec = 9,
+		.extra = &(struct ptp_ocp_flash_info) {
+			.name = "spi_altera", .pci_offset = 0,
+			.data_size = sizeof(struct altera_spi_platform_data),
+			.data = &(struct altera_spi_platform_data) {
+				.num_chipselect = 1,
+				.num_devices = 1,
+				.devices = &(struct spi_board_info) {
+					.modalias = "spi-nor",
+				},
+			},
+		},
 	},
 	{ }
 };
 
 static const struct pci_device_id ptp_ocp_pcidev_id[] = {
 	{ PCI_DEVICE_DATA(FACEBOOK, TIMECARD, &ocp_fb_resource) },
+	{ PCI_DEVICE_DATA(OROLIA, ARTCARD, &ocp_art_resource) },
 	{ 0 }
 };
 MODULE_DEVICE_TABLE(pci, ptp_ocp_pcidev_id);
@@ -435,6 +559,63 @@ ptp_ocp_null_adjfine(struct ptp_clock_info *ptp_info, long scaled_ppm)
 	return -EOPNOTSUPP;
 }
 
+static int
+ptp_ocp_adjphase(struct ptp_clock_info *ptp_info, s32 phase_ns)
+{
+	struct ptp_ocp *bp = container_of(ptp_info, struct ptp_ocp, ptp_info);
+	struct ocp_phase_reg __iomem *reg = bp->phasemeter->mem;
+	unsigned long flags;
+	s32 correction;
+
+	if (!bp->phasemeter)
+		return -EOPNOTSUPP;
+
+	/* XXX this may not be right... convert to 5ns units */
+	correction = div_s64(phase_ns, 5);
+
+	spin_lock_irqsave(&bp->lock, flags);
+	iowrite32(correction, &reg->phase_offset);
+	spin_unlock_irqrestore(&bp->lock, flags);
+
+	return 0;
+}
+
+static int
+ptp_ocp_enable(struct ptp_clock_info *ptp_info, struct ptp_clock_request *rq,
+	       int on)
+{
+	struct ptp_ocp *bp = container_of(ptp_info, struct ptp_ocp, ptp_info);
+	struct ptp_ocp_ext_src *ext = NULL;
+	int err;
+
+	switch (rq->type) {
+	case PTP_CLK_REQ_EXTTS:
+		switch (rq->extts.index) {
+		case 0:
+			ext = bp->phasemeter;
+			break;
+		case 1:
+			ext = bp->ts0;
+			break;
+		case 2:
+			ext = bp->ts1;
+			break;
+		}
+		break;
+	case PTP_CLK_REQ_PPS:
+		ext = bp->pps;
+		break;
+	default:
+		return -EOPNOTSUPP;
+	}
+
+	err = -ENXIO;
+	if (ext)
+		err = ext->info->enable(ext, on);
+
+	return err;
+}
+
 static const struct ptp_clock_info ptp_ocp_clock_info = {
 	.owner		= THIS_MODULE,
 	.name		= KBUILD_MODNAME,
@@ -443,6 +624,10 @@ static const struct ptp_clock_info ptp_ocp_clock_info = {
 	.settime64	= ptp_ocp_settime,
 	.adjtime	= ptp_ocp_adjtime,
 	.adjfine	= ptp_ocp_null_adjfine,
+	.adjphase	= ptp_ocp_adjphase,
+	.enable		= ptp_ocp_enable,
+	.pps		= true,
+	.n_ext_ts	= 3,
 };
 
 static void
@@ -470,10 +655,10 @@ ptp_ocp_watchdog(struct timer_list *t)
 	unsigned long flags;
 	u32 status;
 
-	status = ioread32(&bp->pps->status);
+	status = ioread32(&bp->pps_monitor->status);
 
 	if (status & PPS_STATUS_SUPERV_ERR) {
-		iowrite32(status, &bp->pps->status);
+		iowrite32(status, &bp->pps_monitor->status);
 		if (!bp->gps_lost) {
 			spin_lock_irqsave(&bp->lock, flags);
 			__ptp_ocp_clear_drift_locked(bp);
@@ -731,13 +916,14 @@ ptp_ocp_devlink_flash(struct devlink *devlink, struct device *dev,
 		      const struct firmware *fw)
 {
 	struct mtd_info *mtd = dev_get_drvdata(dev);
+	struct ptp_ocp *bp = devlink_priv(devlink);
 	size_t off, len, resid, wrote;
 	struct erase_info erase;
 	size_t base, blksz;
 	int err;
 
 	off = 0;
-	base = 1024 * 4096;		/* Timecard.bin start address */
+	base = bp->flash_start;
 	blksz = 4096;
 	resid = fw->size;
 
@@ -929,34 +1115,14 @@ ptp_ocp_set_mem_resource(struct resource *res, unsigned long start, int size)
 	*res = r;
 }
 
-static struct platform_device *
-ptp_ocp_spi_bus(struct pci_dev *pdev, struct ocp_resource *r, int id)
+static int
+ptp_ocp_register_spi(struct ptp_ocp *bp, struct ocp_resource *r)
 {
-	struct xspi_platform_data spi_pxdata = {
-		.num_chipselect = 1,
-		.bits_per_word = 8,
-	};
+	struct ptp_ocp_flash_info *info;
+	struct pci_dev *pdev = bp->pdev;
+	struct platform_device *p;
 	struct resource res[2];
 	unsigned long start;
-
-	if (r->extra) {
-		spi_pxdata.devices = r->extra;
-		spi_pxdata.num_devices = 1;
-		id += spi_pxdata.devices->bus_num;
-	}
-
-	start = pci_resource_start(pdev, 0) + r->offset;
-	ptp_ocp_set_mem_resource(&res[0], start, r->size);
-	ptp_ocp_set_irq_resource(&res[1], pci_irq_vector(pdev, r->irq_vec));
-
-	return platform_device_register_resndata(&pdev->dev,
-		"xilinx_spi", id, res, 2, &spi_pxdata, sizeof(spi_pxdata));
-}
-
-static int
-ptp_ocp_register_spi(struct ptp_ocp *bp, struct ocp_resource *res)
-{
-	struct platform_device *p;
 	int id;
 
 	/* XXX hack to work around old FPGA */
@@ -965,19 +1131,26 @@ ptp_ocp_register_spi(struct ptp_ocp *bp, struct ocp_resource *res)
 		return 0;
 	}
 
-	if (res->irq_vec > bp->n_irqs) {
+	if (r->irq_vec > bp->n_irqs) {
 		dev_err(&bp->pdev->dev, "spi device irq %d out of range\n",
-			res->irq_vec);
+			r->irq_vec);
 		return 0;
 	}
 
-	id = pci_dev_id(bp->pdev) << 1;
+	start = pci_resource_start(pdev, 0) + r->offset;
+	ptp_ocp_set_mem_resource(&res[0], start, r->size);
+	ptp_ocp_set_irq_resource(&res[1], pci_irq_vector(pdev, r->irq_vec));
 
-	p = ptp_ocp_spi_bus(bp->pdev, res, id);
+	info = r->extra;
+	id = pci_dev_id(pdev) << 1;
+	id += info->pci_offset;
+
+	p = platform_device_register_resndata(&pdev->dev,
+		info->name, id, res, 2, info->data, info->data_size);
 	if (IS_ERR(p))
 		return PTR_ERR(p);
 
-	bp_assign_entry(bp, res, p);
+	bp_assign_entry(bp, r, p);
 
 	return 0;
 }
@@ -1008,7 +1181,7 @@ ptp_ocp_i2c_bus(struct pci_dev *pdev, struct ocp_resource *r, int id)
 }
 
 static int
-ptp_ocp_register_i2c(struct ptp_ocp *bp, struct ocp_resource *res)
+ptp_ocp_register_i2c(struct ptp_ocp *bp, struct ocp_resource *r)
 {
 	struct pci_dev *pdev = bp->pdev;
 	struct platform_device *p;
@@ -1016,9 +1189,9 @@ ptp_ocp_register_i2c(struct ptp_ocp *bp, struct ocp_resource *res)
 	char buf[32];
 	int id;
 
-	if (res->irq_vec > bp->n_irqs) {
+	if (r->irq_vec > bp->n_irqs) {
 		dev_err(&bp->pdev->dev, "i2c device irq %d out of range\n",
-			res->irq_vec);
+			r->irq_vec);
 		return 0;
 	}
 
@@ -1032,13 +1205,199 @@ ptp_ocp_register_i2c(struct ptp_ocp *bp, struct ocp_resource *res)
 
 	sprintf(buf, "xiic-i2c.%d", id);
 	devm_clk_hw_register_clkdev(&pdev->dev, clk, NULL, buf);
-	p = ptp_ocp_i2c_bus(bp->pdev, res, id);
+	p = ptp_ocp_i2c_bus(bp->pdev, r, id);
 	if (IS_ERR(p))
 		return PTR_ERR(p);
 
-	bp_assign_entry(bp, res, p);
+	bp_assign_entry(bp, r, p);
 
 	return 0;
+}
+
+static irqreturn_t
+ptp_ocp_phase_irq(int irq, void *priv)
+{
+	struct ptp_ocp_ext_src *ext = priv;
+	struct ocp_phase_reg __iomem *reg = ext->mem;
+	struct ptp_clock_event ev;
+	u32 phase_error;
+
+	phase_error = ioread32(&reg->phase_error);
+	if (phase_error > 500000000) {
+		iowrite32(0, &reg->phase_error);
+		phase_error = 0;
+	}
+
+#ifdef PTP_CLOCK_EXTTSUSR
+	ev.type = PTP_CLOCK_EXTTSUSR;
+	ev.index = ext->info->index;
+	ev.data = phase_error;
+	pps_get_ts(&ev.pps_times);
+#else
+	ev.type = PTP_CLOCK_EXTTS;
+	ev.index = ext->info->index;
+	ev.pps_times.ts_real.tv_sec = 0;
+	ev.pps_times.ts_real.tv_nsec = phase_error;
+#endif
+
+	ptp_clock_event(ext->bp->ptp, &ev);
+
+	iowrite32(0, &reg->intr);
+
+	return IRQ_HANDLED;
+}
+
+static int
+ptp_ocp_phase_enable(void *priv, bool enable)
+{
+	struct ptp_ocp_ext_src *ext = priv;
+	struct ocp_phase_reg __iomem *reg = ext->mem;
+
+	iowrite32(enable, &reg->enable);
+
+	return 0;
+}
+
+static irqreturn_t
+ptp_ocp_pps_irq(int irq, void *priv)
+{
+	struct ptp_ocp_ext_src *ext = priv;
+	struct ocp_art_pps_reg __iomem *reg = ext->mem;
+	struct ptp_clock_event ev;
+
+	ev.type = PTP_CLOCK_PPS;
+	ptp_clock_event(ext->bp->ptp, &ev);
+
+	iowrite32(0, &reg->intr);
+
+	return IRQ_HANDLED;
+}
+
+static int
+ptp_ocp_pps_enable(void *priv, bool enable)
+{
+	struct ptp_ocp_ext_src *ext = priv;
+	struct ocp_art_pps_reg __iomem *reg = ext->mem;
+
+	iowrite32(enable, &reg->enable);
+
+	return 0;
+}
+
+static irqreturn_t
+ptp_ocp_ts_irq(int irq, void *priv)
+{
+	struct ptp_ocp_ext_src *ext = priv;
+	struct ts_reg __iomem *reg = ext->mem;
+	struct ptp_clock_event ev;
+
+	/* XXX "should not happen", but is happening on jlemon's box */
+	if (!ioread32(&reg->intr)) {
+		dev_err(&ext->bp->pdev->dev,
+			"%s: ocp%d.%s irq %d when not set\n",
+			__func__, ext->bp->id, ext->info->name, irq);
+		return IRQ_HANDLED;
+	}
+
+#ifdef PTP_CLOCK_EXTTSUSR
+	ev.type = PTP_CLOCK_EXTTSUSR;
+	ev.index = ext->info->index;
+	ev.pps_times.ts_real.tv_sec = ioread32(&reg->time_sec);
+	ev.pps_times.ts_real.tv_nsec = ioread32(&reg->time_ns);
+	ev.data = ioread32(&reg->ts_count);
+#else
+	ev.type = PTP_CLOCK_EXTTS;
+	ev.index = ext->info->index;
+	ev.pps_times.ts_real.tv_sec = ioread32(&reg->time_sec);
+	ev.pps_times.ts_real.tv_nsec = ioread32(&reg->time_ns);
+#endif
+
+	ptp_clock_event(ext->bp->ptp, &ev);
+
+{
+	u32 en, mask, intr;
+	en = ioread32(&reg->enable);
+	mask = ioread32(&reg->intr_mask);
+	intr = ioread32(&reg->intr);
+	pr_err("EXT IRQ: %d ocp%d.%s en:%d mask:%d intr:%d\n",
+		irq, ext->bp->id, ext->info->name, en, mask, intr);
+}
+
+	iowrite32(1, &reg->intr);	/* write 1 to ack */
+
+	return IRQ_HANDLED;
+}
+
+static int
+ptp_ocp_ts_enable(void *priv, bool enable)
+{
+	struct ptp_ocp_ext_src *ext = priv;
+	struct ts_reg __iomem *reg = ext->mem;
+
+	if (enable) {
+		iowrite32(1, &reg->enable);
+		iowrite32(1, &reg->intr_mask);
+		iowrite32(1, &reg->intr);
+	} else {
+		iowrite32(0, &reg->intr_mask);
+		iowrite32(0, &reg->enable);
+	}
+
+{
+	u32 en, mask, intr;
+	en = ioread32(&reg->enable);
+	mask = ioread32(&reg->intr_mask);
+	intr = ioread32(&reg->intr);
+	pr_err("EXT SET: %s ocp%d.%s en:%d mask:%d intr:%d\n",
+		enable ? "ON " : "OFF",
+		ext->bp->id, ext->info->name, en, mask, intr);
+}
+
+	return 0;
+}
+
+static void
+ptp_ocp_unregister_ext(struct ptp_ocp_ext_src *ext)
+{
+	ext->info->enable(ext, false);
+	pci_free_irq(ext->bp->pdev, ext->irq_vec, ext);
+	kfree(ext);
+}
+
+static int
+ptp_ocp_register_ext(struct ptp_ocp *bp, struct ocp_resource *r)
+{
+	struct pci_dev *pdev = bp->pdev;
+	struct ptp_ocp_ext_src *ext;
+	int err;
+
+	ext = kzalloc(sizeof(*ext), GFP_KERNEL);
+	if (!ext)
+		return -ENOMEM;
+
+	err = -EINVAL;
+	ext->mem = ptp_ocp_get_mem(bp, r);
+	if (!ext->mem)
+		goto out;
+
+	ext->bp = bp;
+	ext->info = r->extra;
+	ext->irq_vec = r->irq_vec;
+
+	err = pci_request_irq(pdev, r->irq_vec, ext->info->irq_fcn, 0,
+			      ext, "ocp%d.%s", bp->id, ext->info->name);
+	if (err) {
+		dev_err(&pdev->dev, "Could not get irq %d\n", r->irq_vec);
+		goto out;
+	}
+
+	bp_assign_entry(bp, r, ext);
+
+	return 0;
+
+out:
+	kfree(ext);
+	return err;
 }
 
 static int
@@ -1065,48 +1424,57 @@ ptp_ocp_serial_line(struct ptp_ocp *bp, struct ocp_resource *r)
 }
 
 static int
-ptp_ocp_register_serial(struct ptp_ocp *bp, struct ocp_resource *res)
+ptp_ocp_register_serial(struct ptp_ocp *bp, struct ocp_resource *r)
 {
 	int port;
 
-	if (res->irq_vec > bp->n_irqs) {
+	if (r->irq_vec > bp->n_irqs) {
 		dev_err(&bp->pdev->dev, "serial device irq %d out of range\n",
-			res->irq_vec);
+			r->irq_vec);
 		return 0;
 	}
 
-	port = ptp_ocp_serial_line(bp, res);
+	port = ptp_ocp_serial_line(bp, r);
 	if (port < 0)
 		return port;
 
-	bp_assign_entry(bp, res, port);
+	bp_assign_entry(bp, r, port);
 
 	return 0;
 }
 
 static int
-ptp_ocp_register_mem(struct ptp_ocp *bp, struct ocp_resource *res)
+ptp_ocp_register_mem(struct ptp_ocp *bp, struct ocp_resource *r)
 {
 	void __iomem *mem, **ptr;
 
-	mem = ptp_ocp_get_mem(bp, res);
+	mem = ptp_ocp_get_mem(bp, r);
 	if (!mem)
 		return -EINVAL;
 
-	ptr = (void __iomem *)((uintptr_t)bp + res->bp_offset);
+	ptr = (void __iomem *)((uintptr_t)bp + r->bp_offset);
 	*ptr = mem;
 
 	return 0;
 }
 
+/* FB specific board initializers; last "resource" registered. */
+static int
+ptp_ocp_fb_board_init(struct ptp_ocp *bp, struct ocp_resource *r)
+{
+	bp->flash_start = 1024 * 4096;
+
+	return ptp_ocp_init_clock(bp);
+}
+
 static int
 ptp_ocp_register_resources(struct ptp_ocp *bp)
 {
-	struct ocp_resource *res;
+	struct ocp_resource *r;
 	int err = 0;
 
-	for (res = bp->res; res->setup; res++) {
-		err = res->setup(bp, res);
+	for (r = bp->res_tbl; r->setup; r++) {
+		err = r->setup(bp, r);
 		if (err)
 			break;
 	}
@@ -1215,6 +1583,7 @@ static const struct proc_ops ptp_ocp_proc_source_ops = {
 static int
 ptp_ocp_procfs_complete(struct ptp_ocp *bp)
 {
+	struct pps_device *pps;
 	char buf[32];
 
 	if (bp->gps_port != -1) {
@@ -1227,6 +1596,12 @@ ptp_ocp_procfs_complete(struct ptp_ocp *bp)
 	}
 	sprintf(buf, "/dev/ptp%d", ptp_clock_index(bp->ptp));
 	proc_symlink("ptp", bp->proc, buf);
+
+	pps = pps_lookup_dev(bp->ptp);
+	if (pps) {
+		sprintf(buf, "/dev/%s", dev_name(pps->dev));
+		proc_symlink("pps", bp->proc, buf);
+	}
 
 	proc_create_single_data("serial",
 				0, bp->proc, ptp_ocp_proc_serial, bp);
@@ -1280,6 +1655,14 @@ ptp_ocp_detach(struct ptp_ocp *bp)
 		del_timer_sync(&bp->watchdog);
 	if (bp->id != -1)
 		ptp_ocp_procfs_del(bp);
+	if (bp->ts0)
+		ptp_ocp_unregister_ext(bp->ts0);
+	if (bp->ts1)
+		ptp_ocp_unregister_ext(bp->ts1);
+	if (bp->phasemeter)
+		ptp_ocp_unregister_ext(bp->phasemeter);
+	if (bp->pps)
+		ptp_ocp_unregister_ext(bp->pps);
 	if (bp->gps_port != -1)
 		serial8250_unregister_port(bp->gps_port);
 	if (bp->mac_port != -1)
@@ -1325,7 +1708,7 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	bp->mac_port = -1;
 	bp->id = -1;
 	bp->pdev = pdev;
-	bp->res = (struct ocp_resource *)id->driver_data;
+	bp->res_tbl = (struct ocp_resource *)id->driver_data;
 
 	pci_set_drvdata(pdev, bp);
 
@@ -1340,7 +1723,7 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	 * allow this - if not all of the IRQ's are returned, skip the
 	 * extra devices and just register the clock.
 	 */
-	err = pci_alloc_irq_vectors(pdev, 1, 10, PCI_IRQ_MSI | PCI_IRQ_MSIX);
+	err = pci_alloc_irq_vectors(pdev, 1, 12, PCI_IRQ_MSI | PCI_IRQ_MSIX);
 	if (err < 0) {
 		dev_err(&pdev->dev, "alloc_irq_vectors err: %d\n", err);
 		goto out;
@@ -1353,10 +1736,6 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 		goto out;
 
 	err = ptp_ocp_register_resources(bp);
-	if (err)
-		goto out;
-
-	err = ptp_ocp_init_clock(bp);
 	if (err)
 		goto out;
 
