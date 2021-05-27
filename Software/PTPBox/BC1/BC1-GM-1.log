@@ -1,0 +1,12 @@
+ptp4l[21836.150]: selected /dev/ptp12 as PTP clock
+ptp4l[21836.150]: port 1: INITIALIZING to LISTENING on INIT_COMPLETE
+ptp4l[21836.150]: port 0: INITIALIZING to LISTENING on INIT_COMPLETE
+ptp4l[21836.150]: port 1: link down
+ptp4l[21836.150]: port 1: LISTENING to FAULTY on FAULT_DETECTED (FT_UNSPECIFIED)
+ptp4l[21836.150]: selected local clock 0c42a1.fffe.65c55e as best master
+ptp4l[21836.150]: assuming the grand master role
+ptp4l[21837.023]: port 1: link up
+ptp4l[21837.024]: port 1: FAULTY to LISTENING on INIT_COMPLETE
+ptp4l[21844.567]: port 1: LISTENING to MASTER on ANNOUNCE_RECEIPT_TIMEOUT_EXPIRES
+ptp4l[21844.567]: selected local clock 0c42a1.fffe.65c55e as best master
+ptp4l[21844.567]: assuming the grand master role
