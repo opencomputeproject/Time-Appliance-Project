@@ -2,9 +2,13 @@
 
 source ../configs
 
-node_number=4
+#port number (1 or 2)
 port_number=2
-role="ordinary"
+#port role (master or ordinary)
+role='ordinary'
+
+#gets extrated based on the number in the folder (BCx->x)
+node_number=$(basename "$PWD"| tr -dc '0-9')
 
 ip netns add ${node[$node_number,0]}
 
