@@ -4,7 +4,7 @@ declare -A node
 
 #node1
 #name of network namespace
-node[1,0]='GM'
+node[1,0]='BC1'
 #first ethernet
 node[1,1]='eth1p1'
 #firth ethernet IP
@@ -17,7 +17,7 @@ node[1,4]='192.168.0.2/24'
 
 #node2
 #name of network namespace
-node[2,0]='BC1'
+node[2,0]='BC2'
 #first ethernet
 node[2,1]='eth2p1'
 #firth ethernet IP
@@ -30,7 +30,7 @@ node[2,4]='192.168.1.2/24'
 
 #node3
 #name of network namespace
-node[3,0]='BC2'
+node[3,0]='BC3'
 #first ethernet
 node[3,1]='eth3p1'
 #firth ethernet IP
@@ -43,7 +43,7 @@ node[3,4]='192.168.2.2/24'
 
 #node4
 #name of network namespace
-node[4,0]='BC3'
+node[4,0]='BC4'
 #first ethernet
 node[4,1]='eth4p1'
 #firth ethernet IP
@@ -56,7 +56,7 @@ node[4,4]='192.168.3.2/24'
 
 #node5
 #name of network namespace
-node[5,0]='BC4'
+node[5,0]='BC5'
 #first ethernet
 node[5,1]='eth5p1'
 #firth ethernet IP
@@ -69,7 +69,7 @@ node[4,4]='192.168.4.2/24'
 
 #node6
 #name of network namespace
-node[6,0]='BC5'
+node[6,0]='BC6'
 #first ethernet
 node[6,1]='eth6p1'
 #firth ethernet IP
@@ -82,12 +82,12 @@ node[6,4]='192.168.5.2/24'
 
 #node7
 #name of network namespace
-#node[7,0]='OC'
+node[7,0]='BC7'
 #first ethernet
-#node[7,1]='eth7p1'
+node[7,1]='eth7p1'
 #firth ethernet IP
-#node[7,2]='192.168.7.1/24'
+node[7,2]='192.168.7.1/24'
 #first ethernet
-#node[7,3]='eth7p2'
+node[7,3]='eth7p2'
 #firth ethernet IP
-#node[7,4]='192.168.6.2/24'
+node[7,4]='192.168.6.2/24'
