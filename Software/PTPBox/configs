@@ -64,7 +64,7 @@ node[5,2]='192.168.5.1/24'
 #first ethernet
 node[5,3]='eth5p2'
 #firth ethernet IP
-node[4,4]='192.168.4.2/24'
+node[5,4]='192.168.4.2/24'
 
 
 #node6
