@@ -37,7 +37,7 @@
 ## List of images
 List Of Images | Description
 ------------ | -------------
-[Figure 1](#figure-1) | OGM Block Diagram
+[Figure 1](#figure-1) | OTS Block Diagram
 [Figure 2](#figure-2) | GNSS Receiver
 [Figure 3](#figure-3) | Atomic Clock Example
 [Figure 4](#figure-4) | Time Card Block Diagram
@@ -50,7 +50,6 @@ Abbreviation | Description
 AC | Atomic Clock
 COTS | Commodity off-the-shelf
 DC | Datacenter
-GMC | GrandMaster Clock
 GNSS | Global Navigation Satellite System
 GTM | Go-To-Market
 HW | Hardware
@@ -175,9 +174,9 @@ Examples:
         
 
 ## Time Card
-<a id="Figure-1">![OGM Block Diagram](https://user-images.githubusercontent.com/4749052/94845761-0c7a4d00-0418-11eb-86f6-6c93f649b8de.png)</a>
+<a id="Figure-1">![OTS Block Diagram](https://user-images.githubusercontent.com/4749052/94845761-0c7a4d00-0418-11eb-86f6-6c93f649b8de.png)</a>
 
-<p align="center">Figure 1. OGM Block Diagram</p>
+<p align="center">Figure 1. OTS Block Diagram</p>
 
 General Idea is this card will be connected via PCIe to the server and provide Time Of Day (TOD) via /dev/ptpX interface. Using this interface ptp4l will continuously synchronize PHC on the network card from the atomic clock on the Time Card. This provides precision &lt; 1us.
 
