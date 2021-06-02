@@ -1,4 +1,4 @@
-OCP Time Appliance can be used with any NTP/PTP server.
+OCP Time Appliance can be used with any NTP/PTP server.  
 Here are couple of examples and configs:
 ## NTP
 NTP servers usually can work directly with PHC
@@ -24,5 +24,5 @@ $ /usr/local/bin/ptpresponder -iface eth0
 ### Linuxptp (ptp4l)
 https://sourceforge.net/projects/linuxptp/
 ```
-$ /sbin/ptp4l -f /etc/ptp4l.conf -i eth0 -m"
+$ /sbin/ptp4l -f /etc/ptp4l.conf -i eth0 -m
 ```
