@@ -51,7 +51,6 @@ AC | Atomic Clock
 COTS | Commodity off-the-shelf
 DC | Datacenter
 GMC | GrandMaster Clock
-GM | GrandMaster
 GNSS | Global Navigation Satellite System
 GTM | Go-To-Market
 HW | Hardware
@@ -59,7 +58,7 @@ NIC | Network Interface Card
 NTP | Network Time Protocol
 OCP | Open Compute Project
 OCXO | Oven-Controlled Oscillator
-OGM | Open GrandMaster
+OTS | Open Time Server
 PHC | PTP Hardware Clock
 PTM | Precision Time Measurements
 PTP | Precision Time Protocol
@@ -78,9 +77,9 @@ Table 1. Abbreviations
 
 The time-sync service is relying on a synchronization technology, for now, we are adopting PTP (IEEE 1588) with some addition to that and NTP. 
 
-PTP architecture is scalable and defines the time source from an entity called the **Grandmaster clock** (or stratum 1 in NTP terms).  The GM is distributing time to the entire network and usually gets its timing from an external source, (GNSS signal). 
+PTP architecture is scalable and defines the time source from an entity called the **Time Server clock** (or stratum 1 in NTP terms).  The Open Time Server is distributing time to the entire network and usually gets its timing from an external source, (GNSS signal). 
 
-The current state-of-the-art grandmaster implementations suffer from a few drawbacks that we wish to accommodate:
+The current state-of-the-art Open Time Server implementations suffer from a few drawbacks that we wish to accommodate:
 
 * They are HW appliances that usually target different GTM than a DC 
 * They expose none standard and inconsistent Interfaces and SW feature-sets
@@ -88,12 +87,12 @@ The current state-of-the-art grandmaster implementations suffer from a few drawb
 * It doesn’t rely on open-source software
 * The accuracy/stability grades aren’t in line with DC requirements 
 
-This document describes an open architecture of a Grandmaster, that could eventually be deployed either in a DC or in an edge environment. 
+This document describes an open architecture of a Open Time Server, that could eventually be deployed either in a DC or in an edge environment. 
 
 
 # High-Level Architecture
 
-In general, the OGM is divided into 3 HW components:
+In general, the OTS is divided into 3 HW components:
 
 1. COTS server 
 2. Commodity NIC 
@@ -102,8 +101,8 @@ In general, the OGM is divided into 3 HW components:
 The philosophy behind this fragmentation is very clear, and each decision, modification that will be made, must look-out to this philosophy:
 
 * COTS servers keep their “value for money” due to huge market requirements. They are usually updated with the latest OS version, security patches, and newer technology, faster than HW appliances. 
-* Modern Commodity NICs already support HW timestamp, lead the market with Ethernet and PCIe latest Speeds and Feeds. Modern NIC also supports a wide range of OS versions and comes with a great software ecosystem. NIC + COTS server will allow the OGM to run a full software (and even open source one) PTP and NTP stack. 
-* Timecard will be the smallest (conceptually) possible HW board, which will provide the GNSS signal input and stable frequency input. Isolating these functions in a timecard will allow OGM to choose the proper timecard for their needs (accuracy, stability, cost, etc) and remain with the same SW, interface, and architecture.
+* Modern Commodity NICs already support HW timestamp, lead the market with Ethernet and PCIe latest Speeds and Feeds. Modern NIC also supports a wide range of OS versions and comes with a great software ecosystem. NIC + COTS server will allow the OTS to run a full software (and even open source one) PTP and NTP stack. 
+* Timecard will be the smallest (conceptually) possible HW board, which will provide the GNSS signal input and stable frequency input. Isolating these functions in a timecard will allow OTS to choose the proper timecard for their needs (accuracy, stability, cost, etc) and remain with the same SW, interface, and architecture.
 ## Responsibilities and Requirements 
 ### COTS Server
 * Run commodity OS
@@ -129,8 +128,9 @@ The philosophy behind this fragmentation is very clear, and each decision, modif
 ### Software
 * Linux/*nix operating system
 * [ocp_ptp driver](https://github.com/opencomputeproject/Time-Appliance-Project/tree/master/Time-Card/DRV) (included in Linux kernel 5.2 and higher)
-* Linuxptp package with ptp4l serves PTP on NIC and phc2sys to copy clock values
-* Chrony/NTPd reading `/dev/ptpX` of a NIC
+* For NTP server - Chrony/NTPd reading `/dev/ptpX` of the Time Card 
+* For PTP server - PTP responder https://github.com/facebookincubator/ptp or ptp4l (Linuxptp) reading `/dev/ptpX` of the NIC
+* phc2sys to copy clock values between Time Card and the NIC
 ## NIC
 ### Form-Factor
 * Standard PCIe Stand-up Card
