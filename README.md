@@ -128,7 +128,7 @@ The philosophy behind this fragmentation is very clear, and each decision, modif
 * Linux/*nix operating system
 * [ocp_ptp driver](https://github.com/opencomputeproject/Time-Appliance-Project/tree/master/Time-Card/DRV) (included in Linux kernel 5.2 and higher)
 * For NTP server - Chrony/NTPd reading `/dev/ptpX` of the Time Card 
-* For PTP server - PTP responder https://github.com/facebookincubator/ptp or ptp4l (Linuxptp) reading `/dev/ptpX` of the NIC
+* For PTP server - ptp4u https://github.com/facebookincubator/ptp or ptp4l (Linuxptp) reading `/dev/ptpX` of the NIC
 * phc2sys to copy clock values between Time Card and the NIC
 ## NIC
 ### Form-Factor

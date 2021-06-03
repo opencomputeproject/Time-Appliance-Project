@@ -15,10 +15,10 @@ hwtimestamp *
 ## PTP
 Keep in mind synchronization of PHC between time card and the Network card is required.
 The example shown is for unicast server only.
-### Responder
+### ptp4u
 https://github.com/facebookincubator/ptp
 ```
-$ /usr/local/bin/ptpresponder -iface eth0
+$ /usr/local/bin/ptp4u -iface eth1
 ```
 
 ### Linuxptp (ptp4l)
