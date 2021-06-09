@@ -57,7 +57,7 @@ NIC | Network Interface Card
 NTP | Network Time Protocol
 OCP | Open Compute Project
 OCXO | Oven-Controlled Oscillator
-OTS | Open Time Server
+OTS | Open Time Server (Previously known as an **Open Grandmaster** or a **Leader**) 
 PHC | PTP Hardware Clock
 PTM | Precision Time Measurements
 PTP | Precision Time Protocol
