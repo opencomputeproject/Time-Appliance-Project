@@ -16,7 +16,7 @@
       1. [Software](#Software)
    1. [NIC](#NIC)
       1. [Form-Factor](#Form-Factor)
-      1. [Pcie Interface](#Pcie-Interface)
+      1. [PCIe Interface](#Pcie-Interface)
       1. [Network Ports](#Network-Ports)
       1. [PPS out](#PPS-out)
       1. [PPS In](#PPS-In)
