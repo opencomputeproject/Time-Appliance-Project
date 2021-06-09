@@ -123,18 +123,17 @@ The philosophy behind this fragmentation is very clear, and each decision, modif
 # Detailed Architecture 
 ## COTS Server
 ### Hardware
-In general any general purpose hardware can be used.
+Most of the general purpose hardware can be used.
 We've tested and proved it working with the following spec:  
 * HPE ProLiant DL380 Gen10  
   * CPU. Synchronization between multiple CPUs will add an extra offset. 1 CPU is preferred
   * RAM. At least 8 GiB of RAM. 64 is preferred
   * Riser. Default riser will work. 2x PCIe: x8 and x16
 ### Software
-* Linux operating system
-* [ocp_ptp driver](https://github.com/opencomputeproject/Time-Appliance-Project/tree/master/Time-Card/DRV) (included in Linux kernel 5.12 and higher)
-* For NTP server - Chrony/NTPd reading `/dev/ptpX` of the Time Card 
-* For PTP server - ptp4u https://github.com/facebookincubator/ptp or ptp4l (Linuxptp) reading `/dev/ptpX` of the NIC
-* phc2sys to copy clock values between Time Card and the NIC
+* Linux operating system with the [ocp_ptp driver](https://github.com/opencomputeproject/Time-Appliance-Project/tree/master/Time-Card/DRV) (included in Linux kernel 5.12 and newer). Driver may require vt-d CPU flag enabled in BIOS
+* NTP server - [Chrony](https://github.com/mlichvar/chrony)/NTPd reading `/dev/ptpX` of the Time Card 
+* PTP server - [ptp4u](https://github.com/facebookincubator/ptp) or [ptp4l](https://github.com/richardcochran/linuxptp) reading `/dev/ptpX` of the NIC
+  * [phc2sys](https://github.com/richardcochran/linuxptp) to copy clock values from the Time Card to the NIC
 ## NIC
 ### Form-Factor
 * Standard PCIe Stand-up Card
