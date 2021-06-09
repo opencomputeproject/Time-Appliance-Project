@@ -1,0 +1,36 @@
+# This is a sample udev rules file that demonstrates how to get udev to
+# set the name of IPoIB interfaces to whatever you wish.  There is a
+# 16 character limit on network device names.
+#
+# Important items to note: ATTR{type}=="32" is IPoIB interfaces, and the
+# ATTR{address} match must start with ?* and only reference the last 8
+# bytes of the address or else the address might not match the variable QPN
+# portion.
+#
+# Modern udev is case sensitive and all addresses need to be in lower case.
+#
+# ACTION=="add", SUBSYSTEM=="net", DRIVERS=="?*", ATTR{type}=="32", ATTR{address}=="?*00:02:c9:03:00:31:78:f2", NAME="mlx4_ib3"
+#
+#
+# /etc/udev/rules.d/70-persistent-ipoib.rules
+#
+SUBSYSTEM=="net", ACTION=="add", KERNELS=="0000:69:00.0", NAME="eth1p1"
+SUBSYSTEM=="net", ACTION=="add", KERNELS=="0000:69:00.1", NAME="eth1p2"
+
+SUBSYSTEM=="net", ACTION=="add", KERNELS=="0000:68:00.0", NAME="eth2p1"
+SUBSYSTEM=="net", ACTION=="add", KERNELS=="0000:68:00.1", NAME="eth2p2"
+
+SUBSYSTEM=="net", ACTION=="add", KERNELS=="0000:67:00.0", NAME="eth3p1"
+SUBSYSTEM=="net", ACTION=="add", KERNELS=="0000:67:00.1", NAME="eth3p2"
+
+SUBSYSTEM=="net", ACTION=="add", KERNELS=="0000:1b:00.0", NAME="eth4p1"
+SUBSYSTEM=="net", ACTION=="add", KERNELS=="0000:1b:00.1", NAME="eth4p2"
+
+SUBSYSTEM=="net", ACTION=="add", KERNELS=="0000:1c:00.0", NAME="eth5p1"
+SUBSYSTEM=="net", ACTION=="add", KERNELS=="0000:1c:00.1", NAME="eth5p2"
+
+SUBSYSTEM=="net", ACTION=="add", KERNELS=="0000:19:00.0", NAME="eth6p1"
+SUBSYSTEM=="net", ACTION=="add", KERNELS=="0000:19:00.1", NAME="eth6p2"
+
+SUBSYSTEM=="net", ACTION=="add", KERNELS=="0000:1a:00.0", NAME="eth7p1"
+SUBSYSTEM=="net", ACTION=="add", KERNELS=="0000:1a:00.1", NAME="eth7p2"
