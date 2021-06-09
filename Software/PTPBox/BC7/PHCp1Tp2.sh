@@ -2,8 +2,8 @@
 
 source ../configs
 
-source_port=2
-destination_port=1
+source_port=1
+destination_port=2
 
 #gets extrated based on the number in the folder (BCx->x)
 node_number=$(basename "$PWD"| tr -dc '0-9')

@@ -27,7 +27,7 @@ if [ "$role" == "ordinary" ]; then
         ip netns exec ${node[$node_number,0]} ptp4l -i ${node[$node_number,$(($(($(($port_number-1))*2))+1))]} --slaveOnly 1 -m | tee $(basename "$PWD")-OC-$port_number.log
 else
 	echo "Master Role"
-        #ip netns exec ${node[$node_number,0]} ptp4u --iface ${node[$node_number,$(($(($(($port_number-1))*2))+1))]} -monitoringport 8888
+        #ip netns exec ${node[$node_number,0]} responder --iface ${node[$node_number,$(($(($(($port_number-1))*2))+1))]} -monitoringport 8888
         ip netns exec ${node[$node_number,0]} ptp4l -i ${node[$node_number,$(($(($(($port_number-1))*2))+1))]} --masterOnly 1 -m | tee $(basename "$PWD")-GM-$port_number.log
 fi
 
