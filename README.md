@@ -123,10 +123,15 @@ The philosophy behind this fragmentation is very clear, and each decision, modif
 # Detailed Architecture 
 ## COTS Server
 ### Hardware
-* 2x PCIe Gen3.0/Gen4.0 slots
+In general any general purpose hardware can be used.
+We've tested and proved it working with the following spec:  
+* HPE ProLiant DL380 Gen10  
+  * CPU. Synchronization between multiple CPUs will add an extra offset. 1 CPU is preferred
+  * RAM. At least 8 GiB of RAM. 64 is preferred
+  * Riser. Default riser will work. 2x PCIe: x8 and x16
 ### Software
-* Linux/*nix operating system
-* [ocp_ptp driver](https://github.com/opencomputeproject/Time-Appliance-Project/tree/master/Time-Card/DRV) (included in Linux kernel 5.2 and higher)
+* Linux operating system
+* [ocp_ptp driver](https://github.com/opencomputeproject/Time-Appliance-Project/tree/master/Time-Card/DRV) (included in Linux kernel 5.12 and higher)
 * For NTP server - Chrony/NTPd reading `/dev/ptpX` of the Time Card 
 * For PTP server - ptp4u https://github.com/facebookincubator/ptp or ptp4l (Linuxptp) reading `/dev/ptpX` of the NIC
 * phc2sys to copy clock values between Time Card and the NIC
@@ -211,10 +216,10 @@ With a special equipment it is possible to simulate GNSS constellation and spoof
 
 ### Clock
 GNSS requires "clear sky" to function properly. Moreover there were several historical events of a short term time jumps by some GNSS constallations.
-Because of reliability and in combination with the security concenrns an additional holdover should be performed by [high quality](https://www.meinbergglobal.com/english/specs/gpsopt.htm) XO. An example could be AC, OCXO, etc.
+Because of reliability and in combination with the security concenrns an additional holdover should be performed by [high quality](https://www.meinbergglobal.com/english/specs/gpsopt.htm) XO. An example could be AC, OCXO, TCXO etc.
 In oreder to perform sustainable operation we recommend to use an AC with a holdover ± 1us or HQ OCXO with a holdover ± 22 µs.
 
-One approach is to use rubidium atomic clocks. Examples:
+Atomic clock examples:
 * [SA.3Xm](https://www.microsemi.com/product-directory/embedded-clocks-frequency-references/3825-miniature-atomic-clock-mac?fbclid=IwAR26trWBnHtV6ydBpKiViv3qS4jUpHAtQXJumUusIMB_RnCGclg2Qbd6lSc)
 * [mRO-50](https://www.orolia.com/products/atomic-clocks-oscillators/mro-50)
 * [SA.45s](https://www.microsemi.com/product-directory/embedded-clocks-frequency-references/5207-space-csac)
@@ -222,6 +227,12 @@ One approach is to use rubidium atomic clocks. Examples:
 <a id="Figure-3">![Atomic Clock Example](https://user-images.githubusercontent.com/4749052/98942099-6bd27f00-24e5-11eb-868a-a813986e5e94.png)</a>
 
 <p align="center">Figure 3. Atomic Clock Example</p>
+
+OCXO examples:
+* [SiT5711](https://www.sitime.com/products/stratum-3e-ocxos/sit5711)
+
+TCXO examples:
+* [SiT5356](https://www.sitime.com/products/super-tcxo/sit5356)
 
 ### Bridge
 
