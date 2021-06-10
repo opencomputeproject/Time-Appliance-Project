@@ -15,6 +15,22 @@
 #include <linux/i2c.h>
 #include <linux/mtd/mtd.h>
 #include <linux/proc_fs.h>
+#include <linux/miscdevice.h>
+
+/*---------------------------------------------------------------------------*/
+#ifndef MRO50_IOCTL_H
+#define MRO50_IOCTL_H
+
+#define MRO50_READ_FINE		_IOR('M', 1, u32 *)
+#define MRO50_READ_COARSE	_IOR('M', 2, u32 *)
+#define MRO50_ADJUST_FINE	_IOW('M', 3, u32)
+#define MRO50_ADJUST_COARSE	_IOW('M', 4, u32)
+#define MRO50_READ_TEMP		_IOR('M', 5, u32 *)
+#define MRO50_READ_CTRL		_IOR('M', 6, u32 *)
+#define MRO50_SAVE_COARSE	_IO('M', 7)
+
+#endif /* MRO50_IOCTL_H */
+/*---------------------------------------------------------------------------*/
 
 #ifndef PCI_VENDOR_ID_FACEBOOK
 #define PCI_VENDOR_ID_FACEBOOK 0x1d9b
@@ -139,7 +155,7 @@ struct ptp_ocp_ext_info {
 };
 
 struct ptp_ocp_ext_src {
-	void __iomem 		*mem;
+	void __iomem		*mem;
 	struct ptp_ocp		*bp;
 	struct ptp_ocp_ext_info	*info;
 	int			irq_vec;
@@ -149,6 +165,7 @@ struct ptp_ocp {
 	struct pci_dev		*pdev;
 	struct ocp_resource	*res_tbl;
 	spinlock_t		lock;
+	struct mutex		mutex;
 	struct ocp_reg __iomem	*reg;
 	struct tod_reg __iomem	*tod;
 	struct pps_reg __iomem	*pps_monitor;
@@ -168,6 +185,7 @@ struct ptp_ocp {
 	struct devlink_health_reporter *health;
 	struct proc_dir_entry	*proc;
 	struct timer_list	watchdog;
+	struct miscdevice	mro50;
 	time64_t		gps_lost;
 	int			id;
 	int			n_irqs;
@@ -195,6 +213,7 @@ static int ptp_ocp_register_spi(struct ptp_ocp *bp, struct ocp_resource *r);
 static int ptp_ocp_register_serial(struct ptp_ocp *bp, struct ocp_resource *r);
 static int ptp_ocp_register_ext(struct ptp_ocp *bp, struct ocp_resource *r);
 static int ptp_ocp_fb_board_init(struct ptp_ocp *bp, struct ocp_resource *r);
+static int ptp_ocp_art_board_init(struct ptp_ocp *bp, struct ocp_resource *r);
 static irqreturn_t ptp_ocp_ts_irq(int irq, void *priv);
 static irqreturn_t ptp_ocp_phase_irq(int irq, void *priv);
 static irqreturn_t ptp_ocp_pps_irq(int irq, void *priv);
@@ -322,6 +341,23 @@ struct ocp_art_osc_reg {
 	u32	adjust;
 	u32	temp;
 };
+#define MRO50_CTRL_ENABLE		BIT(0)
+#define MRO50_CTRL_LOCK			BIT(1)
+#define MRO50_CTRL_READ_CMD		BIT(2)
+#define MRO50_CTRL_READ_COARSE		BIT(3)
+#define MRO50_CTRL_READ_DONE		BIT(4)
+#define MRO50_CTRL_ADJUST_CMD		BIT(5)
+#define MRO50_CTRL_ADJUST_COARSE	BIT(6)
+#define MRO50_CTRL_SAVE_COARSE		BIT(7)
+
+#define MRO50_CMD_READ		(MRO50_CTRL_ENABLE | MRO50_CTRL_READ_CMD)
+#define MRO50_CMD_ADJUST	(MRO50_CTRL_ENABLE | MRO50_CTRL_ADJUST_CMD)
+
+#define MRO50_OP_READ_FINE	MRO50_CMD_READ
+#define MRO50_OP_READ_COARSE	(MRO50_CMD_READ | MRO50_CTRL_READ_COARSE)
+#define MRO50_OP_ADJUST_FINE	MRO50_CMD_ADJUST
+#define MRO50_OP_ADJUST_COARSE	(MRO50_CMD_ADJUST | MRO50_CTRL_ADJUST_COARSE)
+
 
 struct ocp_art_pps_reg {
 	u32	enable;
@@ -382,6 +418,9 @@ static struct ocp_resource ocp_art_resource[] = {
 				},
 			},
 		},
+	},
+	{
+		.setup = ptp_ocp_art_board_init,
 	},
 	{ }
 };
@@ -1446,14 +1485,13 @@ ptp_ocp_register_serial(struct ptp_ocp *bp, struct ocp_resource *r)
 static int
 ptp_ocp_register_mem(struct ptp_ocp *bp, struct ocp_resource *r)
 {
-	void __iomem *mem, **ptr;
+	void __iomem *mem;
 
 	mem = ptp_ocp_get_mem(bp, r);
 	if (!mem)
 		return -EINVAL;
 
-	ptr = (void __iomem *)((uintptr_t)bp + r->bp_offset);
-	*ptr = mem;
+	bp_assign_entry(bp, r, mem);
 
 	return 0;
 }
@@ -1465,6 +1503,168 @@ ptp_ocp_fb_board_init(struct ptp_ocp *bp, struct ocp_resource *r)
 	bp->flash_start = 1024 * 4096;
 
 	return ptp_ocp_init_clock(bp);
+}
+
+static int
+__ptp_ocp_mro50_wait_cmd(struct ocp_art_osc_reg *reg, u32 done)
+{
+	u32 ctrl;
+	int i;
+
+	for (i = 0; i < 100; i++) {
+		ctrl = ioread32(&reg->ctrl);
+		if (ctrl & done)
+			break;
+		usleep_range(100, 1000);
+	}
+	return ctrl & done ? 0 : -ETIMEDOUT;
+}
+
+static int
+__ptp_ocp_mro50_write_locked(struct ocp_art_osc_reg *reg, u32 ctrl, u32 val)
+{
+	iowrite32(val, &reg->adjust);
+	iowrite32(ctrl, &reg->ctrl);
+
+	return __ptp_ocp_mro50_wait_cmd(reg, MRO50_CTRL_ADJUST_CMD);
+}
+
+static int
+__ptp_ocp_mro50_read_locked(struct ocp_art_osc_reg *reg, u32 ctrl, u32 *val)
+{
+	int err;
+
+	iowrite32(ctrl, &reg->ctrl);
+	err = __ptp_ocp_mro50_wait_cmd(reg, MRO50_CTRL_READ_DONE);
+	if (!err)
+		*val = ioread32(&reg->value);
+
+	return err;
+}
+
+static int
+ptp_ocp_mro50_read(struct ptp_ocp *bp, u32 ctrl, u32 *val)
+{
+	int err;
+
+	mutex_lock(&bp->mutex);
+	err = __ptp_ocp_mro50_read_locked(bp->osc, ctrl, val);
+	mutex_unlock(&bp->mutex);
+
+	return err;
+}
+
+static int
+ptp_ocp_mro50_write(struct ptp_ocp *bp, u32 ctrl, u32 val)
+{
+	int err;
+
+	mutex_lock(&bp->mutex);
+	err = __ptp_ocp_mro50_write_locked(bp->osc, ctrl, val);
+	mutex_unlock(&bp->mutex);
+
+	return err;
+}
+
+static long
+ptp_ocp_mro50_ioctl(struct file *file, unsigned cmd, unsigned long arg)
+{
+	struct miscdevice *mro50 = file->private_data;
+	struct ptp_ocp *bp = container_of(mro50, struct ptp_ocp, mro50);
+	u32 val;
+	int err;
+
+	switch (cmd) {
+	case MRO50_READ_FINE:
+		err = ptp_ocp_mro50_read(bp, MRO50_OP_READ_FINE, &val);
+		break;
+	case MRO50_READ_COARSE:
+		err = ptp_ocp_mro50_read(bp, MRO50_OP_READ_COARSE, &val);
+		break;
+	case MRO50_READ_TEMP:
+		val = ioread32(&bp->osc->temp);
+		err = 0;
+		break;
+	case MRO50_READ_CTRL:
+		val = ioread32(&bp->osc->ctrl);
+		err = 0;
+		break;
+	case MRO50_ADJUST_FINE:
+		if (get_user(val, (u32 __user *)arg))
+			return -EFAULT;
+		return ptp_ocp_mro50_write(bp, MRO50_OP_ADJUST_FINE, val);
+	case MRO50_ADJUST_COARSE:
+		if (get_user(val, (u32 __user *)arg))
+			return -EFAULT;
+		return ptp_ocp_mro50_write(bp, MRO50_OP_ADJUST_COARSE, val);
+	case MRO50_SAVE_COARSE:
+		mutex_lock(&bp->mutex);
+		iowrite32(val, &bp->osc->ctrl);
+		mutex_unlock(&bp->mutex);
+		return 0;
+	default:
+		return -ENOTTY;
+	}
+
+	if (!err && put_user(val, (int __user *)arg))
+		err = -EFAULT;
+
+	return err;
+}
+
+const struct file_operations ptp_ocp_mro50_fops = {
+	.owner =		THIS_MODULE,
+	.unlocked_ioctl =	ptp_ocp_mro50_ioctl,
+};
+
+static void
+ptp_ocp_unregister_mro50(struct miscdevice *mro50)
+{
+	struct ptp_ocp *bp = container_of(mro50, struct ptp_ocp, mro50);
+
+	iowrite32(0, &bp->osc->ctrl);
+
+	misc_deregister(mro50);
+	kfree(mro50->name);
+}
+
+static int
+ptp_ocp_register_mro50(struct ptp_ocp *bp)
+{
+	struct miscdevice *mro50 = &bp->mro50;
+	char *name;
+	int len;
+	int err;
+
+	len = strlen("mro50.X") + 1;
+
+	name = kmalloc(len, GFP_KERNEL);
+	if (!name)
+		return -ENOMEM;
+	snprintf(name, len, "mro50.%d", bp->id);
+
+	mro50->minor = MISC_DYNAMIC_MINOR;
+	mro50->fops = &ptp_ocp_mro50_fops;
+	mro50->name = name;
+
+	err = misc_register(mro50);
+	if (err)
+		goto out;
+
+	iowrite32(MRO50_CTRL_ENABLE, &bp->osc->ctrl);
+
+	return 0;
+
+out:
+	kfree(name);
+	return err;
+}
+
+/* ART specific board initializers; last "resource" registered. */
+static int
+ptp_ocp_art_board_init(struct ptp_ocp *bp, struct ocp_resource *r)
+{
+	return ptp_ocp_register_mro50(bp);
 }
 
 static int
@@ -1594,6 +1794,10 @@ ptp_ocp_procfs_complete(struct ptp_ocp *bp)
 		sprintf(buf, "/dev/ttyS%d", bp->mac_port);
 		proc_symlink("ttyMAC", bp->proc, buf);
 	}
+	if (bp->mro50.name) {
+		sprintf(buf, "/dev/%s", bp->mro50.name);
+		proc_symlink("mro50", bp->proc, buf);
+	}
 	sprintf(buf, "/dev/ptp%d", ptp_clock_index(bp->ptp));
 	proc_symlink("ptp", bp->proc, buf);
 
@@ -1675,6 +1879,8 @@ ptp_ocp_detach(struct ptp_ocp *bp)
 		platform_device_unregister(bp->i2c_osc);
 	if (bp->i2c_clk)
 		clk_hw_unregister_fixed_rate(bp->i2c_clk);
+	if (bp->mro50.name)
+		ptp_ocp_unregister_mro50(&bp->mro50);
 	if (bp->n_irqs)
 		pci_free_irq_vectors(bp->pdev);
 	if (bp->ptp)
@@ -1704,6 +1910,7 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 
 	bp->ptp_info = ptp_ocp_clock_info;
 	spin_lock_init(&bp->lock);
+	mutex_init(&bp->mutex);
 	bp->gps_port = -1;
 	bp->mac_port = -1;
 	bp->id = -1;
