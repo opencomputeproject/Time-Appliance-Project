@@ -357,7 +357,7 @@ struct ocp_art_osc_reg {
 #define MRO50_OP_READ_COARSE	(MRO50_CMD_READ | MRO50_CTRL_READ_COARSE)
 #define MRO50_OP_ADJUST_FINE	MRO50_CMD_ADJUST
 #define MRO50_OP_ADJUST_COARSE	(MRO50_CMD_ADJUST | MRO50_CTRL_ADJUST_COARSE)
-
+#define MRO50_OP_SAVE_COARSE	(MRO50_CTRL_ENABLE | MRO50_CTRL_SAVE_COARSE)
 
 struct ocp_art_pps_reg {
 	u32	enable;
@@ -1599,7 +1599,7 @@ ptp_ocp_mro50_ioctl(struct file *file, unsigned cmd, unsigned long arg)
 		return ptp_ocp_mro50_write(bp, MRO50_OP_ADJUST_COARSE, val);
 	case MRO50_SAVE_COARSE:
 		mutex_lock(&bp->mutex);
-		iowrite32(val, &bp->osc->ctrl);
+		iowrite32(MRO50_OP_SAVE_COARSE, &bp->osc->ctrl);
 		mutex_unlock(&bp->mutex);
 		return 0;
 	default:
