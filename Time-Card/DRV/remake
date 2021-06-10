@@ -26,7 +26,7 @@ fi
 
 make -C $KDIR M=$PWD
 
-if [ $INSTALL ]; then
+if [ $INSTALL == 1 ]; then
     ln -sf ${PWD}/ptp_ocp.ko /lib/modules/${KVER}
     depmod -a
 fi
