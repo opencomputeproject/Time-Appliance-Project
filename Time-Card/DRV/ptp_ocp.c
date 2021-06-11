@@ -369,7 +369,7 @@ struct ocp_phase_reg {
 	u32	phase_error;
 	u32	phase_offset;
 	u32	enable;
-	u32	__pad1[8];
+	u32	__pad1[7];
 	u32	intr;
 };
 
@@ -604,16 +604,12 @@ ptp_ocp_adjphase(struct ptp_clock_info *ptp_info, s32 phase_ns)
 	struct ptp_ocp *bp = container_of(ptp_info, struct ptp_ocp, ptp_info);
 	struct ocp_phase_reg __iomem *reg = bp->phasemeter->mem;
 	unsigned long flags;
-	s32 correction;
 
 	if (!bp->phasemeter)
 		return -EOPNOTSUPP;
 
-	/* XXX this may not be right... convert to 5ns units */
-	correction = div_s64(phase_ns, 5);
-
 	spin_lock_irqsave(&bp->lock, flags);
-	iowrite32(correction, &reg->phase_offset);
+	iowrite32(phase_ns, &reg->phase_offset);
 	spin_unlock_irqrestore(&bp->lock, flags);
 
 	return 0;
@@ -1260,13 +1256,14 @@ ptp_ocp_phase_irq(int irq, void *priv)
 	struct ptp_ocp_ext_src *ext = priv;
 	struct ocp_phase_reg __iomem *reg = ext->mem;
 	struct ptp_clock_event ev;
-	u32 phase_error;
+	s32 phase_error;
 
 	phase_error = ioread32(&reg->phase_error);
 	if (phase_error > 500000000) {
 		iowrite32(0, &reg->phase_error);
 		phase_error = 0;
 	}
+
 
 #ifdef PTP_CLOCK_EXTTSUSR
 	ev.type = PTP_CLOCK_EXTTSUSR;
@@ -1276,8 +1273,7 @@ ptp_ocp_phase_irq(int irq, void *priv)
 #else
 	ev.type = PTP_CLOCK_EXTTS;
 	ev.index = ext->info->index;
-	ev.pps_times.ts_real.tv_sec = 0;
-	ev.pps_times.ts_real.tv_nsec = phase_error;
+	ev.timestamp = phase_error;
 #endif
 
 	ptp_clock_event(ext->bp->ptp, &ev);
