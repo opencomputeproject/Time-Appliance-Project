@@ -22,26 +22,12 @@
       1. [PPS In](#PPS-In)
       1. [Hardware timestamps](#Hardware-timestamps)
    1. [Time Card](#Time-Card-1)
-      1. [Form Factor](#Form-Factor)
-      1. [GNSS](#GNSS)
-         1. [Receiver](#Receiver)
-         1. [Security](#Security)
-      1. [Clock](#Clock)
-      1. [Bridge](#example)
-         1. [Hardware Implementation](#Hardware-Implementation)
-         1. [Software Implementation](#Software-Implementation)
-      1. [Interfaces](#Interfaces)
-         1. [LED](#LED)
 1. [License](#License)
 
 ## List of images
 List Of Images | Description
 ------------ | -------------
 [Figure 1](#figure-1) | OTS Block Diagram
-[Figure 2](#figure-2) | GNSS Receiver
-[Figure 3](#figure-3) | Atomic Clock Example
-[Figure 4](#figure-4) | Time Card Block Diagram
-[Figure 5](#figure-5) | Bridge Block Diagram
 
 
 ## Abbreviations
@@ -97,6 +83,8 @@ In general, the OTS is divided into 3 HW components:
 2. Commodity NIC 
 3. Time Card 
 
+![Open Grandmaster System Diagram](Time-Card/images/overall.png)
+
 The philosophy behind this fragmentation is very clear, and each decision, modification that will be made, must look-out to this philosophy:
 
 * COTS servers keep their “value for money” due to huge market requirements. They are usually updated with the latest OS version, security patches, and newer technology, faster than HW appliances. 
@@ -130,6 +118,7 @@ We've tested and proved it working with the following spec:
   * RAM. At least 8 GiB of RAM. 64 is preferred
   * Riser. Default riser will work. 2x PCIe: x8 and x16
 ### Software
+Please detailed [software description](https://github.com/opencomputeproject/Time-Appliance-Project/tree/master/Software) document
 * Linux operating system with the [ocp_ptp driver](https://github.com/opencomputeproject/Time-Appliance-Project/tree/master/Time-Card/DRV) (included in Linux kernel 5.12 and newer). Driver may require vt-d CPU flag enabled in BIOS
 * NTP server - [Chrony](https://github.com/mlichvar/chrony)/NTPd reading `/dev/ptpX` of the Time Card 
 * PTP server - [ptp4u](https://github.com/facebookincubator/ptp) or [ptp4l](https://github.com/richardcochran/linuxptp) reading `/dev/ptpX` of the NIC
@@ -175,107 +164,16 @@ NIC should timestamp all PPP egress packets.
 
 Examples:
 * [NVIDIA ConnectX-6 Dx](https://www.mellanox.com/products/ethernet-adapters/connectx-6-dx)
-        
 
 ## Time Card
-<a id="Figure-1">![OTS Block Diagram](https://user-images.githubusercontent.com/4749052/94845761-0c7a4d00-0418-11eb-86f6-6c93f649b8de.png)</a>
+Please see [Time Card details architecture](https://github.com/opencomputeproject/Time-Appliance-Project/tree/master/Time-Card) document or simply visit www.timingcard.com.
+<a id="Figure-2">![OTS Block Diagram](https://user-images.githubusercontent.com/4749052/94845761-0c7a4d00-0418-11eb-86f6-6c93f649b8de.png)</a>
 
-<p align="center">Figure 1. OTS Block Diagram</p>
+<p align="center">Figure 2. OTS Block Diagram</p>
 
-General Idea is this card will be connected via PCIe to the server and provide Time Of Day (TOD) via /dev/ptpX interface. Using this interface ptp4l will continuously synchronize PHC on the network card from the atomic clock on the Time Card. This provides precision &lt; 1us.
+General Idea is this card will be connected via PCIe to the server and provide Time Of Day (TOD) via `/dev/ptpX` interface. Using this interface ptp4l will continuously synchronize PHC on the network card from the atomic clock on the Time Card. This provides precision < 1us.
 
 For the extremely high precision 1PPS output of the Time Card will be connected to the 1PPS input of the NIC, providing &lt;100ns precision. 
-
-### Form Factor
-* Standard PCIe Stand-up Card
-* Single Slot - Passive Cooling Solution
-
-### GNSS
-#### Receiver
-The GNSS receiver can be a product from ublock or any other vendor as long as it provides PPS output and the TOD using any suitable format.
-
-This is the recommended module:  **u-blox LEA-M8T-0-10 concurrent GNSS timing module**
-
-
-<a id="Figure-2">![GNSS Receiver](https://user-images.githubusercontent.com/4749052/94846436-0b95eb00-0419-11eb-9d20-f543b65a0ea8.png)</a>
-
-<p align="center">Figure 2. GNSS Receiver</p>
-
-#### Security
-There are 2 main attack vectors on GNSS receiver
-#### Jamming
-Jamming is the simplest form of attack. In order to keep operations while under attack the most reliable approach is to perform a long run holdover.  
-See more about holdover in the [clock](#Clock) section.
-
-#### Spoofing
-GNSS authenticity is relevant today. A mechanism to protect against over-the-air spoofing incidents is desirable.
-With a special equipment it is possible to simulate GNSS constellation and spoof the receiver. Basic principals to protect against such attack:
-* Use high-quality GNSS receivers which verify packet signature
-* Disciplining implementations see more in [bridge](#bridge) section should protect against sudden jumps in time and space. For the datacenter use cases jump in space could be completely forbidden.
-
-### Clock
-GNSS requires "clear sky" to function properly. Moreover there were several historical events of a short term time jumps by some GNSS constallations.
-Because of reliability and in combination with the security concenrns an additional holdover should be performed by [high quality](https://www.meinbergglobal.com/english/specs/gpsopt.htm) XO. An example could be AC, OCXO, TCXO etc.
-In oreder to perform sustainable operation we recommend to use an AC with a holdover ± 1us or HQ OCXO with a holdover ± 22 µs.
-
-Atomic clock examples:
-* [SA.3Xm](https://www.microsemi.com/product-directory/embedded-clocks-frequency-references/3825-miniature-atomic-clock-mac?fbclid=IwAR26trWBnHtV6ydBpKiViv3qS4jUpHAtQXJumUusIMB_RnCGclg2Qbd6lSc)
-* [mRO-50](https://www.orolia.com/products/atomic-clocks-oscillators/mro-50)
-* [SA.45s](https://www.microsemi.com/product-directory/embedded-clocks-frequency-references/5207-space-csac)
-
-<a id="Figure-3">![Atomic Clock Example](https://user-images.githubusercontent.com/4749052/98942099-6bd27f00-24e5-11eb-868a-a813986e5e94.png)</a>
-
-<p align="center">Figure 3. Atomic Clock Example</p>
-
-OCXO examples:
-* [SiT5711](https://www.sitime.com/products/stratum-3e-ocxos/sit5711)
-
-TCXO examples:
-* [SiT5356](https://www.sitime.com/products/super-tcxo/sit5356)
-
-### Bridge
-
-Bridge between GNSS receiver and Atomic clock can be implemented using software or hardware solutions. The hardware implementation is preferred and is our end goal.
-
-#### Hardware Implementation
-Here is one of the examples of hardware implementations.
-* FPGA is responsible for most of the functionality
-* Exposed /dev/phc and /dev/pps are read by open source software such as ptp4l and chronyd
-
-<a id="Figure-4">![Time Card - Block Diagram](https://user-images.githubusercontent.com/4749052/95886452-8266a880-0d76-11eb-82b1-950b4a30d60b.png)</a>
-
-<p align="center">Figure 4. Time Card Block Diagram</p>
-
-<a id="Figure-5">![Bridge Block Diagram](https://user-images.githubusercontent.com/4749052/94845452-9aa20380-0417-11eb-9901-ac25b5109ec7.png)</a>
-
-<p align="center">Figure 5. Bridge Block Diagram</p>
-
-#### Software Implementation
-Software implementation still requires most of the components, however the communication between components is done with user space software:
-* GPSd exposing /dev/ppsY and provides TOD via SHM
-* FPGA board reads 1 PPS from different sources
-* Host daemon monitors the offset and steers oscillator
-* phc2sys can copy data between clocks, including between GPSd and Atomic and then Atomic to PHC on the NIC
-
-### Interfaces
-* PCIe
-    * PCIe x1 (18 pins) generation 3.0 or above
-    * Generic, supporting multiple OS versions
-    * Exposes PHC device in Linux (/dev/ptpX) as well as PPS (/dev/ppsY)
-    * Exposes leap second indicator to a shared memory segment read by chrony/ptp4l
-* 1PPS / 10MHz SMA output
-* 1PPS / 10MHz SMA input
-* GNSS Antenna SMA input
-
-#### LED
-
-LED should be used to provide externally visible status information of the timing card. 
-
-For example:
-* Off - card is not powered or not properly fitted
-* Solid green - card is powered, GNSS ok, 1PPS/10MHz output ok
-* Flashing green - card is in warm-up, acquiring satellites
-* Solid red - alarm / malfunction
 
 # License
 OCP encourages participants to share their proposals, specifications and designs with the community. This is to promote openness and encourage continuous and open feedback. It is important to remember that by providing feedback for any such documents, whether in written or verbal form, that the contributor or the contributor's organization grants OCP and its members irrevocable right to use this feedback for any purpose without any further obligation. 
