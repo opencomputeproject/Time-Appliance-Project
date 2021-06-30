@@ -1,5 +1,8 @@
 # Open Time Server
 
+The Open Time Server (OTS) is an Open, Scalable and Validated reference architecture that can be deployed in Data Centers or in an edge environments.
+ 
+
 ![GitHub Logo](https://github.com/opencomputeproject/Time-Appliance-Project/blob/master/Time-Card/images/OCP%20logo.jpg?raw=true)
 
 ## Table of Contents
@@ -71,8 +74,6 @@ The current state-of-the-art Open Time Server implementations suffer from a few 
 * Development cycles and the effort needed to add new features are long and expensive
 * It doesn’t rely on open-source software
 * The accuracy/stability grades aren’t in line with DC requirements 
-
-This document describes an open architecture of a Open Time Server, that could eventually be deployed either in a DC or in an edge environment. 
 
 
 # High-Level Architecture
