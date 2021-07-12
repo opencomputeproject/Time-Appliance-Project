@@ -113,11 +113,18 @@ The philosophy behind this fragmentation is very clear, and each decision, modif
 ## COTS Server
 ### Hardware
 Most of the general purpose hardware can be used.
-We've tested and proved it working with the following spec:  
+
+We've tested and proved it working with the following platform spec:  
 * HPE ProLiant DL380 Gen10  
   * CPU. Synchronization between multiple CPUs will add an extra offset. 1 CPU is preferred
   * RAM. At least 8 GiB of RAM. 64 is preferred
   * Riser. Default riser will work. 2x PCIe: x8 and x16
+
+Similar platforms: 
+* SuperMicro 6019U-TRT - single or dual CPU
+  * A single CPU leavesis preferred, but leaves only x8 PCIe connectivity 
+* SuperMicro 5019GP-TT - single socket with maximum throughput 
+
 ### Software
 Please detailed [software description](https://github.com/opencomputeproject/Time-Appliance-Project/tree/master/Software) document
 * Linux operating system with the [ocp_ptp driver](https://github.com/opencomputeproject/Time-Appliance-Project/tree/master/Time-Card/DRV) (included in Linux kernel 5.12 and newer). Driver may require vt-d CPU flag enabled in BIOS
