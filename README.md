@@ -126,9 +126,11 @@ Please detailed [software description](https://github.com/opencomputeproject/Tim
   * [phc2sys](https://github.com/richardcochran/linuxptp) to copy clock values from the Time Card to the NIC
 ## NIC
 ### Form-Factor
-* Standard PCIe Stand-up HHHL Half-Height, Half-Length -or- OCP NIC 3.0 [https://www.opencompute.org/wiki/Server/Mezz] 
+* Standard PCIe Stand-up HHHL Half-Height, Half-Length 
+-or- OCP NIC 3.0 [https://www.opencompute.org/wiki/Server/Mezz] 
 * Single Slot - Passive Cooling Solution
-* Support for Standard PCIe Tall and Short brackets -or- OCP NIC 3.0 ejector types
+* Support for Standard PCIe Tall and Short brackets 
+-or- OCP NIC 3.0 ejector types
 
 ### PCIe Interface
 * PCIe Gen3.0/Gen4.0 X n lanes on Gold-fingers, where n = at least 8
