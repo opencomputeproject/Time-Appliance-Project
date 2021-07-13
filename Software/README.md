@@ -10,7 +10,7 @@
 
 ## Driver
 This repository contains the [ocp_ptp driver](https://github.com/opencomputeproject/Time-Appliance-Project/tree/master/Time-Card/DRV) (included in Linux kernel 5.12 and newer). Driver may require vt-d CPU flag enabled in BIOS.
-To compile the driver manually just run `./remake` and then load it with `modprobe ocp_ptp`.
+To compile the driver manually just run `./remake` and then load it with `modprobe ptp_ocp`.
 
 OCP Time Appliance can be used with any NTP/PTP server.  
 Here are couple of examples and configs:
