@@ -86,9 +86,8 @@ In general, the OTS is divided into 3 HW components:
 2. Commodity NIC 
 3. Time Card 
 
-![Open Time Server System Diagram](Time-Card/images/overall.png)
+<a id="Figure-1">![Open Time Server System Diagram](Time-Card/images/overall.png)</a>
 <p align="center">Figure 1. OTS system diagram</p>
-
 The philosophy behind this fragmentation is very clear, and each decision, modification that will be made, must look-out to this philosophy:
 
 * COTS servers keep their “value for money” due to huge market requirements. They are usually updated with the latest OS version, security patches, and newer technology, faster than HW appliances. 
@@ -96,10 +95,10 @@ The philosophy behind this fragmentation is very clear, and each decision, modif
 * Timecard will be the smallest (conceptually) possible HW board, which will provide the GNSS signal input and stable frequency input. Isolating these functions in a timecard will allow OTS to choose the proper timecard for their needs (accuracy, stability, cost, etc) and remain with the same SW, interface, and architecture.
 
 <a id="Figure-2">![OTS Block Diagram](Time-Card/images/OTS_concept.png)</a>
+<p align="center">Figure 2. OTS Concept</p>
 General Idea is the Time Card is connected via PCIe to the server and provides Time Of Day (TOD) via `/dev/ptpX` interface.  
 Using this interface `phc2sys` continuously synchronizes PHC on the network card from the atomic clock on the Time Card. This provides precision < 1us.  
 For the extremely high precision 1PPS output of the Time Card will be connected to the 1PPS input of the NIC, providing <100ns precision. 
-<p align="center">Figure 2. OTS Concept</p>
 
 ## Responsibilities and Requirements 
 ### COTS Server
