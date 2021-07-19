@@ -1,10 +1,17 @@
+To save spec as PDF - select text below (including images) -> right click -> Print -> Save as PDF
+
+# Software
+#### Spec revision № 1.0
+This spec outlines the software part of the Open Source Time Appliance,
+including driver, NTP and PTP servers
+
 ## Table of Contents
 1. [Driver](#Driver)
 1. [NTP](#Ntp)
-   1. [Chrony](#Chrony)
-   1. [PTP](#PTP)
-      1. [ptp4u](#ptp4u)
-      1. [linuxptp](#linuxptp)
+   1. [Chrony](#chrony)
+1. [PTP](#PTP)
+   1. [ptp4u](#ptp4u)
+   1. [linuxptp](#linuxptp)
 1. [License](#License)
 
 
