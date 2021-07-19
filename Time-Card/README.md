@@ -42,7 +42,7 @@ Grandmaster is a critical part of a PTP enabled network. It provides accurate ti
 ### Receiver
 The GNSS receiver can be a product from ublock or any other vendor as long as it provides PPS output and the TOD using any suitable format.
 
-This is the recommended module:  **u-blox LEA-M8T-0-10 concurrent GNSS timing module**
+This is the recommended module:  **u-blox LEA-M8T-0-10 concurrent GNSS time module**
 
 
 <a id="Figure-1">![GNSS Receiver](https://user-images.githubusercontent.com/4749052/94846436-0b95eb00-0419-11eb-9d20-f543b65a0ea8.png)</a>
@@ -117,7 +117,7 @@ Software implementation still requires most of the components, however the commu
 
 ### LED
 
-LED should be used to provide externally visible status information of the timing card. 
+LED should be used to provide externally visible status information of the time card. 
 
 For example:
 * Off - card is not powered or not properly fitted
@@ -136,7 +136,7 @@ Compared to "True Time" Time Card is actually off by just +5 to -45ns (50ns ampl
 # Repository content
 
 * Bill of Materials (parts from Digikey)
-* Schematic and PCB of the timing card
+* Schematic and PCB of the time card
 * Driver (Kernel Module) CentOS 8
 * CAD files for the custom PCIe bracket 
 
