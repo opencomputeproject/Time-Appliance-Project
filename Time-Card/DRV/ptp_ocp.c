@@ -1700,6 +1700,7 @@ out:
 static int
 ptp_ocp_art_board_init(struct ptp_ocp *bp, struct ocp_resource *r)
 {
+	bp->flash_start = 0x1000000;
 	return ptp_ocp_register_mro50(bp);
 }
 
