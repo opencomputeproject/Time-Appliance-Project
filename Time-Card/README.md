@@ -44,10 +44,10 @@ Grandmaster is a critical part of a PTP enabled network. It provides accurate ti
 ### Receiver
 The GNSS receiver can be a product from ublock or any other vendor as long as it provides PPS output and the TOD using any suitable format.
 
-This is the recommended module:  **u-blox LEA-M8T-0-10 concurrent GNSS time module**
+This is the recommended module:  **u-blox RCB-F9T GNSS time module**
 
 
-<a id="Figure-1">![GNSS Receiver](https://user-images.githubusercontent.com/4749052/94846436-0b95eb00-0419-11eb-9d20-f543b65a0ea8.png)</a>
+<a id="Figure-1">![GNSS Receiver](https://www.u-blox.com/sites/default/files/styles/product_full/public/products/RCB-F9T_PCBVer-C.png)</a>
 
 <p align="center">Figure 1. GNSS Receiver</p>
 
