@@ -137,6 +137,7 @@ Similar platforms:
 * SuperMicro 6019U-TRT - single or dual CPU
   * A single CPU leavesis preferred, but leaves only x8 PCIe connectivity 
 * SuperMicro 5019GP-TT - single socket with maximum throughput 
+* Intel NUC 9 Pro
 
 ### Software
 Please detailed [software description](https://github.com/opencomputeproject/Time-Appliance-Project/tree/master/Software) document
