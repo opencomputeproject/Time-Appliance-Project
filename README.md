@@ -32,8 +32,8 @@ The Open Time Server (OTS) is an Open, Scalable and Validated reference architec
 List Of Images | Description
 ------------ | -------------
 [Figure 1](#figure-1) | Open Time Server System Diagram
-[Figure 2](#figure-2) | OTS Concept
-[Figure 2](#figure-3) | OTS Assembly
+[Figure 2](#figure-2) | Open Time Server Concept
+[Figure 2](#figure-3) | Open Time Server Assembly
 
 ## Abbreviations
 Abbreviation | Description
@@ -87,15 +87,15 @@ In general, the OTS is divided into 3 HW components:
 3. Time Card 
 
 <a id="Figure-1">![Open Time Server System Diagram](Time-Card/images/overall.png)</a>
-<p align="center">Figure 1. OTS system diagram</p>
+<p align="center">Figure 1. Open Time Server System Diagram</p>
 The philosophy behind this fragmentation is very clear, and each decision, modification that will be made, must look-out to this philosophy:
 
 * COTS servers keep their “value for money” due to huge market requirements. They are usually updated with the latest OS version, security patches, and newer technology, faster than HW appliances. 
 * Modern Commodity NICs already support HW timestamp, lead the market with Ethernet and PCIe latest Speeds and Feeds. Modern NIC also supports a wide range of OS versions and comes with a great software ecosystem. NIC + COTS server will allow the OTS to run a full software (and even open source one) PTP and NTP stack. 
 * Timecard will be the smallest (conceptually) possible HW board, which will provide the GNSS signal input and stable frequency input. Isolating these functions in a timecard will allow OTS to choose the proper timecard for their needs (accuracy, stability, cost, etc) and remain with the same SW, interface, and architecture.
 
-<a id="Figure-2">![OTS Block Diagram](Time-Card/images/OTS_concept.png)</a>
-<p align="center">Figure 2. OTS Concept</p>
+<a id="Figure-2">![Open Time Server Concept](Time-Card/images/OTS_concept.png)</a>
+<p align="center">Figure 2. Open Time Server Concept</p>
 General Idea is the Time Card is connected via PCIe to the server and provides Time Of Day (TOD) via `/dev/ptpX` interface.  
 Using this interface `phc2sys` continuously synchronizes PHC on the network card from the atomic clock on the Time Card. This provides precision < 1us.  
 For the extremely high precision 1PPS output of the Time Card will be connected to the 1PPS input of the NIC, providing <100ns precision. 
@@ -120,22 +120,19 @@ For the extremely high precision 1PPS output of the Time Card will be connected 
 
 # Detailed Architecture 
 Real life assembly components can be 
-<a id="Figure-3">![OTS Block Diagram](Time-Card/images/OTS_assembly.png)</a>
-<p align="center">Figure 3. OTS Assembly</p>
+<a id="Figure-3">![Open Time Server Assembly](Time-Card/images/OTS_assembly.png)</a>
+<p align="center">Figure 3. Open Time Server Assembly</p>
 
 ## COTS Server
 ### Hardware
-Most of the general purpose hardware can be used.
+Most of the general purpose hardware can be used.  
+If multi-CPU system is chosen - we recommend connecting the Time Card and the Network Card to the same PCIe lane.  
+Synchronization between multiple CPUs will add an extra offset.  
 
-We've tested and proved it working with the following platform spec:  
-* HPE ProLiant DL380 Gen10  
-  * CPU. Synchronization between multiple CPUs will add an extra offset. 1 CPU is preferred
-  * RAM. At least 8 GiB of RAM. 64 is preferred
-  * Riser. Default riser will work. 2x PCIe: x8 and x16
-
-Similar platforms: 
+We've tested and proved setup is working with the following platform spec:  
+* HPE ProLiant DL380 Gen10
+* OCP Tioga Pass
 * SuperMicro 6019U-TRT - single or dual CPU
-  * A single CPU leavesis preferred, but leaves only x8 PCIe connectivity 
 * SuperMicro 5019GP-TT - single socket with maximum throughput 
 * Intel NUC 9 Pro
 
