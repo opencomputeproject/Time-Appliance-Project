@@ -143,12 +143,12 @@ Please detailed [software description](https://github.com/opencomputeproject/Tim
 * PTP server - [ptp4u](https://github.com/facebookincubator/ptp) or [ptp4l](https://github.com/richardcochran/linuxptp) reading `/dev/ptpX` of the NIC
   * [phc2sys](https://github.com/richardcochran/linuxptp) to copy clock values from the Time Card to the NIC
 ## NIC
+Most of the general purpose hardware can be used.  
+For the improved precision of NTP or PTP there can be extra requirements:
 ### Form-Factor
-* Standard PCIe Stand-up HHHL Half-Height, Half-Length 
--or- OCP NIC 3.0 [https://www.opencompute.org/wiki/Server/Mezz] 
+* Standard PCIe Stand-up HHHL Half-Height, Half-Length -or- [OCP NIC 3.0](https://www.opencompute.org/wiki/Server/Mezz)
 * Single Slot - Passive Cooling Solution
-* Support for Standard PCIe Tall and Short brackets 
--or- OCP NIC 3.0 ejector types
+* Support for Standard PCIe Tall and Short brackets -or- OCP NIC 3.0 ejector types
 
 ### PCIe Interface
 * PCIe Gen3.0/Gen4.0 X n lanes on Gold-fingers, where n = at least 8
