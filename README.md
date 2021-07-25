@@ -17,7 +17,7 @@ This spec can be accessed using http://www.opentimeserver.com
       1. [Network Interface Card](#Network-Interface-Card)
       1. [Time Card](#Time-Card)
 1. [Detailed Architecture](#Detailed-Architecture)
-   1. [COTS Server](#COTS-Server)
+   1. [COTS Server](#COTS-Server-1)
       1. [Hardware](#Hardware)
       1. [Software](#Software)
    1. [NIC](#NIC)
@@ -27,7 +27,6 @@ This spec can be accessed using http://www.opentimeserver.com
       1. [Hardware timestamps](#Hardware-timestamps)
       1. [PPS out](#PPS-out)
       1. [PPS In](#PPS-In)
-
    1. [Time Card](#Time-Card-1)
 1. [License](#License)
 
