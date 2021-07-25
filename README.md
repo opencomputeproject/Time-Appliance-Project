@@ -1,12 +1,14 @@
 *To save spec as PDF - select text below (including images) -> right click -> Print -> Save as PDF*
 # Open Time Server
 #### Spec revision № 1.0
-The Open Time Server (OTS) is an Open, Scalable and Validated reference architecture that can be deployed in Data Centers or in an edge environments.
+The Open Time Server (OTS) is an Open, Scalable and Validated reference architecture that can be deployed in Data Centers or in an edge environments.  
+This spec can be accessed using http://www.opentimeserver.com
  
 
 ![GitHub Logo](https://github.com/opencomputeproject/Time-Appliance-Project/blob/master/Time-Card/images/OCP%20logo.jpg?raw=true)
 
 ## Table of Contents
+1. [List of images](#List-of-images)
 1. [Abbreviations](#Abbreviations)
 1. [General](#General)
 1. [High-Level Architecture](#High-Level-Architecture)
@@ -22,9 +24,10 @@ The Open Time Server (OTS) is an Open, Scalable and Validated reference architec
       1. [Form-Factor](#Form-Factor)
       1. [PCIe Interface](#Pcie-Interface)
       1. [Network Ports](#Network-Ports)
+      1. [Hardware timestamps](#Hardware-timestamps)
       1. [PPS out](#PPS-out)
       1. [PPS In](#PPS-In)
-      1. [Hardware timestamps](#Hardware-timestamps)
+
    1. [Time Card](#Time-Card-1)
 1. [License](#License)
 
@@ -96,6 +99,7 @@ The philosophy behind this fragmentation is very clear, and each decision, modif
 
 <a id="Figure-2">![Open Time Server Concept](Time-Card/images/OTS_concept.png)</a>
 <p align="center">Figure 2. Open Time Server Concept</p>
+
 General Idea is the Time Card is connected via PCIe to the server and provides Time Of Day (TOD) via `/dev/ptpX` interface.  
 Using this interface `phc2sys` continuously synchronizes PHC on the network card from the atomic clock on the Time Card. This provides precision < 1us.  
 For the extremely high precision 1PPS output of the Time Card will be connected to the 1PPS input of the NIC, providing <100ns precision. 
@@ -106,9 +110,9 @@ For the extremely high precision 1PPS output of the Time Card will be connected 
 * PCIe as an interconnect
 * PTM Support
 #### Network Interface Card
-* PPS in/out
-* PTM Support
 * Hardware timestamps
+* [optional] PPS in/out
+* [optional] PTM Support
 * [optional] Time of day tunnel from timecard to SW
 #### Time Card
 * Holdover
@@ -144,7 +148,8 @@ Please detailed [software description](https://github.com/opencomputeproject/Tim
   * [phc2sys](https://github.com/richardcochran/linuxptp) to copy clock values from the Time Card to the NIC
 ## NIC
 Most of the general purpose hardware can be used.  
-For the improved precision of NTP or PTP there can be extra requirements:
+For the improved precision of NTP or PTP there can be extra requirements below.
+
 ### Form-Factor
 * Standard PCIe Stand-up HHHL Half-Height, Half-Length -or- [OCP NIC 3.0](https://www.opencompute.org/wiki/Server/Mezz)
 * Single Slot - Passive Cooling Solution
@@ -155,6 +160,17 @@ For the improved precision of NTP or PTP there can be extra requirements:
 
 ### Network Ports
 * Single or Dual-port Ethernet
+
+### Hardware timestamps 
+NIC should timestamp all ingress packets.  
+Non PTP packets can be batch and have a common TS in the SW descriptor, as long as they are not distant more than TBD nanosecond.  
+NIC should timestamp all PPP egress packets.  
+
+* PHC
+* PTM 
+* 1PPS input
+* [optional] 10MHz input which can be used as frequency input to the TSU unit 
+* [optional] Multi-host support
 
 ### PPS out
 * PPS Out Rise/Fall Time < 5 nano Sec 
@@ -168,19 +184,6 @@ For the improved precision of NTP or PTP there can be extra requirements:
 * PPS In Jitter < 250 fento Sec
 * PPS In Impedance 	= 50 Ohm
 * PPS In frequency 1Hz - 10MHz
-
-
-### Hardware timestamps 
-
-NIC should timestamp all ingress packets.  
-Non PTP packets can be batch and have a common TS in the SW descriptor, as long as they are not distant more than TBD nanosecond.  
-NIC should timestamp all PPP egress packets.  
-
-* PHC
-* PTM 
-* 1PPS input
-* [optional] 10MHz input which can be used as frequency input to the TSU unit 
-* [optional] Multi-host support
 
 Examples:
 * [NVIDIA ConnectX-6 Dx](https://www.mellanox.com/products/ethernet-adapters/connectx-6-dx)
