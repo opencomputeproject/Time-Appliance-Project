@@ -88,7 +88,7 @@ In general, the OTS is divided into 3 HW components:
 2. Commodity NIC 
 3. Time Card 
 
-<a id="Figure-1">![Open Time Server System Diagram](Time-Card/images/overall.png)</a>
+<a id="Figure-1">![Open Time Server System Diagram](/Time-Card/images/overall.png)</a>
 <p align="center">Figure 1. Open Time Server System Diagram</p>
 The philosophy behind this fragmentation is very clear, and each decision, modification that will be made, must look-out to this philosophy:
 
@@ -96,7 +96,7 @@ The philosophy behind this fragmentation is very clear, and each decision, modif
 * Modern Commodity NICs already support HW timestamp, lead the market with Ethernet and PCIe latest Speeds and Feeds. Modern NIC also supports a wide range of OS versions and comes with a great software ecosystem. NIC + COTS server will allow the OTS to run a full software (and even open source one) PTP and NTP stack. 
 * Timecard will be the smallest (conceptually) possible HW board, which will provide the GNSS signal input and stable frequency input. Isolating these functions in a timecard will allow OTS to choose the proper timecard for their needs (accuracy, stability, cost, etc) and remain with the same SW, interface, and architecture.
 
-<a id="Figure-2">![Open Time Server Concept](Time-Card/images/OTS_concept.png)</a>
+<a id="Figure-2">![Open Time Server Concept](/Time-Card/images/OTS_concept.png)</a>
 <p align="center">Figure 2. Open Time Server Concept</p>
 
 General Idea is the Time Card is connected via PCIe to the server and provides Time Of Day (TOD) via `/dev/ptpX` interface.  
@@ -123,7 +123,7 @@ For the extremely high precision 1PPS output of the Time Card will be connected 
 
 # Detailed Architecture 
 Real life assembly components can be 
-<a id="Figure-3">![Open Time Server Assembly](Time-Card/images/OTS_assembly.png)</a>
+<a id="Figure-3">![Open Time Server Assembly](/Time-Card/images/OTS_assembly.png)</a>
 <p align="center">Figure 3. Open Time Server Assembly</p>
 
 ## COTS Server
