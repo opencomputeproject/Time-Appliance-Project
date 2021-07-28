@@ -11,10 +11,10 @@ including driver, NTP and PTP servers
    1. [Chrony](#chrony)
 1. [PTP](#PTP)
    1. [Server](#server)
-     1. [ptp4u](#ptp4u)
-     1. [linuxptp](#linuxptp)
+      1. [ptp4u](#ptp4u)
+      1. [linuxptp](#linuxptp)
    1. [Monitoring](#monitoring)
-     1. [ptpcheck](#ptpcheck)
+      1. [ptpcheck](#ptpcheck)
 1. [License](#License)
 
 
