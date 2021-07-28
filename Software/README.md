@@ -7,11 +7,14 @@ including driver, NTP and PTP servers
 
 ## Table of Contents
 1. [Driver](#Driver)
-1. [NTP](#Ntp)
+1. [NTP](#NTP)
    1. [Chrony](#chrony)
 1. [PTP](#PTP)
-   1. [ptp4u](#ptp4u)
-   1. [linuxptp](#linuxptp)
+   1. [Server](#server)
+     1. [ptp4u](#ptp4u)
+     1. [linuxptp](#linuxptp)
+   1. [Monitoring](#monitoring)
+     1. [ptpcheck](#ptpcheck)
 1. [License](#License)
 
 
@@ -36,16 +39,40 @@ hwtimestamp *
 ## PTP
 Keep in mind synchronization of PHC between time card and the Network card is required.
 The example shown is for unicast server only.
-### ptp4u
+### Server
+#### ptp4u
 https://github.com/facebookincubator/ptp
 ```
 $ /usr/local/bin/ptp4u -iface eth1
 ```
 
-### linuxptp
+#### linuxptp
 https://sourceforge.net/projects/linuxptp/
 ```
 $ /sbin/ptp4l -f /etc/ptp4l.conf -i eth0 -m
+```
+### Monitoring
+#### ptpcheck
+https://github.com/facebookincubator/ptp
+ptpcheck is the tool allowing to debug ptp server and a client.  
+Server:
+```
+$ /usr/local/bin/ptpcheck trace -S <server>
+INFO[0000] using ClockIdentity 1234dd.fffe.5678aa, talking to <server> using Two-Step Unicast PTPv2 protocol
+...
+Collected measurements:
+      N|       0 |       1 |       2 |       3 |
+  delay| 7.907µs | 7.903µs | 7.923µs | 7.907µs |
+ offset| 9.558µs | 9.648µs | 9.689µs | 9.941µs |
+INFO[0015] done
+```
+Client:
+```
+$ /usr/local/bin/ptpcheck diag
+[ OK ] GM is present
+[ OK ] Period since last ingress is 600.804116ms, we expect it to be within 1s
+[ OK ] GM offset is -71ns, we expect it to be within 250µs
+[ OK ] GM mean path delay is 3.622µs, we expect it to be within 100ms
 ```
 
 # License
