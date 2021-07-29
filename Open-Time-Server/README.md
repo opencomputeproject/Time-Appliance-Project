@@ -35,7 +35,7 @@ List Of Images | Description
 ------------ | -------------
 [Figure 1](#figure-1) | Open Time Server System Diagram
 [Figure 2](#figure-2) | Open Time Server Concept
-[Figure 2](#figure-3) | Open Time Server Assembly
+[Figure 3](#figure-3) | Open Time Server Assembly
 
 ## Abbreviations
 Abbreviation | Description
