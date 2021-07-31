@@ -20,7 +20,21 @@ including driver, NTP and PTP servers
 
 ## Driver
 This repository contains the [ocp_ptp driver](https://github.com/opencomputeproject/Time-Appliance-Project/tree/master/Time-Card/DRV) (included in Linux kernel 5.12 and newer). Driver may require vt-d CPU flag enabled in BIOS.
-To compile the driver manually just run `./remake` and then load it with `modprobe ocp_ptp`.
+To compile the driver manually just run `./remake` and then load it with `modprobe ocp_ptp`.  
+It will expose all the devices like this:
+
+```
+$ ls -l /proc/driver/ocp0/
+total 0
+-rw-r--r-- 1 root root  0 Jul 30 03:24 clock_source
+-r--r--r-- 1 root root  0 Jul 30 03:24 gps_state
+lrwxrwxrwx 1 root root 26 Jul 30 03:24 i2c -> /sys/bus/i2c/devices/i2c-0
+lrwxrwxrwx 1 root root  9 Jul 30 03:24 pps -> /dev/pps2
+lrwxrwxrwx 1 root root  9 Jul 30 03:24 ptp -> /dev/ptp2
+-r--r--r-- 1 root root  0 Jul 30 03:24 serial
+lrwxrwxrwx 1 root root 10 Jul 30 03:24 ttyGPS -> /dev/ttyS2
+lrwxrwxrwx 1 root root 10 Jul 30 03:24 ttyMAC -> /dev/ttyS3
+```
 
 OCP Time Appliance can be used with any NTP/PTP server.  
 Here are couple of examples and configs:
@@ -30,8 +44,9 @@ NTP servers usually can work directly with PHC
 https://github.com/mlichvar/chrony
 ```
 $ cat /etc/chrony.conf
-refclock PHC /dev/ptp1 poll 0 trust
+refclock PHC /dev/ptp2 tai poll 0 trust
 ...
+leapsectz right/UTC
 allow all
 hwtimestamp *
 ```
