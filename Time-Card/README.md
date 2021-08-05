@@ -1,10 +1,10 @@
 To save spec as PDF - select text below (including images) -> right click -> Print -> Save as PDF
-# Time Card (www.timingcard.com)
+# Time Card
 #### Spec revision № 1.0
+Time Card is the heart of the [Open Time Server](http://www.opentimeserver.com) Project.  
+This spec can be accessed using http://www.timingcard.com  
 
 ![Time Card](images/timingcard.png)
-Time Card is the heart of the Open Time Server Project. 
-You can find more info at www.ocptap.com
 
 ## Table of Contents
 1. [General](#General)
