@@ -107,7 +107,7 @@ For the extremely high precision 1PPS output of the Time Card will be connected 
 ### COTS Server
 * Run commodity OS
 * PCIe as an interconnect
-* PTM Support
+* [optional] PTM Support
 #### Network Interface Card
 * Hardware timestamps
 * [optional] PPS in/out
@@ -129,6 +129,7 @@ Real life assembly components can be
 ## COTS Server
 ### Hardware
 Most of the general purpose hardware can be used.  
+vt-d CPU support is required.  
 If multi-CPU system is chosen - we recommend connecting the Time Card and the Network Card to the same PCIe lane.  
 Synchronization between multiple CPUs will add an extra offset.  
 
