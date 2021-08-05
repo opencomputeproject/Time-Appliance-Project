@@ -1,10 +1,10 @@
 # Driver
 
 Driver is based on a kernel module for CentOS and Ubunutu. 
-Kernel 5.2+ is recommended
+Kernel 5.12+ is recommended
 
 ## Instruction
-
+Make sure vt-d option is enabled in BIOS.   
 Run the remake followed by modprobe ptp_ocp
 
 ## Outcome
