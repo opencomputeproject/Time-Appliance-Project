@@ -9,7 +9,7 @@ Run the remake followed by modprobe ptp_ocp
 
 ## Outcome
 ```
-$ ls -g /sys/class/timecard/ocp1/
+$ ls -g /sys/class/timecard/ocp0/
 total 0
 -r--r--r--. 1 root 4096 Aug  3 19:49 available_clock_sources
 -rw-r--r--. 1 root 4096 Aug  3 19:49 clock_source
@@ -24,6 +24,16 @@ lrwxrwxrwx. 1 root    0 Aug  3 19:49 subsystem -> ../../../../../../class/timeca
 lrwxrwxrwx. 1 root    0 Aug  3 19:49 ttyGNSS -> ../../tty/ttyS7/
 lrwxrwxrwx. 1 root    0 Aug  3 19:49 ttyMAC -> ../../tty/ttyS8/
 -rw-r--r--. 1 root 4096 Aug  3 19:39 uevent
+```
+
+The main resource directory is accessed through the /sys/class/timecard/ocpN directory, which provides links to the various TimeCard resources.  The device links can easily be used in scripts:
+
+```
+  tty=$(basename $(readlink /sys/class/timecard/ocp0/ttyGNSS))
+  ptp=$(basename $(readlink /sys/class/timecard/ocp0/ptp))
+
+  echo "/dev/$tty"
+  echo "/dev/$ptp"
 ```
 
 After successfully loading the driver, one will see:
