@@ -24,16 +24,21 @@ To compile the driver manually just run `./remake` and then load it with `modpro
 It will expose all the devices like this:
 
 ```
-$ ls -l /proc/driver/ocp0/
+$ ls -g /sys/class/timecard/ocp1/
 total 0
--rw-r--r-- 1 root root  0 Jul 30 03:24 clock_source
--r--r--r-- 1 root root  0 Jul 30 03:24 gps_state
-lrwxrwxrwx 1 root root 26 Jul 30 03:24 i2c -> /sys/bus/i2c/devices/i2c-0
-lrwxrwxrwx 1 root root  9 Jul 30 03:24 pps -> /dev/pps2
-lrwxrwxrwx 1 root root  9 Jul 30 03:24 ptp -> /dev/ptp2
--r--r--r-- 1 root root  0 Jul 30 03:24 serial
-lrwxrwxrwx 1 root root 10 Jul 30 03:24 ttyGPS -> /dev/ttyS2
-lrwxrwxrwx 1 root root 10 Jul 30 03:24 ttyMAC -> /dev/ttyS3
+-r--r--r--. 1 root 4096 Aug  3 19:49 available_clock_sources
+-rw-r--r--. 1 root 4096 Aug  3 19:49 clock_source
+lrwxrwxrwx. 1 root    0 Aug  3 19:49 device -> ../../../0000:04:00.0/
+-r--r--r--. 1 root 4096 Aug  3 19:49 gps_sync
+lrwxrwxrwx. 1 root    0 Aug  3 19:49 i2c -> ../../xiic-i2c.1024/i2c-2/
+drwxr-xr-x. 2 root    0 Aug  3 19:49 power/
+lrwxrwxrwx. 1 root    0 Aug  3 19:49 pps -> ../../../../../virtual/pps/pps1/
+lrwxrwxrwx. 1 root    0 Aug  3 19:49 ptp -> ../../ptp/ptp2/
+-r--r--r--. 1 root 4096 Aug  3 19:49 serialnum
+lrwxrwxrwx. 1 root    0 Aug  3 19:49 subsystem -> ../../../../../../class/timecard/
+lrwxrwxrwx. 1 root    0 Aug  3 19:49 ttyGPS -> ../../tty/ttyS7/
+lrwxrwxrwx. 1 root    0 Aug  3 19:49 ttyMAC -> ../../tty/ttyS8/
+-rw-r--r--. 1 root 4096 Aug  3 19:39 uevent
 ```
 
 OCP Time Appliance can be used with any NTP/PTP server.  
