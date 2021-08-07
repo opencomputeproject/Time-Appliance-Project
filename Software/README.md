@@ -24,7 +24,7 @@ To compile the driver manually just run `./remake` and then load it with `modpro
 It will expose all the devices like this:
 
 ```
-$ ls -g /sys/class/timecard/ocp1/
+$ ls -g /sys/class/timecard/ocp0/
 total 0
 -r--r--r--. 1 root 4096 Aug  3 19:49 available_clock_sources
 -rw-r--r--. 1 root 4096 Aug  3 19:49 clock_source
