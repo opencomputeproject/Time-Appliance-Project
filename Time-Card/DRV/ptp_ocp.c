@@ -1570,6 +1570,72 @@ gnss_sync_show(struct device *dev, struct device_attribute *attr, char *buf)
 static DEVICE_ATTR_RO(gnss_sync);
 
 static ssize_t
+external_pps_cable_delay_show(struct device *dev,
+			      struct device_attribute *attr, char *buf)
+{
+	struct ptp_ocp *bp = dev_get_drvdata(dev);
+	u32 val;
+
+	val = ioread32(&bp->pps_to_ext->cable_delay);
+	return sysfs_emit(buf, "%d\n", val);
+}
+
+static ssize_t
+external_pps_cable_delay_store(struct device *dev,
+			       struct device_attribute *attr,
+			       const char *buf, size_t count)
+{
+	struct ptp_ocp *bp = dev_get_drvdata(dev);
+	unsigned long flags;
+	int err;
+	u16 val;
+
+	err = kstrtou16(buf, 0, &val);
+	if (err)
+		return err;
+
+	spin_lock_irqsave(&bp->lock, flags);
+	iowrite32(val, &bp->pps_to_ext->cable_delay);
+	spin_unlock_irqrestore(&bp->lock, flags);
+
+	return count;
+}
+static DEVICE_ATTR_RW(external_pps_cable_delay);
+
+static ssize_t
+internal_pps_cable_delay_show(struct device *dev,
+			      struct device_attribute *attr, char *buf)
+{
+	struct ptp_ocp *bp = dev_get_drvdata(dev);
+	u32 val;
+
+	val = ioread32(&bp->pps_to_clk->cable_delay);
+	return sysfs_emit(buf, "%d\n", val);
+}
+
+static ssize_t
+internal_pps_cable_delay_store(struct device *dev,
+			       struct device_attribute *attr,
+			       const char *buf, size_t count)
+{
+	struct ptp_ocp *bp = dev_get_drvdata(dev);
+	unsigned long flags;
+	int err;
+	u16 val;
+
+	err = kstrtou16(buf, 0, &val);
+	if (err)
+		return err;
+
+	spin_lock_irqsave(&bp->lock, flags);
+	iowrite32(val, &bp->pps_to_clk->cable_delay);
+	spin_unlock_irqrestore(&bp->lock, flags);
+
+	return count;
+}
+static DEVICE_ATTR_RW(internal_pps_cable_delay);
+
+static ssize_t
 clock_source_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct ptp_ocp *bp = dev_get_drvdata(dev);
@@ -1627,6 +1693,8 @@ static struct attribute *timecard_attrs[] = {
 	&dev_attr_gnss_sync.attr,
 	&dev_attr_clock_source.attr,
 	&dev_attr_available_clock_sources.attr,
+	&dev_attr_external_pps_cable_delay.attr,
+	&dev_attr_internal_pps_cable_delay.attr,
 	NULL,
 };
 ATTRIBUTE_GROUPS(timecard);
