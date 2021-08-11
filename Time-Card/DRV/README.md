@@ -1,6 +1,6 @@
 # Driver
 
-Driver is based on a kernel module for CentOS and Ubunutu. 
+Driver is based on a kernel module for CentOS and Ubuntu. 
 Kernel 5.12+ is recommended
 
 ## Instruction
