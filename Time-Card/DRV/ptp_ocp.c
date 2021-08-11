@@ -10,6 +10,8 @@
 #include <linux/clkdev.h>
 #include <linux/clk-provider.h>
 #include <linux/platform_device.h>
+#include <linux/platform_data/i2c-xiic.h>
+#include <linux/platform_data/i2c-ocores.h>
 #include <linux/ptp_clock_kernel.h>
 #include <linux/spi/spi.h>
 #include <linux/spi/xilinx_spi.h>
@@ -18,6 +20,7 @@
 #include <linux/i2c.h>
 #include <linux/mtd/mtd.h>
 #include <linux/miscdevice.h>
+#include <linux/version.h>
 
 /*---------------------------------------------------------------------------*/
 #ifndef MRO50_IOCTL_H
@@ -189,7 +192,7 @@ struct ptp_ocp {
 	struct ptp_ocp_ext_src	*pps;
 	struct ptp_ocp_ext_src	*ts0;
 	struct ptp_ocp_ext_src	*ts1;
-	struct ptp_ocp_ext_src	*phasemeter;
+	struct ptp_ocp_ext_src	*phasemeter;	/* XXX will change */
 	struct ocp_art_osc_reg	__iomem *osc;
 	struct img_reg __iomem	*image;
 	struct ptp_clock	*ptp;
@@ -198,6 +201,7 @@ struct ptp_ocp {
 	struct platform_device	*spi_flash;
 	struct clk_hw		*i2c_clk;
 	struct timer_list	watchdog;
+	const struct attribute_group **attr_groups;
 	struct miscdevice	mro50;
 	time64_t		gnss_lost;
 	int			id;
@@ -232,6 +236,9 @@ static irqreturn_t ptp_ocp_phase_irq(int irq, void *priv);
 static irqreturn_t ptp_ocp_art_pps_irq(int irq, void *priv);
 static int ptp_ocp_phase_enable(void *priv, bool enable);
 static int ptp_ocp_art_pps_enable(void *priv, bool enable);
+
+static const struct attribute_group *fb_timecard_groups[];
+static const struct attribute_group *art_timecard_groups[];
 
 #define bp_assign_entry(bp, res, val) ({				\
 	uintptr_t addr = (uintptr_t)(bp) + (res)->bp_offset;		\
@@ -316,6 +323,20 @@ static struct ocp_resource ocp_fb_resource[] = {
 		.extra = &(struct ptp_ocp_i2c_info) {
 			.name = "xiic-i2c",
 			.fixed_rate = 50000000,
+			.data_size = sizeof(struct xiic_i2c_platform_data),
+			.data = &(struct xiic_i2c_platform_data) {
+				.num_devices = 1,
+				.devices = &(struct i2c_board_info) {
+					I2C_BOARD_INFO("24mac402", 0x58),
+				},
+#if 0
+				.num_devices = 2,
+				.devices = (struct i2c_board_info[]) {
+					{ I2C_BOARD_INFO("24c08", 0x50) },
+					{ I2C_BOARD_INFO("24mac402", 0x58) },
+				},
+#endif
+			},
 		},
 	},
 	{
@@ -382,7 +403,7 @@ struct ocp_phase_reg {
 	u32	phase_error;
 	u32	phase_offset;
 	u32	enable;
-	u32	__pad1[8];
+	u32	__pad1[7];
 	u32	intr;
 };
 
@@ -399,7 +420,7 @@ static struct ocp_resource ocp_art_resource[] = {
 		OCP_EXT_RESOURCE(phasemeter),
 		.offset = 0x00320000, .size = 0x30, .irq_vec = 10,
 		.extra = &(struct ptp_ocp_ext_info) {
-			.name = "phasemeter", .index = 0,
+			.name = "phasemeter", .index = 2,
 			.irq_fcn = ptp_ocp_phase_irq,
 			.enable = ptp_ocp_phase_enable,
 		},
@@ -430,6 +451,25 @@ static struct ocp_resource ocp_art_resource[] = {
 					.modalias = "spi-nor",
 				},
 			},
+		},
+	},
+	{
+		OCP_I2C_RESOURCE(i2c_ctrl),
+		.offset = 0x350000, .size = 0x100, .irq_vec = 4,
+		.extra = &(struct ptp_ocp_i2c_info) {
+			.name = "ocores-i2c",
+			.fixed_rate = 400000,
+#if 1
+			.data_size = sizeof(struct ocores_i2c_platform_data),
+			.data = &(struct ocores_i2c_platform_data) {
+				.clock_khz = 125000,
+				.bus_khz = 400,
+				.num_devices = 1,
+				.devices = &(struct i2c_board_info) {
+					I2C_BOARD_INFO("24c08", 0x50),
+				},
+			},
+#endif
 		},
 	},
 	{
@@ -608,16 +648,12 @@ ptp_ocp_adjphase(struct ptp_clock_info *ptp_info, s32 phase_ns)
 	struct ptp_ocp *bp = container_of(ptp_info, struct ptp_ocp, ptp_info);
 	struct ocp_phase_reg __iomem *reg = bp->phasemeter->mem;
 	unsigned long flags;
-	s32 correction;
 
 	if (!bp->phasemeter)
 		return -EOPNOTSUPP;
 
-	/* XXX this may not be right... convert to 5ns units */
-	correction = div_s64(phase_ns, 5);
-
 	spin_lock_irqsave(&bp->lock, flags);
-	iowrite32(correction, &reg->phase_offset);
+	iowrite32(phase_ns, &reg->phase_offset);
 	spin_unlock_irqrestore(&bp->lock, flags);
 
 	return 0;
@@ -852,6 +888,9 @@ ptp_ocp_get_serial_number(struct ptp_ocp *bp)
 	struct device *dev;
 	int err;
 
+	if (!bp->i2c_ctrl)
+		return;
+
 	dev = device_find_child(&bp->i2c_ctrl->dev, NULL, ptp_ocp_firstchild);
 	if (!dev) {
 		dev_err(&bp->pdev->dev, "Can't find I2C adapter\n");
@@ -889,25 +928,8 @@ ptp_ocp_info(struct ptp_ocp *bp)
 		 ptp_ocp_clock_name_from_val(select >> 16),
 		 ptp_clock_index(bp->ptp));
 
-	ptp_ocp_tod_info(bp);
-}
-
-static int
-ptp_ocp_devlink_register(struct devlink *devlink, struct device *dev)
-{
-	int err;
-
-	err = devlink_register(devlink, dev);
-	if (err)
-		return err;
-
-	return 0;
-}
-
-static void
-ptp_ocp_devlink_unregister(struct devlink *devlink)
-{
-	devlink_unregister(devlink);
+	if (bp->tod)
+		ptp_ocp_tod_info(bp);
 }
 
 static struct device *
@@ -1217,7 +1239,7 @@ ptp_ocp_phase_irq(int irq, void *priv)
 	struct ptp_ocp_ext_src *ext = priv;
 	struct ocp_phase_reg __iomem *reg = ext->mem;
 	struct ptp_clock_event ev;
-	u32 phase_error;
+	s32 phase_error;
 
 	phase_error = ioread32(&reg->phase_error);
 	if (phase_error > 500000000) {
@@ -1225,9 +1247,7 @@ ptp_ocp_phase_irq(int irq, void *priv)
 		phase_error = 0;
 	}
 	ev.type = PTP_CLOCK_EXTTS;
-	ev.index = ext->info->index;
-	ev.pps_times.ts_real.tv_sec = 0;
-	ev.pps_times.ts_real.tv_nsec = phase_error;
+	ev.timestamp = phase_error;
 
 	ptp_clock_event(ext->bp->ptp, &ev);
 
@@ -1378,12 +1398,13 @@ static int
 ptp_ocp_fb_board_init(struct ptp_ocp *bp, struct ocp_resource *r)
 {
 	bp->flash_start = 1024 * 4096;
+	bp->attr_groups = fb_timecard_groups;
 
 	return ptp_ocp_init_clock(bp);
 }
 
 static int
-__ptp_ocp_mro50_wait_cmd(struct ocp_art_osc_reg *reg, u32 done)
+__ptp_ocp_mro50_wait_cmd(struct ocp_art_osc_reg __iomem *reg, u32 done)
 {
 	u32 ctrl;
 	int i;
@@ -1398,7 +1419,8 @@ __ptp_ocp_mro50_wait_cmd(struct ocp_art_osc_reg *reg, u32 done)
 }
 
 static int
-__ptp_ocp_mro50_write_locked(struct ocp_art_osc_reg *reg, u32 ctrl, u32 val)
+__ptp_ocp_mro50_write_locked(struct ocp_art_osc_reg __iomem *reg,
+			     u32 ctrl, u32 val)
 {
 	iowrite32(val, &reg->adjust);
 	iowrite32(ctrl, &reg->ctrl);
@@ -1407,7 +1429,8 @@ __ptp_ocp_mro50_write_locked(struct ocp_art_osc_reg *reg, u32 ctrl, u32 val)
 }
 
 static int
-__ptp_ocp_mro50_read_locked(struct ocp_art_osc_reg *reg, u32 ctrl, u32 *val)
+__ptp_ocp_mro50_read_locked(struct ocp_art_osc_reg __iomem *reg,
+			    u32 ctrl, u32 *val)
 {
 	int err;
 
@@ -1489,7 +1512,7 @@ ptp_ocp_mro50_ioctl(struct file *file, unsigned cmd, unsigned long arg)
 	return err;
 }
 
-const struct file_operations ptp_ocp_mro50_fops = {
+static const struct file_operations ptp_ocp_mro50_fops = {
 	.owner =		THIS_MODULE,
 	.unlocked_ioctl =	ptp_ocp_mro50_ioctl,
 };
@@ -1541,6 +1564,8 @@ out:
 static int
 ptp_ocp_art_board_init(struct ptp_ocp *bp, struct ocp_resource *r)
 {
+	bp->attr_groups = art_timecard_groups;
+
 	return ptp_ocp_register_mro50(bp);
 }
 
@@ -1705,7 +1730,7 @@ available_clock_sources_show(struct device *dev,
 }
 static DEVICE_ATTR_RO(available_clock_sources);
 
-static struct attribute *timecard_attrs[] = {
+static struct attribute *fb_timecard_attrs[] = {
 	&dev_attr_serialnum.attr,
 	&dev_attr_gnss_sync.attr,
 	&dev_attr_clock_source.attr,
@@ -1714,7 +1739,13 @@ static struct attribute *timecard_attrs[] = {
 	&dev_attr_internal_pps_cable_delay.attr,
 	NULL,
 };
-ATTRIBUTE_GROUPS(timecard);
+ATTRIBUTE_GROUPS(fb_timecard);
+
+static struct attribute *art_timecard_attrs[] = {
+	&dev_attr_serialnum.attr,
+	NULL,
+};
+ATTRIBUTE_GROUPS(art_timecard);
 
 static void
 ptp_ocp_dev_release(struct device *dev)
@@ -1817,7 +1848,7 @@ ptp_ocp_complete(struct ptp_ocp *bp)
 	if (pps)
 		ptp_ocp_symlink(bp, pps->dev, "pps");
 
-	if (device_add_groups(&bp->dev, timecard_groups))
+	if (device_add_groups(&bp->dev, bp->attr_groups))
 		pr_err("device add groups failed\n");
 
 	return 0;
@@ -1854,7 +1885,7 @@ ptp_ocp_detach_sysfs(struct ptp_ocp *bp)
 	sysfs_remove_link(&dev->kobj, "ttyMAC");
 	sysfs_remove_link(&dev->kobj, "ptp");
 	sysfs_remove_link(&dev->kobj, "pps");
-	device_remove_groups(dev, timecard_groups);
+	device_remove_groups(dev, bp->attr_groups);
 }
 
 static void
@@ -1890,6 +1921,32 @@ ptp_ocp_detach(struct ptp_ocp *bp)
 	device_unregister(&bp->dev);
 }
 
+/* XXX out of tree hack - if this symbol is defined, kernel is using new API */
+#ifdef DEVLINK_PARAM_GENERIC_ENABLE_ETH_NAME
+#define DEVLINK_NEW_API 1
+#endif
+
+static inline struct devlink *
+ptp_ocp_devlink_alloc(const struct devlink_ops *ops, size_t priv_size,
+		      struct device *dev)
+{
+#ifdef DEVLINK_NEW_API
+	return devlink_alloc(ops, priv_size, dev);
+#else
+	return devlink_alloc(ops, priv_size);
+#endif
+}
+
+static inline int
+ptp_ocp_devlink_register(struct devlink *devlink, struct device *dev)
+{
+#ifdef DEVLINK_NEW_API
+	return devlink_register(devlink);
+#else
+	return devlink_register(devlink, dev);
+#endif
+}
+
 static int
 ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 {
@@ -1897,7 +1954,8 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	struct ptp_ocp *bp;
 	int err;
 
-	devlink = devlink_alloc(&ptp_ocp_devlink_ops, sizeof(*bp));
+	devlink = ptp_ocp_devlink_alloc(&ptp_ocp_devlink_ops, sizeof(*bp),
+					&pdev->dev);
 	if (!devlink) {
 		dev_err(&pdev->dev, "devlink_alloc failed\n");
 		return -ENOMEM;
@@ -1957,7 +2015,7 @@ out:
 	pci_disable_device(pdev);
 	pci_set_drvdata(pdev, NULL);
 out_unregister:
-	ptp_ocp_devlink_unregister(devlink);
+	devlink_unregister(devlink);
 out_free:
 	devlink_free(devlink);
 
@@ -1974,7 +2032,7 @@ ptp_ocp_remove(struct pci_dev *pdev)
 	pci_disable_device(pdev);
 	pci_set_drvdata(pdev, NULL);
 
-	ptp_ocp_devlink_unregister(devlink);
+	devlink_unregister(devlink);
 	devlink_free(devlink);
 }
 
