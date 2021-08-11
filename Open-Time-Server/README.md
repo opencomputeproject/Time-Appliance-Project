@@ -175,13 +175,13 @@ NIC should timestamp all PPP egress packets.
 ### PPS out
 * PPS Out Rise/Fall Time < 5 nano Sec 
 * PPS Out Delay < 400 pico Sec
-* PPS Out Jitter < 250 fento Sec
+* PPS Out Jitter < 250 femto Sec
 * PPS Out Impedance	= 50 Ohm
 * PPS Out frequency	1Hz - 10MHz
 
 ### PPS In
 * PPS In Delay < 400 pico Sec
-* PPS In Jitter < 250 fento Sec
+* PPS In Jitter < 250 femto Sec
 * PPS In Impedance 	= 50 Ohm
 * PPS In frequency 1Hz - 10MHz
 
