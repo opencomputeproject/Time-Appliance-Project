@@ -3,7 +3,11 @@ set -euo pipefail
 DIST="$(awk -F= '/^NAME/{print tolower($2)}' /etc/os-release|awk 'gsub(/[" ]/,x) + 1')"
 
 KVER=`uname -r`
-INSTALL=1
+default_install=1
+
+if [ "$*" == "install" ]; then
+    INSTALL=1
+fi
 
 case "$DIST" in
     ubuntu)
@@ -16,7 +20,7 @@ esac
 
 if [ -e ./ksrc ]; then
     KDIR=./ksrc
-    INSTALL=0
+    default_install=0
 fi
 
 if [ ! -d "${KDIR:-}" ]; then
@@ -26,7 +30,8 @@ fi
 
 make -C $KDIR M=$PWD
 
-if [ $INSTALL == 1 ]; then
+if [ ${INSTALL:-$default_install} == 1 ]; then
+    echo "installing module"
     ln -sf ${PWD}/ptp_ocp.ko /lib/modules/${KVER}
     depmod -a
 fi
