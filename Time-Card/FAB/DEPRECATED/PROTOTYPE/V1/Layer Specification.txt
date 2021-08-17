@@ -1,0 +1,8 @@
+TOP gtl (1oz)
+INNER 1 g1 (1oz)
+INNER 2 g2 (1oz)
+INNER 3 g3 (1oz)
+INNER 4 g4 (1oz)
+BOT gbl (1oz)
+
+
