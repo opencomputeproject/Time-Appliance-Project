@@ -1,4 +1,4 @@
-##PTPBox
+## PTPBox
 
 PTPBox is a framework based on Linux Network Namespace allowing you to create a PTP network on a single machine with my multiple NICs. Network Namespace allows the machines to be isolated run run sricpts separately (similar to a container) and interract with other NICs via the physical connection. There are different nodes which can be confidugred (IP addresses and ports). Using a simple run.sh command you will have all individual threads run on sepearate Tmux panes and windows. It should be nted the LinuxPTP and Tmux are requirements for PTPBox to run properly. Here is a picture of the Hardware implementation with 7 Nvidia CX6 NICs on a single machine.
 
