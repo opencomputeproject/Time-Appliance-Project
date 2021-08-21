@@ -10,7 +10,7 @@ if [ "$*" == "install" ]; then
 fi
 
 case "$DIST" in
-    ubuntu)
+    debian*|ubuntu)
         KDIR=/usr/src/linux-headers-${KVER}
         ;;
     centos*)
