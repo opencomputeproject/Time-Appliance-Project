@@ -191,7 +191,7 @@ struct ptp_ocp {
 	struct ptp_ocp_ext_src	*pps;
 	struct ptp_ocp_ext_src	*ts0;
 	struct ptp_ocp_ext_src	*ts1;
-	struct ptp_ocp_ext_src	*phasemeter;	/* XXX will change */
+	struct ocp_phase_reg __iomem *phasemeter;
 	struct ocp_art_osc_reg	__iomem *osc;
 	struct img_reg __iomem	*image;
 	struct ptp_clock	*ptp;
@@ -232,9 +232,7 @@ static irqreturn_t ptp_ocp_ts_irq(int irq, void *priv);
 static int ptp_ocp_ts_enable(void *priv, bool enable);
 
 static int ptp_ocp_art_board_init(struct ptp_ocp *bp, struct ocp_resource *r);
-static irqreturn_t ptp_ocp_phase_irq(int irq, void *priv);
 static irqreturn_t ptp_ocp_art_pps_irq(int irq, void *priv);
-static int ptp_ocp_phase_enable(void *priv, bool enable);
 static int ptp_ocp_art_pps_enable(void *priv, bool enable);
 
 static const struct attribute_group *fb_timecard_groups[];
@@ -395,15 +393,14 @@ struct ocp_art_osc_reg {
 
 struct ocp_art_pps_reg {
 	u32	enable;
-	u32	__pad0[3];
+	u32	__pad0[11];
 	u32	intr;
 };
 
 struct ocp_phase_reg {
-	u32	phase_error;
+	u32	__pad0;
 	u32	phase_offset;
-	u32	enable;
-	u32	__pad1[7];
+	u32	__pad1[9];
 	u32	intr;
 };
 
@@ -417,20 +414,17 @@ static struct ocp_resource ocp_art_resource[] = {
 		.offset = 0x00160000 + 0x1000, .irq_vec = 3,
 	},
 	{
-		OCP_EXT_RESOURCE(phasemeter),
-		.offset = 0x00320000, .size = 0x30, .irq_vec = 10,
-		.extra = &(struct ptp_ocp_ext_info) {
-			.index = 2,
-			.irq_fcn = ptp_ocp_phase_irq,
-			.enable = ptp_ocp_phase_enable,
-		},
+		OCP_MEM_RESOURCE(phasemeter),
+		.offset = 0x00320000, .size = 0x30,
 	},
+	/* Timestamp associated with Interal PPS of the card */
 	{
-		OCP_EXT_RESOURCE(pps),
+		OCP_EXT_RESOURCE(ts0),
 		.offset = 0x00330000, .size = 0x20, .irq_vec = 11,
 		.extra = &(struct ptp_ocp_ext_info) {
-			.irq_fcn = ptp_ocp_art_pps_irq,
-			.enable = ptp_ocp_art_pps_enable,
+			.index = 0,
+			.irq_fcn = ptp_ocp_ts_irq,
+			.enable = ptp_ocp_ts_enable,
 		},
 	},
 	{
@@ -469,6 +463,24 @@ static struct ocp_resource ocp_art_resource[] = {
 				},
 			},
 #endif
+		},
+	},
+	/* Timestamp associated with GNSS receiver PPS */
+	{
+		OCP_EXT_RESOURCE(ts1),
+		.offset = 0x360000, .size = 0x20, .irq_vec = 12,
+		.extra = &(struct ptp_ocp_ext_info) {
+			.index = 1,
+			.irq_fcn = ptp_ocp_ts_irq,
+			.enable = ptp_ocp_ts_enable,
+		},
+	},
+	{
+		OCP_EXT_RESOURCE(pps),
+		.offset = 0x00370000, .size = 0x20, .irq_vec = 13,
+		.extra = &(struct ptp_ocp_ext_info) {
+			.irq_fcn = ptp_ocp_art_pps_irq,
+			.enable = ptp_ocp_art_pps_enable,
 		},
 	},
 	{
@@ -645,7 +657,7 @@ static int
 ptp_ocp_adjphase(struct ptp_clock_info *ptp_info, s32 phase_ns)
 {
 	struct ptp_ocp *bp = container_of(ptp_info, struct ptp_ocp, ptp_info);
-	struct ocp_phase_reg __iomem *reg = bp->phasemeter->mem;
+	struct ocp_phase_reg __iomem *reg = bp->phasemeter;
 	unsigned long flags;
 
 	if (!bp->phasemeter)
@@ -674,9 +686,6 @@ ptp_ocp_enable(struct ptp_clock_info *ptp_info, struct ptp_clock_request *rq,
 			break;
 		case 1:
 			ext = bp->ts1;
-			break;
-		case 2:
-			ext = bp->phasemeter;
 			break;
 		}
 		break;
@@ -1215,40 +1224,6 @@ ptp_ocp_ts_enable(void *priv, bool enable)
 }
 
 static irqreturn_t
-ptp_ocp_phase_irq(int irq, void *priv)
-{
-	struct ptp_ocp_ext_src *ext = priv;
-	struct ocp_phase_reg __iomem *reg = ext->mem;
-	struct ptp_clock_event ev;
-	s32 phase_error;
-
-	phase_error = ioread32(&reg->phase_error);
-	if (phase_error > 500000000) {
-		iowrite32(0, &reg->phase_error);
-		phase_error = 0;
-	}
-	ev.type = PTP_CLOCK_EXTTS;
-	ev.timestamp = phase_error;
-
-	ptp_clock_event(ext->bp->ptp, &ev);
-
-	iowrite32(0, &reg->intr);
-
-	return IRQ_HANDLED;
-}
-
-static int
-ptp_ocp_phase_enable(void *priv, bool enable)
-{
-	struct ptp_ocp_ext_src *ext = priv;
-	struct ocp_phase_reg __iomem *reg = ext->mem;
-
-	iowrite32(enable, &reg->enable);
-
-	return 0;
-}
-
-static irqreturn_t
 ptp_ocp_art_pps_irq(int irq, void *priv)
 {
 	struct ptp_ocp_ext_src *ext = priv;
@@ -1539,6 +1514,7 @@ out:
 static int
 ptp_ocp_art_board_init(struct ptp_ocp *bp, struct ocp_resource *r)
 {
+	bp->flash_start = 0x1000000;
 	bp->attr_groups = art_timecard_groups;
 
 	return ptp_ocp_register_mro50(bp);
@@ -1886,8 +1862,6 @@ ptp_ocp_detach(struct ptp_ocp *bp)
 		ptp_ocp_unregister_ext(bp->ts0);
 	if (bp->ts1)
 		ptp_ocp_unregister_ext(bp->ts1);
-	if (bp->phasemeter)
-		ptp_ocp_unregister_ext(bp->ts1);
 	if (bp->pps)
 		ptp_ocp_unregister_ext(bp->pps);
 	if (bp->gnss_port != -1)
@@ -1969,7 +1943,7 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	 * allow this - if not all of the IRQ's are returned, skip the
 	 * extra devices and just register the clock.
 	 */
-	err = pci_alloc_irq_vectors(pdev, 1, 12, PCI_IRQ_MSI | PCI_IRQ_MSIX);
+	err = pci_alloc_irq_vectors(pdev, 1, 16, PCI_IRQ_MSI | PCI_IRQ_MSIX);
 	if (err < 0) {
 		dev_err(&pdev->dev, "alloc_irq_vectors err: %d\n", err);
 		goto out;
