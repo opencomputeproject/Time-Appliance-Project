@@ -191,7 +191,7 @@ struct ptp_ocp {
 	struct ptp_ocp_ext_src	*pps;
 	struct ptp_ocp_ext_src	*ts0;
 	struct ptp_ocp_ext_src	*ts1;
-	struct ocp_phase_reg __iomem *phasemeter;
+	struct ocp_phase_reg	__iomem *phasemeter;
 	struct ocp_art_osc_reg	__iomem *osc;
 	struct img_reg __iomem	*image;
 	struct ptp_clock	*ptp;
@@ -268,12 +268,15 @@ static const struct attribute_group *art_timecard_groups[];
  * 3: GPS
  * 4: GPS2 (n/c)
  * 5: MAC
- * 6: SPI IMU (inertial measurement unit)
- * 7: I2C oscillator
- * 8: HWICAP
+ * 6: N/C
+ * 7: I2C controller
+ * 8: HWICAP (notused)
  * 9: SPI Flash
- * 10: phasemeter
- * 11: PPS
+ --
+ * 10: n/c
+ * 11: Orolia TS0
+ * 12: Orolia TS1
+ * 13: Orolia PPS
  */
 
 static struct ocp_resource ocp_fb_resource[] = {
@@ -417,7 +420,7 @@ static struct ocp_resource ocp_art_resource[] = {
 		OCP_MEM_RESOURCE(phasemeter),
 		.offset = 0x00320000, .size = 0x30,
 	},
-	/* Timestamp associated with Interal PPS of the card */
+	/* Timestamp associated with Internal PPS of the card */
 	{
 		OCP_EXT_RESOURCE(ts0),
 		.offset = 0x00330000, .size = 0x20, .irq_vec = 11,
