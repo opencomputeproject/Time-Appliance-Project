@@ -159,6 +159,17 @@ struct gpio_reg {
 	u32	__pad1;
 };
 
+struct irig_master_reg {
+	u32	ctrl;
+	u32	status;
+	u32	__pad0;
+	u32	version;
+	u32	adj_sec;
+	u32	mode_ctrl;
+};
+
+#define IRIG_M_CTRL_ENABLE	BIT(0)
+
 struct ptp_ocp_flash_info {
 	const char *name;
 	int pci_offset;
@@ -196,6 +207,7 @@ struct ptp_ocp {
 	struct pps_reg __iomem	*pps_to_ext;
 	struct pps_reg __iomem	*pps_to_clk;
 	struct gpio_reg __iomem	*sma;
+	struct irig_master_reg 	__iomem *irig_out;
 	struct ptp_ocp_ext_src	*pps;
 	struct ptp_ocp_ext_src	*ts0;
 	struct ptp_ocp_ext_src	*ts1;
@@ -331,6 +343,10 @@ static struct ocp_resource ocp_fb_resource[] = {
 	{
 		OCP_MEM_RESOURCE(tod),
 		.offset = 0x01050000, .size = 0x10000,
+	},
+	{
+		OCP_MEM_RESOURCE(irig_out),
+		.offset = 0x01080000, .size = 0x10000,
 	},
 	{
 		OCP_MEM_RESOURCE(image),
@@ -1421,6 +1437,21 @@ ptp_ocp_fb_board_init(struct ptp_ocp *bp, struct ocp_resource *r)
 	return ptp_ocp_init_clock(bp);
 }
 
+static void
+ptp_ocp_irig_out(struct ptp_ocp *bp, bool enable)
+{
+	u32 ctrl;
+	bool on;
+
+	ctrl = ioread32(&bp->irig_out->ctrl);
+	on = ctrl & IRIG_M_CTRL_ENABLE;
+	if (on ^ enable) {
+		ctrl &= ~IRIG_M_CTRL_ENABLE;
+		ctrl |= enable ? IRIG_M_CTRL_ENABLE : 0;
+		iowrite32(ctrl, &bp->irig_out->ctrl);
+	}
+}
+
 static int
 __ptp_ocp_mro50_wait_cmd(struct ocp_art_osc_reg __iomem *reg, u32 done)
 {
@@ -1718,6 +1749,12 @@ sma2_out_show(struct device *dev, struct device_attribute *attr, char *buf)
 	return sma_show_output(val, buf, 1);
 }
 
+static void
+__ctrl_irig_out(struct ptp_ocp *bp, u32 val)
+{
+	ptp_ocp_irig_out(bp, val & 0x00100010);
+}
+
 static ssize_t
 sma1_out_store(struct device *dev, struct device_attribute *attr,
 	      const char *buf, size_t count)
@@ -1734,6 +1771,7 @@ sma1_out_store(struct device *dev, struct device_attribute *attr,
 	spin_lock_irqsave(&bp->lock, flags);
 	gpio = ioread32(&bp->sma->gpio2);
 	gpio = (gpio & 0xffff0000) | val;
+	__ctrl_irig_out(bp, gpio);
 	iowrite32(gpio, &bp->sma->gpio2);
 	spin_unlock_irqrestore(&bp->lock, flags);
 
@@ -1757,6 +1795,7 @@ sma2_out_store(struct device *dev, struct device_attribute *attr,
 	spin_lock_irqsave(&bp->lock, flags);
 	gpio = ioread32(&bp->sma->gpio2);
 	gpio = (gpio & 0xffff) | (val << 16);
+	__ctrl_irig_out(bp, gpio);
 	iowrite32(gpio, &bp->sma->gpio2);
 	spin_unlock_irqrestore(&bp->lock, flags);
 
