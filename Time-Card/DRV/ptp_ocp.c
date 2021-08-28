@@ -1705,6 +1705,14 @@ gnss_sync_show(struct device *dev, struct device_attribute *attr, char *buf)
 }
 static DEVICE_ATTR_RO(gnss_sync);
 
+/*
+ * In the schematic, pins are ANTx, these map to the external connectors:
+ * ANT1 == sma2
+ * ANT2 == sma1
+ * ANT3 == sma4
+ * ANT4 == sma3
+ */
+
 static ssize_t
 sma_show_output(u32 val, char *buf, int default_idx)
 {
@@ -1836,7 +1844,7 @@ sma1_out_store(struct device *dev, struct device_attribute *attr,
 static DEVICE_ATTR_RW(sma1_out);
 
 static ssize_t
-sma3_in_show(struct device *dev, struct device_attribute *attr, char *buf)
+sma4_in_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct ptp_ocp *bp = dev_get_drvdata(dev);
 	u32 val;
@@ -1848,7 +1856,7 @@ sma3_in_show(struct device *dev, struct device_attribute *attr, char *buf)
 }
 
 static ssize_t
-sma4_in_show(struct device *dev, struct device_attribute *attr, char *buf)
+sma3_in_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct ptp_ocp *bp = dev_get_drvdata(dev);
 	u32 val;
@@ -1858,7 +1866,7 @@ sma4_in_show(struct device *dev, struct device_attribute *attr, char *buf)
 }
 
 static ssize_t
-sma3_in_store(struct device *dev, struct device_attribute *attr,
+sma4_in_store(struct device *dev, struct device_attribute *attr,
 	      const char *buf, size_t count)
 {
 	struct ptp_ocp *bp = dev_get_drvdata(dev);
@@ -1878,10 +1886,10 @@ sma3_in_store(struct device *dev, struct device_attribute *attr,
 
 	return count;
 }
-static DEVICE_ATTR_RW(sma3_in);
+static DEVICE_ATTR_RW(sma4_in);
 
 static ssize_t
-sma4_in_store(struct device *dev, struct device_attribute *attr,
+sma3_in_store(struct device *dev, struct device_attribute *attr,
 	      const char *buf, size_t count)
 {
 	struct ptp_ocp *bp = dev_get_drvdata(dev);
@@ -1901,7 +1909,7 @@ sma4_in_store(struct device *dev, struct device_attribute *attr,
 
 	return count;
 }
-static DEVICE_ATTR_RW(sma4_in);
+static DEVICE_ATTR_RW(sma3_in);
 
 static ssize_t
 available_sma_inputs_show(struct device *dev,
