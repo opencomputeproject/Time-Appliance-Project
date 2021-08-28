@@ -240,8 +240,9 @@ struct ptp_ocp {
 	int			gnss_port;
 	int			mac_port;	/* miniature atomic clock */
 	u8			serial[6];
-	int			flash_start;
 	bool			has_serial;
+	int			flash_start;
+	s32			utc_tai_offset;
 };
 
 struct ocp_resource {
@@ -2025,6 +2026,40 @@ available_clock_sources_show(struct device *dev,
 }
 static DEVICE_ATTR_RO(available_clock_sources);
 
+static ssize_t
+utc_tai_offset_show(struct device *dev,
+		    struct device_attribute *attr, char *buf)
+{
+	struct ptp_ocp *bp = dev_get_drvdata(dev);
+
+	return sysfs_emit(buf, "%d\n", bp->utc_tai_offset);
+}
+
+static ssize_t
+utc_tai_offset_store(struct device *dev,
+		     struct device_attribute *attr,
+		     const char *buf, size_t count)
+{
+	struct ptp_ocp *bp = dev_get_drvdata(dev);
+	unsigned long flags;
+	int err;
+	s32 val;
+
+	err = kstrtos32(buf, 0, &val);
+	if (err)
+		return err;
+
+	bp->utc_tai_offset = val;
+
+	spin_lock_irqsave(&bp->lock, flags);
+	iowrite32(val, &bp->irig_out->adj_sec);
+	iowrite32(val, &bp->dcf_out->adj_sec);
+	spin_unlock_irqrestore(&bp->lock, flags);
+
+	return count;
+}
+static DEVICE_ATTR_RW(utc_tai_offset);
+
 static struct attribute *fb_timecard_attrs[] = {
 	&dev_attr_serialnum.attr,
 	&dev_attr_gnss_sync.attr,
@@ -2038,6 +2073,7 @@ static struct attribute *fb_timecard_attrs[] = {
 	&dev_attr_sma4_in.attr,
 	&dev_attr_available_sma_inputs.attr,
 	&dev_attr_available_sma_outputs.attr,
+	&dev_attr_utc_tai_offset.attr,
 	NULL,
 };
 ATTRIBUTE_GROUPS(fb_timecard);
