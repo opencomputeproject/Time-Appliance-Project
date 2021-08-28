@@ -1730,7 +1730,7 @@ out:
 }
 
 static ssize_t
-sma1_out_show(struct device *dev, struct device_attribute *attr, char *buf)
+sma2_out_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct ptp_ocp *bp = dev_get_drvdata(dev);
 	u32 val;
@@ -1740,7 +1740,7 @@ sma1_out_show(struct device *dev, struct device_attribute *attr, char *buf)
 }
 
 static ssize_t
-sma2_out_show(struct device *dev, struct device_attribute *attr, char *buf)
+sma1_out_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct ptp_ocp *bp = dev_get_drvdata(dev);
 	u32 val;
@@ -1756,7 +1756,7 @@ __ctrl_irig_out(struct ptp_ocp *bp, u32 val)
 }
 
 static ssize_t
-sma1_out_store(struct device *dev, struct device_attribute *attr,
+sma2_out_store(struct device *dev, struct device_attribute *attr,
 	      const char *buf, size_t count)
 {
 	struct ptp_ocp *bp = dev_get_drvdata(dev);
@@ -1777,10 +1777,10 @@ sma1_out_store(struct device *dev, struct device_attribute *attr,
 
 	return count;
 }
-static DEVICE_ATTR_RW(sma1_out);
+static DEVICE_ATTR_RW(sma2_out);
 
 static ssize_t
-sma2_out_store(struct device *dev, struct device_attribute *attr,
+sma1_out_store(struct device *dev, struct device_attribute *attr,
 	      const char *buf, size_t count)
 {
 	struct ptp_ocp *bp = dev_get_drvdata(dev);
@@ -1801,7 +1801,7 @@ sma2_out_store(struct device *dev, struct device_attribute *attr,
 
 	return count;
 }
-static DEVICE_ATTR_RW(sma2_out);
+static DEVICE_ATTR_RW(sma1_out);
 
 static ssize_t
 sma3_in_show(struct device *dev, struct device_attribute *attr, char *buf)
