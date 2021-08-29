@@ -1,5 +1,7 @@
 # System on Module
 
+![Time Card FPGA](TimeCard_FPGA.png)
+
 The FPGA bitstream can be configured to various options. Currently it is based on the [NetTimeLogic clock module](https://www.nettimelogic.com/clock-products.php).  <br />
 
 Check the [Readme.pdf](https://github.com/opencomputeproject/Time-Appliance-Project/blob/master/Time-Card/SOM/FPGA/Readme.pdf) for more details about the implementation.  <br />
@@ -18,6 +20,8 @@ In the [Doc folder](https://github.com/opencomputeproject/Time-Appliance-Project
 * PPS Master pulse width 100 ms
 * Clock, PPS Slave, TOD Slave and PPS Master are enabled
 * All Timestampers are disabled
+* IRIG Slave/Master are disabled
+* DCF Slave/Master are disabled
 
 ## In the Binaries folder are the bitstreams for the SOM Module. ## 
 * TimeCard.bit to flash the FPGA (volatile)
