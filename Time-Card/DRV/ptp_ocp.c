@@ -2054,6 +2054,46 @@ internal_pps_cable_delay_store(struct device *dev,
 static DEVICE_ATTR_RW(internal_pps_cable_delay);
 
 static ssize_t
+irig_b_mode_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct ptp_ocp *bp = dev_get_drvdata(dev);
+	u32 val;
+
+	val = ioread32(&bp->irig_out->ctrl);
+	val = (val >> 16) & 0x07;
+	return sysfs_emit(buf, "%d\n", val);
+}
+
+static ssize_t
+irig_b_mode_store(struct device *dev,
+		  struct device_attribute *attr,
+		  const char *buf, size_t count)
+{
+	struct ptp_ocp *bp = dev_get_drvdata(dev);
+	unsigned long flags;
+	int err;
+	u32 reg;
+	u8 val;
+
+	err = kstrtou8(buf, 0, &val);
+	if (err)
+		return err;
+	if (val > 7)
+		return -EINVAL;
+
+	reg = ((val & 0x7) << 16);
+
+	spin_lock_irqsave(&bp->lock, flags);
+	iowrite32(0, &bp->irig_out->ctrl);		/* disable */
+	iowrite32(reg, &bp->irig_out->ctrl);		/* change mode */
+	iowrite32(reg | IRIG_M_CTRL_ENABLE, &bp->irig_out->ctrl);
+	spin_unlock_irqrestore(&bp->lock, flags);
+
+	return count;
+}
+static DEVICE_ATTR_RW(irig_b_mode);
+
+static ssize_t
 clock_source_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct ptp_ocp *bp = dev_get_drvdata(dev);
@@ -2142,6 +2182,7 @@ static struct attribute *fb_timecard_attrs[] = {
 	&dev_attr_available_sma_inputs.attr,
 	&dev_attr_available_sma_outputs.attr,
 	&dev_attr_utc_tai_offset.attr,
+	&dev_attr_irig_b_mode.attr,
 	NULL,
 };
 ATTRIBUTE_GROUPS(fb_timecard);
@@ -2179,7 +2220,7 @@ ptp_ocp_summary_show(struct seq_file *s, void *data)
 {
 	struct device *dev = s->private;
 	struct ts_reg __iomem *ts_reg;
-	u32 sma_in, sma_out, val;
+	u32 sma_in, sma_out, ctrl, val;
 	struct ptp_ocp *bp;
 	char *buf, *src;
 	bool on;
@@ -2229,11 +2270,12 @@ ptp_ocp_summary_show(struct seq_file *s, void *data)
 	}
 
 	if (bp->irig_out) {
-		on = ioread32(&bp->irig_out->ctrl) & IRIG_M_CTRL_ENABLE;
+		ctrl = ioread32(&bp->irig_out->ctrl);
+		on = ctrl & IRIG_M_CTRL_ENABLE;
 		val = ioread32(&bp->irig_out->status);
 		gpio_multi_map(buf, sma_out, 4, "sma1", "sma2", "----");
-		seq_printf(s, "%7s: %s, error: %d, out: %s\n", "IRIG",
-			   on ? " ON" : "OFF", val, buf);
+		seq_printf(s, "%7s: %s, error: %d, mode %d, out: %s\n", "IRIG",
+			   on ? " ON" : "OFF", val, (ctrl >> 16), buf);
 	}
 
 	if (bp->irig_in) {
