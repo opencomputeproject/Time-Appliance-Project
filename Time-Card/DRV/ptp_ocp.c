@@ -240,10 +240,10 @@ struct ptp_ocp {
 	struct pps_reg __iomem	*pps_to_clk;
 	struct gpio_reg __iomem	*pps_select;
 	struct gpio_reg __iomem	*sma;
-	struct irig_master_reg 	__iomem *irig_out;
-	struct irig_slave_reg 	__iomem *irig_in;
-	struct dcf_master_reg 	__iomem *dcf_out;
-	struct dcf_slave_reg 	__iomem *dcf_in;
+	struct irig_master_reg	__iomem *irig_out;
+	struct irig_slave_reg	__iomem *irig_in;
+	struct dcf_master_reg	__iomem *dcf_out;
+	struct dcf_slave_reg	__iomem *dcf_in;
 	struct ptp_ocp_ext_src	*pps;
 	struct ptp_ocp_ext_src	*ts0;
 	struct ptp_ocp_ext_src	*ts1;
@@ -2153,7 +2153,7 @@ static struct attribute *art_timecard_attrs[] = {
 ATTRIBUTE_GROUPS(art_timecard);
 
 #ifdef CONFIG_DEBUG_FS
-#define gpio_map(gpio, bit, pri, sec, def) ({ 			\
+#define gpio_map(gpio, bit, pri, sec, def) ({			\
 	char *_ans;						\
 	if (gpio & (1 << bit))					\
 		_ans = pri;					\
@@ -2315,19 +2315,19 @@ static struct dentry *ptp_ocp_debugfs_root;
 static int
 ptp_ocp_debugfs_add_device(struct ptp_ocp *bp)
 {
-        struct dentry *d;
+	struct dentry *d;
 
-        d = debugfs_create_dir(dev_name(&bp->dev), ptp_ocp_debugfs_root);
-        if (IS_ERR(d))
-                return PTR_ERR(d);
+	d = debugfs_create_dir(dev_name(&bp->dev), ptp_ocp_debugfs_root);
+	if (IS_ERR(d))
+		return PTR_ERR(d);
 	bp->debug_root = d;
 
-        d = debugfs_create_file("summary", S_IRUGO, bp->debug_root,
-                                &bp->dev, &ptp_ocp_summary_fops);
-        if (IS_ERR(d))
+	d = debugfs_create_file("summary", S_IRUGO, bp->debug_root,
+				&bp->dev, &ptp_ocp_summary_fops);
+	if (IS_ERR(d))
 		goto fail;
 
-        return 0;
+	return 0;
 
 fail:
 	debugfs_remove_recursive(bp->debug_root);
@@ -2346,21 +2346,21 @@ ptp_ocp_debugfs_remove_device(struct ptp_ocp *bp)
 static int
 ptp_ocp_debugfs_init(void)
 {
-        struct dentry *d;
+	struct dentry *d;
 
-        d = debugfs_create_dir("timecard", NULL);
-        if (IS_ERR(d))
-                return PTR_ERR(d);
+	d = debugfs_create_dir("timecard", NULL);
+	if (IS_ERR(d))
+		return PTR_ERR(d);
 
-        ptp_ocp_debugfs_root = d;
+	ptp_ocp_debugfs_root = d;
 
-        return 0;
+	return 0;
 }
 
 static void
 ptp_ocp_debugfs_fini(void)
 {
-        debugfs_remove_recursive(ptp_ocp_debugfs_root);
+	debugfs_remove_recursive(ptp_ocp_debugfs_root);
 }
 #else
 #define ptp_ocp_debugfs_init()			0
