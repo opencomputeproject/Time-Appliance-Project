@@ -618,7 +618,7 @@ static struct ocp_selector ptp_ocp_sma_in[] = {
 
 static struct ocp_selector ptp_ocp_sma_out[] = {
 	{ .name = "10Mhz",	.value = 0x00 },
-	{ .name = "FPGA",	.value = 0x01 },
+	{ .name = "PHC",	.value = 0x01 },
 	{ .name = "MAC",	.value = 0x02 },
 	{ .name = "GNSS",	.value = 0x04 },
 	{ .name = "GNSS2",	.value = 0x08 },
