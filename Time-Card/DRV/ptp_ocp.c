@@ -2273,12 +2273,8 @@ ptp_ocp_summary_show(struct seq_file *s, void *data)
 		if (bp->pps_select) {
 			val = ioread32(&bp->pps_select->gpio1);
 			if (val & 0x01) {
-				if (sma_in & 0x01)
-					src = "sma2";
-				else if (sma_in & 0x010000)
-					src = "sma1";
-				else
-					src = "----";
+				src = gpio_map(sma_in, 1,
+					       "sma4", "sma3", "----");
 			} else if (val & 0x02)
 				src = "MAC";
 			else if (val & 0x04)
