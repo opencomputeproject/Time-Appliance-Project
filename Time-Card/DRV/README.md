@@ -40,7 +40,7 @@ After successfully loading the driver, one will see:
 * PTP POSIX clock, linking to the physical hardware clock (PHC) on the Time Card (`/dev/ptp2`) 
 * GNSS serial `/dev/ttyS7` 
 * Atomic clock serial `/dev/ttyS8`
-* two i2c (`/dev/i2c-*`) devices added
+* i2c (`/dev/i2c-*`) device
 
 Now, once can use standard `linuxptp` tools such as `phc2sys` or `ts2phc` to copy, sync, tune, etc... See more in [software](/Software) section
 
