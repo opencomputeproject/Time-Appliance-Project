@@ -2221,6 +2221,7 @@ ptp_ocp_summary_show(struct seq_file *s, void *data)
 	struct device *dev = s->private;
 	struct ts_reg __iomem *ts_reg;
 	u32 sma_in, sma_out, ctrl, val;
+	struct timespec64 ts;
 	struct ptp_ocp *bp;
 	char *buf, *src;
 	bool on;
@@ -2302,6 +2303,10 @@ ptp_ocp_summary_show(struct seq_file *s, void *data)
 			   on ? " ON" : "OFF", val, src);
 	}
 
+	src = gpio_map(sma_in, 2, "sma4", "sma3", "GNSS");
+	sprintf(buf, "%s via PPS2", src);
+	seq_printf(s, " MAC PPS src: %s\n", buf);
+
 	/* assumes automatic switchover/selection */
 	val = ioread32(&bp->reg->select);
 	switch (val >> 16) {
@@ -2339,9 +2344,9 @@ ptp_ocp_summary_show(struct seq_file *s, void *data)
 	seq_printf(s, "%7s: %s, state: %s\n", "PHC src", buf,
 		   val & OCP_STATUS_IN_SYNC ? "sync" : "unsynced");
 
-	src = gpio_map(sma_in, 2, "sma4", "sma3", "GNSS");
-	sprintf(buf, "%s via PPS2", src);
-	seq_printf(s, " MAC PPS src: %s\n", buf);
+	if (!ptp_ocp_gettimex(&bp->ptp_info, &ts, NULL))
+		seq_printf(s, "%7s: %lld.%ld == %ptT\n", "PHC",
+			   ts.tv_sec, ts.tv_nsec, &ts);
 
 	free_page((unsigned long)buf);
 	return 0;
