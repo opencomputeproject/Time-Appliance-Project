@@ -33,13 +33,13 @@ List Of Images | Description
 
 ## General
 
-Time Master is a critical part of a PTP enabled network. It provides accurate time via GNSS while maintains the accuracy in case of GNSS failure via a high stability (and holdover) oscillator such as an atomic clock. Exisiting products in the market are often closed sourced an far from sufficient features. The Time Card project presents an open source solution via a PCIe card.
+Time Master is a critical part of a PTP enabled network. It provides accurate time via GNSS while maintaining accuracy in case of GNSS failure via a high stability (and holdover) oscillator such as an atomic clock. Existing products in the market are often closed sourced and are far from having sufficient features. The Time Card project presents an open source solution via a PCIe card.
 
 
 ## Form Factor
 * Standard PCIe Stand-up Card
 * Single Slot - Passive Cooling Solution
-
+ 
 ## GNSS
 ### Receiver
 The GNSS receiver can be a product from ublock or any other vendor as long as it provides PPS output and the TOD using any suitable format.
@@ -59,14 +59,14 @@ See more about holdover in the [clock](#Clock) section.
 
 ### Spoofing
 GNSS authenticity is relevant today. A mechanism to protect against over-the-air spoofing incidents is desirable.
-With a special equipment it is possible to simulate GNSS constellation and spoof the receiver. Basic principals to protect against such attack:
+With special equipment it is possible to simulate a GNSS constellation and spoof the receiver. Basic principals to protect against such attack:
 * Use high-quality GNSS receivers which verify packet signature
 * Disciplining implementations see more in [bridge](#bridge) section should protect against sudden jumps in time and space. For the datacenter use cases jump in space could be completely forbidden.
 
 ## Clock
 GNSS requires "clear sky" to function properly. Moreover there were several historical events of a short term time jumps by some GNSS constallations.
-Because of reliability and in combination with the security concenrns an additional holdover should be performed by [high quality](https://www.meinbergglobal.com/english/specs/gpsopt.htm) XO. An example could be AC, OCXO, TCXO etc.
-In oreder to perform sustainable operation we recommend to use an AC with a holdover ± 1us or HQ OCXO with a holdover ± 22 µs.
+Because of reliability and in combination with the security concerns an additional holdover should be performed by [high quality](https://www.meinbergglobal.com/english/specs/gpsopt.htm) XO. An example could be AC, OCXO, TCXO etc.
+In order to perform sustainable operation we recommend to use an AC with a holdover ± 1us or HQ OCXO with a holdover ± 22 µs.
 
 Atomic clock examples:
 * [SA5X](https://www.microsemi.com/product-directory/embedded-clocks-frequency-references/5570-miniature-atomic-clock-mac-sa5x)
@@ -85,7 +85,7 @@ TCXO examples:
 
 ## Bridge
 
-Bridge between GNSS receiver and Atomic clock can be implemented using software or hardware solutions. The hardware implementation is preferred and is our end goal.
+The bridge between the GNSS receiver and the Atomic clock can be implemented using software or hardware solutions. The hardware implementation is preferred and is our end goal.
 
 ### Hardware Implementation
 Here is one of the examples of hardware implementations.
@@ -121,7 +121,7 @@ Software implementation still requires most of the components, however the commu
 
 ### LED
 
-LED should be used to provide externally visible status information of the time card. 
+An LED should be used to provide externally visible status information of the time card. 
 
 For example:
 * Off - card is not powered or not properly fitted
@@ -131,7 +131,7 @@ For example:
 
 # Precision
 Time card has a 1PPS output which can be compared with 1PPS of the locked GNSS receiver.  
-Using Calnex Sentinel device we were able to compare 1PPS outputs with internal reference which we call a "True Time".  
+Using a Calnex Sentinel device we were able to compare 1PPS outputs with internal reference which we call a "True Time".  
 ![Initial design](images/precision_pps.png)
 From our observation we see that PPS of the GNSS receiver is off from "True Time" between -25ns to -55ns (30ns amplitude).  
 Where Time Card PPS is off compared to GNSS by approximately 30ns.  
@@ -146,7 +146,7 @@ Compared to "True Time" Time Card is actually off by just +5 to -45ns (50ns ampl
 
 # Where can I get one?
 
-You have all necessary source code, BOM, Gerber files and binaries to build it youself. However, we are currently working with several suppliers and will have their contact info soon available to allow you to puchase an out-of-the-box ready Time Card.
+You have all necessary source code, BOM, Gerber files and binaries to build it yourself. However, we are currently working with several suppliers and will have their contact info soon available to allow you to purchase an out-of-the-box ready Time Card.
 
 # License
 Contributions to this Specification are made under the terms and conditions set forth in Open Web Foundation Contributor License Agreement (“OWF CLA 1.0”) (“Contribution License”) by: 
