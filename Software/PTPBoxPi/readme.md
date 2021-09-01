@@ -1,19 +1,12 @@
-## PTPBox
+## PTPBox for Raspberry Pi CM4 with an Intel i350
 
 PTPBox is a bash script based framework which uses the Linux Network Namespace allowing it to create a PTP network on a single machine with multiple NICs. Network Namespace allows the machines to be isolated run run sricpts separately (similar to a container) and interract with other NICs via the physical connection. There are different nodes which can be confidugred (IP addresses and ports). Using a simple run.sh command you will have all individual threads run on sepearate Tmux panes and windows. It should be nted the LinuxPTP and Tmux are requirements for PTPBox to run properly. 
 
-A block digram of a machine with 5 nodes looks as follows
+A block digram of a machine with 3 nodes looks as follows
 
-<img width="520" alt="Screen Shot 2021-08-20 at 1 17 52 PM" src="https://user-images.githubusercontent.com/1751211/130289149-104930de-e346-4359-9b0a-2497c579d611.png">
+Here is a picture of the Raspberry CM4 with an Intel i350 and two loop backs.
 
-Here is a picture of the Hardware implementation with 7 Nvidia CX6 NICs on a single machine.
-
-![IMG_2883](https://user-images.githubusercontent.com/1751211/130288428-4c6ea350-f049-4743-a0a0-b58b781cf26e.jpg)
-
-For a budget solution, a machine with multiple built in NICs can be utilized. Bellow you can see and implementation based on the [Protectli](https://protectli.com/) [Valut-6](https://protectli.com/vault-6-port/) firewall with six built-in NICs. The motherboard hosts six i210 NICs and an Intel i5 processor. Running four network namespaces with servos and master clock threads to simulate a two PTP enabled hops from GM to OC.
-<img width="508" alt="Screen Shot 2021-08-20 at 1 19 53 PM" src="https://user-images.githubusercontent.com/1751211/130289603-5e0318b8-5fe6-41e6-afda-daed9a0e41e5.png">
-<img width="380" alt="Screen Shot 2021-08-20 at 1 19 38 PM" src="https://user-images.githubusercontent.com/1751211/130289609-81e360cc-ace8-42a0-af31-23500b22dbc6.png">
-
+<img width="1162" alt="Screen Shot 2021-08-31 at 11 42 25 PM" src="https://user-images.githubusercontent.com/1751211/131624305-79032e77-a770-42f0-b44d-c2ecbfa53b19.png">
 
 # License
 Contributions to this Specification are made under the terms and conditions set forth in Open Web Foundation Contributor License Agreement (“OWF CLA 1.0”) (“Contribution License”) by: 
