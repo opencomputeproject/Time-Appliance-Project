@@ -108,7 +108,7 @@ A PTP profile is a set of required options, prohibited options, and the ranges a
 - Options required, permitted, prohibited
 - Uncertainty specifications
 - Transport mechanisms required, permitted, or prohibited
-- If relevant, the value of the observation interval &ge; τ &gt; used for PTP Variance measurements.
+- If relevant, the value of the observation interval τ used for PTP Variance measurements.
 
 
 # 4 Reference Model
@@ -560,4 +560,7 @@ As a contributor to this document, all members represent that they have the auth
 [1](#sdfootnote1anc) See Section 2 - Terminology
 
 [2](#sdfootnote2anc) See Section 2 - Terminology
+
+
+&ge; τ &gt;
 
