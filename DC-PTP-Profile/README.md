@@ -564,8 +564,8 @@ Additional PTP management TLVs might be defined for the purpose of calculating t
 
 [7] ITU-T G.8272, Timing characteristics of primary reference time clocks
 
-1.
-# Revision
+
+# 8 Revision
 
 | **Revision** | **Comments** |
 | --- | --- |
@@ -574,8 +574,8 @@ Additional PTP management TLVs might be defined for the purpose of calculating t
 | 0.3 | Added revision table. Updated OCP license section |
 | 0.4 | Added IEEE CID and updated profileIdentifier based on received CID (Company ID). Added PTP management messages. Added clarifying text on IPv6/IPv4/UDP. |
 
-1.
-# License
+
+# 9 License
 
 There are 2 types of license under which a document can be submitted. Please provide one only.
 
