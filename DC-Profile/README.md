@@ -112,7 +112,7 @@ A PTP profile is a set of required options, prohibited options, and the ranges a
 - Options required, permitted, prohibited
 - Uncertainty specifications
 - Transport mechanisms required, permitted, or prohibited
-- If relevant, the value of the observation interval &le; used for PTP Variance measurements.
+- If relevant, the value of the observation interval $gt; used for PTP Variance measurements.
 
 
 # Reference Model
@@ -375,13 +375,22 @@ In this PTP profile, all requests are made by an OC and all grants are made by a
 
 ![](RackMultipart20210902-4-1pjwd17_html_136d09be3ded70e1.png)
 
+![Screen Shot 2021-09-01 at 10 15 01 PM](https://user-images.githubusercontent.com/50565500/131785933-0ea7f2fb-b549-4feb-9bde-c900994005ef.jpg)
+
+
 Figure 2. Unicast negotiation for Announce messages
 
 ![](RackMultipart20210902-4-1pjwd17_html_1b71fed664e75b8c.png)
 
+![Screen Shot 2021-09-01 at 10 15 10 PM](https://user-images.githubusercontent.com/50565500/131785947-1365a62d-7d57-4cb5-bf40-6e4e0e978866.jpg)
+
+
 Figure 3.Unicast negotiation for Sync messages
 
 ![](RackMultipart20210902-4-1pjwd17_html_7cfad08b3bf81817.png)
+
+![Screen Shot 2021-09-01 at 10 15 21 PM](https://user-images.githubusercontent.com/50565500/131785961-04a40448-ff5f-4724-8a1d-c552634f298c.jpg)
+
 
 Figure 4. Unicast negotiation for Delay\_Resp messages
 
@@ -396,6 +405,9 @@ Example 1 also shows that a standby GM is not utilized if the active GM of the r
 
 ![](RackMultipart20210902-4-1pjwd17_html_450545cc0c78eb56.png)
 
+![Screen Shot 2021-09-01 at 10 15 38 PM](https://user-images.githubusercontent.com/50565500/131786037-c423bdd1-4c94-4af3-be02-df278793e76e.jpg)
+
+
 Figure 5. Example1 of Active/Standby GMs across two groups each with 500 OCs
 
 Figure 6 shows an example which consists of 2 OC groups with 3 potential GMs, designated 1 through 3, respectively. GM 1 and GM 3 are potential GMs for OC group 1 and are entered into the unicastDiscoveryPortDS of each OC of group 1. GM 2 and GM 3 are potential GMs for OC group 2 and are entered into the unicastDiscoveryPortDS of each OC of group 2. GM3 is essentially a shared GM between the 2 OC groups. The attributes of the GMs are set such that GM 1 and GM 2 are each better than GM 3 as determined by the BMCA. As in the example above, this can be done by configuring the priority2 attributes such that priority 2 for GM 1 is less than priority 2 for GM 3, and priority2 for GM 2 is less than priority2 for GM 3. This will also occur if the clockIdentities of GM 1 and GM 2 are each less than the clockIdentity of GM 3 and all the other attributes of GMs 1, 2, and 3 are the same. The BMCA will result in GM 1 and GM 2 being the active GMs for OC groups 1 and 2, respectively. GM 3 will be the standby GM for both groups 1 and 2. If either GM 1 or GM 2 fails, GM 3 will become the GM for the group whose GM has failed. If both GM 1 and GM 2 fail, then either GM 3 will become the GM for both OC groups 1 and 2, and therefore must be able to handle the load of both groups or only a single failure (i.e., of a single GM) can be tolerated.
@@ -403,6 +415,9 @@ Figure 6 shows an example which consists of 2 OC groups with 3 potential GMs, de
 In Example 2, there is only a single standby GM, and therefore only a single GM is not utilized if there are no failures (unlike Example 1, where two GMs are not utilized if there are no failures). However, either the single standby GM must handle a higher load if both active GMs fail, or else only a single active failure can be tolerated at any time.
 
 ![](RackMultipart20210902-4-1pjwd17_html_1013e624301136e0.png)
+
+![Screen Shot 2021-09-01 at 10 15 48 PM](https://user-images.githubusercontent.com/50565500/131786062-4491d579-0615-4684-91fe-91bf83d5ec45.jpg)
+
 
 Figure 6. Example2 one active GM for each group and one standby GM for both groups
 
