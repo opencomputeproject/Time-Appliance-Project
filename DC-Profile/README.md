@@ -18,11 +18,11 @@ This document defines a PTP profile for time-sensitive applications within a dat
 
 Table of Contents
 
-[1Introduction 5](#_Toc81400010)
+[1-Introduction 5](#_Toc81400010)
 
-[2Terminology 5](#_Toc81400011)
+[2-Terminology 5](#_Toc81400011)
 
-[3PTP Profile Definition 5](#_Toc81400012)
+[3-PTP Profile Definition 5](#_Toc81400012)
 
 [4Reference Model 6](#_Toc81400013)
 
