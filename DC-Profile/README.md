@@ -12,77 +12,79 @@ CONTRIBUTOR(S):
 
 [name, company]
 
-Executive Summary
+# Executive Summary
 
 This document defines a PTP profile for time-sensitive applications within a data center environment. The document is developed within the Open Compute Project (OCP) Timing Appliances Project community [1]. The PTP profile is based on IEEE Std 1588 TM-2019 [2]. When applicable, the profile also references and reuses information from other PTP profiles or other industry specifications. The document provides a set of requirements for implementing, deploying and operating timing appliances within a data center. A timing appliance is an element that is PTP-aware such as a switch/router, time server, NIC card, software module, timing card, monitoring device, etc.
 
 Table of Contents
 
-[1-Introduction 5](#_Toc81400010)
+[1 Introduction 5](#_Toc81400010)
 
-[2-Terminology 5](#_Toc81400011)
+[2 Terminology 5](#_Toc81400011)
 
-[3-PTP Profile Definition 5](#_Toc81400012)
+[3 PTP Profile Definition 5](#_Toc81400012)
 
-[4-Reference Model 6](#_Toc81400013)
+[4 Reference Model 6](#_Toc81400013)
 
-[4.1-Model 1 – Transparent Clock Model 6](#_Toc81400014)
+[4.1 Model 1 – Transparent Clock Model 6](#_Toc81400014)
 
-[5-Model 1 - Additional Requirements 8](#_Toc81400015)
+[5 Model 1 - Additional Requirements 8](#_Toc81400015)
 
-[6-PTP Profile 8](#_Toc81400016)
+[6 PTP Profile 8](#_Toc81400016)
 
-[6.1-Profile Identifier 8](#_Toc81400017)
+[6.1 Profile Identifier 8](#_Toc81400017)
 
-[6.2-Clock Types 8](#_Toc81400018)
+[6.2 Clock Types 8](#_Toc81400018)
 
-[6.3-Message Types 9](#_Toc81400019)
+[6.3 Message Types 9](#_Toc81400019)
 
-[6.4-Transport mechanisms required, permitted, or prohibited 9](#_Toc81400020)
+[6.4 Transport mechanisms required, permitted, or prohibited 9](#_Toc81400020)
 
-[6.5-Clock identity 9](#_Toc81400021)
+[6.5 Clock identity 9](#_Toc81400021)
 
-[6.6-Path delay Measurement Mechanism 10](#_Toc81400022)
+[6.6 Path delay Measurement Mechanism 10](#_Toc81400022)
 
-[6.7-Class of Service 10](#_Toc81400023)
+[6.7 Class of Service 10](#_Toc81400023)
 
-[6.8-PTP Security 10](#_Toc81400024)
+[6.8 PTP Security 10](#_Toc81400024)
 
-[6.9-Profile Isolation and Domain Number 10](#_Toc81400025)
+[6.9 Profile Isolation and Domain Number 10](#_Toc81400025)
 
-[6.10-One-step and two-step operation 11](#_Toc81400026)
+[6.10 One-step and two-step operation 11](#_Toc81400026)
 
-[6.11-End-to-End TC with two-step operation 11](#_Toc81400027)
+[6.11 End-to-End TC with two-step operation 11](#_Toc81400027)
 
-[6.12-PTP message rate 12](#_Toc81400028)
+[6.12 PTP message rate 12](#_Toc81400028)
 
-[6.13-PTP inter-message interval 12](#_Toc81400029)
+[6.13 PTP inter-message interval 12](#_Toc81400029)
 
-[6.14-Unicast Communication 13](#_Toc81400030)
+[6.14 Unicast Communication 13](#_Toc81400030)
 
-[6.14.1-Unicast Discovery 13](#_Toc81400031)
+[6.14.1 Unicast Discovery 13](#_Toc81400031)
 
-[6.14.2-Unicast Negotiation 14](#_Toc81400032)
+[6.14.2 Unicast Negotiation 14](#_Toc81400032)
 
-[6.14.3-Active Standby Scenario 17](#_Toc81400033)
+[6.14.3 Active Standby Scenario 17](#_Toc81400033)
 
-[6.14.4-Active Active Scenario 20](#_Toc81400034)
+[6.14.4 Active Active Scenario 20](#_Toc81400034)
 
-[6.15-Best Clock Algorithm and Clock Attributes 20](#_Toc81400035)
+[6.15 Best Clock Algorithm and Clock Attributes 20](#_Toc81400035)
 
-[6.16-Network Limits and Error Budget for Model 1 23](#_Toc81400036)
+[6.16 Network Limits and Error Budget for Model 1 23](#_Toc81400036)
 
-[6.17-PTP management messages 25](#_Toc81400037)
+[6.17 PTP management messages 25](#_Toc81400037)
 
-[7-References 26](#_Toc81400038)
+[7 References 26](#_Toc81400038)
 
-[8-Revision 26](#_Toc81400039)
+[8 Revision 26](#_Toc81400039)
 
-[9-License 27](#_Toc81400040)
+[9 License 27](#_Toc81400040)
+
 
 # Introduction
 
 Time is a key element to get the highest efficiency in a distributed system. The performance of a distributed system depends in part on the level of synchronization between the elements. Several industries such as telecom, power, industrial, automotive, professional audio and video have embraced the need for highly accurate and reliable distribution and synchronization of time across packet networks. Although the use case scenario for each of the industries is different, they all share one common thing and that is, time synchronization. Each use case scenario defines a set of requirements and configurations that are specified in a &#39;PTP profile&#39;. This document defines a PTP profile to serve the needs of data center time-sensitive applications, data center network infrastructure and the use of synchronized clocks [3]. The profile specifies the set of PTP features and attribute values applicable to a PTP instance that operates in a single device (eg., such as a switch, router, server) and within exactly one PTP domain. Additionally, this specification also addresses additional requirements and use cases that are outside the definition of a PTP profile.
+
 
 # Terminology
 
@@ -95,6 +97,7 @@ This document uses the following translation of terms used by IEEE1588:
 | Master | Leader |
 | Slave | Follower |
 | Grandmaster | Open Time Server or GM |
+
 
 # PTP Profile Definition
 
@@ -111,13 +114,14 @@ A PTP profile is a set of required options, prohibited options, and the ranges a
 - Transport mechanisms required, permitted, or prohibited
 - If relevant, the value of the observation interval  used for PTP Variance measurements.
 
+
 # Reference Model
 
 The model referenced in this section is designated as Model 1. The model consists of three layers. The time reference layer consists primarily of sourcing a time reference (e.g, GNSS) and the PTP Open Time Server (GM) functionality [4]. The network fabric layer consists of a set of network elements that support PTP clocks such as the transparent clock (TC) or the boundary clock (BC). The server layer consists of a group of end-hosts that support PTP clocks such as the ordinary clock (OC), and where the time-sensitive applications typically reside.
 
 In Model 1, the network fabric layer consists of a chain of TCs.
 
-  1.
+
 ## Model 1 – Transparent Clock Model
 
 The high-level characteristics of Model 1 shown in Figure 1 are:
@@ -163,6 +167,7 @@ Figure 1. Model 1 – Chain of Transparent Clocks
 
 The PTP profile is based on IEEE Std 1588-2019.
 
+
 ## Profile Identifier
 
 The information below identifies the profile. The profile is defined by OCP.
@@ -181,6 +186,7 @@ organizationName: Open Compute Project (OCP)
 
 sourceIdentification: This profile is specified by OCP and can be downloaded from [https://www.opencompute.org](https://www.opencompute.org/)
 
+
 ## Clock Types
 
 The profile allows for the following clocks to be used. See clause 3 of IEEE Std 1588-2019 for the full definitions.
@@ -191,6 +197,7 @@ The profile allows for the following clocks to be used. See clause 3 of IEEE Std
 | OC | A PTP clock that has a single PTP port in its domain and maintains the timescale used in the domain. |
 
 Some additional requirements that pertain to the GM and that are outside the PTP Profile are defined in the OCP-TAP Open Time Server project [4].
+
 
 ## Message Types
 
@@ -204,6 +211,7 @@ The profile allows for the following messages:
 6. Signaling
 7. Management
 
+
 ## Transport mechanisms required, permitted, or prohibited
 
 The transport mechanism UDP over IPv6 per Annex D of IEEE Std 1588-2019 must be supported.
@@ -214,23 +222,28 @@ The UDP checksum must be computed when a PTP message is retransmitted (see 3.1.6
 
 The UDP destination port numbers per Annex C.2 of IEEE Std 1588-2019 must be supported. The UDP source port number of a unicast PTP message can be any ephemeral port number and should be preserved throughout the lifetime of a PTP connection that has been established using the unicast negotiation mechanism.
 
+
 ## Clock identity
 
 The clockIdentity must be an EUI-64 as specified in 7.5.2.2 of IEEE Std 1588-2019. The EUI-64 must be globally unique. If the EUI-64 is formed from an existing EUI-48, it must be done by appending two octets after the final six octets of the EUI-48 such that the 64 bits of the clockIdentity are not the same as the bits of any EUI-64 that has previously been assigned or may be assigned in the future by an authorized assignee of the MA-L, MA-M, or MA-S from which the EUI-48 was assigned. This means that either the entity that forms the EUI-64 owns the MA-L, MA-M, or MA-S from which the EUI-48 was formed, or the owner of that MA-L, MA-M, or MA-S has given the entity that forms the EUI-64 the sole right to the clockIdentity being formed.
 
 Note: When using the MAC address, the clock identity is created by appending two octets after the final six octets of the MAC address. Note that in IEEE Std 1588-2008 the clock identity was formed by adding the two octets &#39;FFFE&#39; between the 3rd octet and 4th octet of the MAC address, however, that mapping has been deprecated by the IEEE.
 
+
 ## Path delay Measurement Mechanism
 
 The path delay measurement mechanism must be the delay request-response mechanism. The value of the data set member portDS.delayMechanism must be E2E.
+
 
 ## Class of Service
 
 PTP event messages should set the DSCP field of the IPv6 Traffic Class field to the highest class of service possible. This should minimize latency and delay variation as PTP packets traverse a set of transparent clocks. In Model1, the GM and OC should set the traffic class value.
 
+
 ## PTP Security
 
 PTP security is out of scope given the network will be a single trusted domain managed by a single entity.
+
 
 ## Profile Isolation and Domain Number
 
@@ -243,6 +256,7 @@ An organization can obtain only one sdoId. If the organization develops multiple
 This PTP profile does not require an sdoId since it is assumed it will be the only profile within the data center network. If the assumption is not correct, another profile running on the network will conflict with this profile if the sdoId and domainNumber of the other profile are both 0.
 
 Note – The sdoId is backward compatible with IEEE Std 1588-2008. The first nibble of the sdoId, i.e., the majorSdoId, corresponds to the transportSpecific field of IEEE Std 1588-2008. The final 8 bits of the sdoId, i.e., the minorSdoId, was reserved in IEEE Std 1588-2008 and was specified as 0x00.
+
 
 ## One-step and two-step operation
 
@@ -258,6 +272,7 @@ Note: one-step operation reduces the number of PTP messages transmitted by a PTP
 
 Note: IEEE Std 1588-2019 allows one-step versus two-step operation to be on a PTP port basis. However, IEEE Std 1588-2019 does not describe this capability. This profile requires that all PTP ports on a per clock basis be the same.
 
+
 ## End-to-End TC with two-step operation
 
 This section applies to the scenario where two-step TC operation may be used.
@@ -267,6 +282,7 @@ If an end-to-end TC uses two-step operation, each Delay\_Req and corresponding D
 If all the TCs are two-step, the Delay\_Req and Delay\_Resp must traverse the same set of transparent clocks (links and network elements) between the GM and OC in order to meet the subclause requirements. This property might not always hold true when using for example packet spraying, load balancing and equal cost multipath techniques. This is particularly applicable to data center environments and a reason for recommending the use of one-step operation TCs as noted in section 6.10.
 
 If all the TCs are one-step, the Delay\_Req and Delay\_Resp need not traverse the same set of TCs (links and network elements) between the GM and OC.
+
 
 ## PTP message rate
 
@@ -279,6 +295,7 @@ Table 1 defines the range of message rates for Announce, Sync, Delay\_Req, and D
 | Delay\_Req &amp; Delay\_Resp | 0 | 1 | -7 | 128 | 0 |
 
 Table 1. Range of logMessageInterval for a PTP Port
+
 
 ## PTP inter-message interval
 
@@ -297,6 +314,7 @@ For example, if the grantor port grants Sync or Announce messages with logMessag
 
 In principle, the mean Sync rate and the mean Delay\_Req/Delay\_Resp rate need not be the same. If the actual delay on the PTP communication path is changing sufficiently slowly (after the OC has processed any correction field), then infrequent delay measurements compared to the mean Sync interval might give acceptable performance. In this case, the mean Delay\_Req/Delay\_Resp rate can be chosen to be smaller than the mean Sync rate. The Sync rate that is chosen depends on the implementation of the OC filter and how much noise the oscillator at the OC generates. If the oscillator has a large noise generation, then the Sync rate would likely be larger. In this case, the OC would use new Sync information more frequently to correct for time error.
 
+
 ## Unicast Communication
 
 PTP communication in this profile is based on unicast. Most PTP profiles in the industry are based on multicast, except for two of the ITU-T telecom profiles that are based on unicast [5, 6].
@@ -306,6 +324,7 @@ Both unicast discovery (clause 17.4 of IEEE Std 1588-2019) and unicast negotiati
 The unicast negotiation feature is permanently enabled. The unicastNegotiationPortDS.enable member (of the unicastNegotiationPortDS) must be TRUE for each PTP port (there is a unicastNegotiationPortDS for each PTP port). This dataset member applies to GM and OC and is not applicable to TC.
 
 The unicastFlag of all PTP messages must be set to TRUE.
+
 
 ### Unicast Discovery
 
@@ -321,6 +340,7 @@ In Model 1 of this PTP profile, a table of potential GMs is configured in each O
 Each OC uses unicast negotiation to request Announce messages from each potential GM contained in the unicastDiscoveryPortDS. If a potential GM does not grant the request, the OC attempts again after a time interval corresponding to logQueryInterval. The received Announce messages cause a state decision event, which causes the BMCA to be invoked. This results in one of the potential GMs becoming the active GM. Any other potential GMs are standby GMs from the perspective of the OC. If the active GM fails, the OC will stop receiving announce messages and the accounceReceiptTimeout will expire. This will invoke the BMCA. The BMCA will result in one of the standby GMs (i.e., the best of the remaining potential GMs) becoming the active GM. If there are no GMs in the unicastDiscoveryPortDS or if none of the GMs in the unicastDiscoveryPortDS grants Announce messages to the OC, the OC will go into either free-run or holdover.
 
 After the GM is selected, the OC uses unicast negotiation to request Sync and Delay\_Resp messages from the GM. Upon being granted Sync messages, the OC receives the Sync messages from the GM. Upon being granted Delay\_Resp messages, the OC sends Delay\_Req messages to the GM and receives a Delay\_Resp message in response to each Delay\_Req message.
+
 
 ### Unicast Negotiation
 
@@ -365,6 +385,7 @@ Figure 3.Unicast negotiation for Sync messages
 
 Figure 4. Unicast negotiation for Delay\_Resp messages
 
+
 ### Active Standby Scenario
 
 This section provides examples on how PTP and the default BMCA can be used to provide full and partial redundancy of GMs during normal operation and failure scenarios.
@@ -387,9 +408,11 @@ Figure 6. Example2 one active GM for each group and one standby GM for both grou
 
 Example 1 illustrates the case of full redundancy where there is one standby GM for each active GM. Example 2 illustrates the case of partial redundancy where there are fewer standby GMs than active GMs. To balance the load among the active GMs, the OCs should be divided as evenly as possible among the active GMs. To balance the load among the standby GMs and also achieve maximum robustness to failures, the standby GMs should be assigned to equal numbers of OC groups. For example, if there are 60000 OCs, 12 potential active GMs, and 4 potential standby GMs, the OCs should be divided into groups of 5000 OCs each (i.e., 60000 OCs/12 GMs), and each of the 12 potential active GMs should be entered in the unicastDiscoveryPortDS of the OCs of exactly one group. Each potential standby GM should be entered in the unicastDiscoveryPortDS of the OCs of exactly 3 groups (and no group should have two standby GMs entered in the unicastDiscoveryPortDS of any of its OCs). With this approach, a standby GM serves as a backup for up to 3 OC groups. In this example, if a standby GM can handle the load of up to _N_ groups (_N_ 3), then _N_ active failures can be tolerated.
 
+
 ### Active Active Scenario
 
 This section is for future, and will consist on providing examples on how PTP and the default BMCA can be used to provide load balancing and maximize the use of GMs in both normal operation and failure scenarios beyond active standby examples provided in section 6.14.2.
+
 
 ## Best Clock Algorithm and Clock Attributes
 
@@ -435,6 +458,7 @@ The data set members listed in Table 2 are not applicable to TCs. TCs do not par
 | currentDS | synchronizationUncertain | FALSE (default) | FALSE (default) |
 
 Table 2. Data set members and values
+
 
 ## Network Limits and Error Budget for Model 1
 
@@ -490,6 +514,7 @@ The total error at the input of the application is 584 ns + 100 ns + 200 ns + 20
 
 If the OC loses its connection to the network and enters holdover or the GM loses its connection to its time source (e.g., GNSS) and enters holdover with clockClass = 7, it can be assumed that the application already has already built-up an error of 1100 ns relative to TAI. In worst case, the application could drift another 1400 ns before it exceeds the 2.5 s requirement. This means that the holdover requirement for the OC or the GM can be taken as 1400 ns over a time period T. This period T should be specified by the OC or GM datasheet. In addition, if the OC switches from one active GM to another active GM, any transient during this switch must be within 1400 ns.
 
+  1.
 ## PTP management messages
 
 The profile uses the PTP management mechanism and PTP management messages (TLVs) defined in clause 15 of IEEE Std 1588-2019. The management messages are used by a PTP management node for the purpose of configuration and/or monitoring PTP Instances.
@@ -506,6 +531,7 @@ The following additional TLV should be supported (Note: This TLV is an implement
 
 Additional PTP management TLVs might be defined for the purpose of calculating time error bounds. This is for further study.
 
+1.
 # References
 
 [1] OCP Timing Appliances Project (TAP) Incubation Proposal, July 2020, [https://www.opencompute.org/wiki/Time\_Appliances\_Project](https://www.opencompute.org/wiki/Time_Appliances_Project)
@@ -522,6 +548,7 @@ Additional PTP management TLVs might be defined for the purpose of calculating t
 
 [7] ITU-T G.8272, Timing characteristics of primary reference time clocks
 
+1.
 # Revision
 
 | **Revision** | **Comments** |
@@ -531,6 +558,7 @@ Additional PTP management TLVs might be defined for the purpose of calculating t
 | 0.3 | Added revision table. Updated OCP license section |
 | 0.4 | Added IEEE CID and updated profileIdentifier based on received CID (Company ID). Added PTP management messages. Added clarifying text on IPv6/IPv4/UDP. |
 
+1.
 # License
 
 There are 2 types of license under which a document can be submitted. Please provide one only.
