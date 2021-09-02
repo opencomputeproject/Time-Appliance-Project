@@ -82,12 +82,12 @@ Table of Contents
 [9 License 27](#_Toc81400040)
 
 
-# Introduction
+# 1 Introduction
 
 Time is a key element to get the highest efficiency in a distributed system. The performance of a distributed system depends in part on the level of synchronization between the elements. Several industries such as telecom, power, industrial, automotive, professional audio and video have embraced the need for highly accurate and reliable distribution and synchronization of time across packet networks. Although the use case scenario for each of the industries is different, they all share one common thing and that is, time synchronization. Each use case scenario defines a set of requirements and configurations that are specified in a &#39;PTP profile&#39;. This document defines a PTP profile to serve the needs of data center time-sensitive applications, data center network infrastructure and the use of synchronized clocks [3]. The profile specifies the set of PTP features and attribute values applicable to a PTP instance that operates in a single device (eg., such as a switch, router, server) and within exactly one PTP domain. Additionally, this specification also addresses additional requirements and use cases that are outside the definition of a PTP profile.
 
 
-# Terminology
+# 2 Terminology
 
 The IEEE 1588 committee is working on a project to recommend alternative terminology that is more inclusive than some of terminology currently used in IEEE Std 1588-2019. The IEEE project has not yet decided on the alternative terminology as of August 2021.
 
@@ -100,7 +100,7 @@ This document uses the following translation of terms used by IEEE1588:
 | Grandmaster | Open Time Server or GM |
 
 
-# PTP Profile Definition
+# 3 PTP Profile Definition
 
 A PTP profile is &quot;a document, or a portion of a document, specifying the set of PTP features and attribute values applicable to a PTP instance, and written by an organization following the specification of IEEE Std IEEE1588-2019. The profile allows organizations to specify selections of attribute values and optional features of PTP for the purpose of meeting requirements of a particular application. A PTP profile applicable to data center is defined in this document.
 
@@ -116,14 +116,14 @@ A PTP profile is a set of required options, prohibited options, and the ranges a
 - If relevant, the value of the observation interval &ge; \tau $gt; used for PTP Variance measurements.
 
 
-# Reference Model
+# 4 Reference Model
 
 The model referenced in this section is designated as Model 1. The model consists of three layers. The time reference layer consists primarily of sourcing a time reference (e.g, GNSS) and the PTP Open Time Server (GM) functionality [4]. The network fabric layer consists of a set of network elements that support PTP clocks such as the transparent clock (TC) or the boundary clock (BC). The server layer consists of a group of end-hosts that support PTP clocks such as the ordinary clock (OC), and where the time-sensitive applications typically reside.
 
 In Model 1, the network fabric layer consists of a chain of TCs.
 
 
-## Model 1 – Transparent Clock Model
+## 4.1 Model 1 – Transparent Clock Model
 
 The high-level characteristics of Model 1 shown in Figure 1 are:
 
