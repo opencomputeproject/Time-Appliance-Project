@@ -147,6 +147,11 @@ The high-level characteristics of Model 1 shown in Figure 1 are:
 
 ![](RackMultipart20210902-4-1pjwd17_html_881529b6176e302f.jpg)
 
+
+![Screen Shot 2021-09-01 at 9 39 40 PM](https://user-images.githubusercontent.com/50565500/131783435-2fdf74fb-814e-429e-b8a5-948881af19b2.jpg)
+
+
+
 Figure 1. Model 1 – Chain of Transparent Clocks
 
 1.
