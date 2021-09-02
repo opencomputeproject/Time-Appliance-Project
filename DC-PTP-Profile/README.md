@@ -160,12 +160,19 @@ The PTP profile is based on IEEE Std 1588-2019.
 The information below identifies the profile. The profile is defined by OCP.
 
 profileName: PTP profile for data center application (DC-PTP Profile 1)
+
 profileNumber: 1
+
 primaryVersion: 1
+
 revisionNumber: 0
+
 profileIdentifier: 7A-4D-2F-01-01-00
+
 organizationName: Open Compute Project (OCP)
+
 sourceIdentification: This profile is specified by OCP and can be downloaded from [https://www.opencompute.org](https://www.opencompute.org/)
+
 
 
 ## 6.2 Clock Types
