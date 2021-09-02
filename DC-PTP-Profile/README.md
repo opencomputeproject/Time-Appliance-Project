@@ -1,6 +1,6 @@
 
 
-![Screen Shot 2021-09-01 at 10 20 09 PM](https://user-images.githubusercontent.com/50565500/131786227-38cb483b-6cbc-42b8-96b9-d520f9b4425a.jpg)
+![GitHub Logo](https://github.com/opencomputeproject/Time-Appliance-Project/blob/master/Time-Card/images/OCP%20logo.jpg?raw=true)
 
 
 # Data Center PTP Profile 1
