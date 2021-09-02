@@ -14,47 +14,47 @@ This document defines a PTP profile for time-sensitive applications within a dat
 
 ### Table of Contents
 
-[1 Introduction 5](#_Toc81400010)
+[1 Introduction](#_Toc81400010)
 
-[2 Terminology 5](#_Toc81400011)
+[2 Terminology](#_Toc81400011)
 
-[3 PTP Profile Definition 5](#_Toc81400012)
+[3 PTP Profile Definition](#_Toc81400012)
 
-[4 Reference Model 6](#_Toc81400013)
+[4 Reference Model](#_Toc81400013)
 
-[4.1 Model 1 – Transparent Clock Model 6](#_Toc81400014)
+[4.1 Model 1 – Transparent Clock Model](#_Toc81400014)
 
-[5 Model 1 - Additional Requirements 8](#_Toc81400015)
+[5 Model 1 - Additional Requirements](#_Toc81400015)
 
-[6 PTP Profile 8](#_Toc81400016)
+[6 PTP Profile](#_Toc81400016)
 
-[6.1 Profile Identifier 8](#_Toc81400017)
+[6.1 Profile Identifier](#_Toc81400017)
 
-[6.2 Clock Types 8](#_Toc81400018)
+[6.2 Clock Types](#_Toc81400018)
 
-[6.3 Message Types 9](#_Toc81400019)
+[6.3 Message Types](#_Toc81400019)
 
-[6.4 Transport mechanisms required, permitted, or prohibited 9](#_Toc81400020)
+[6.4 Transport mechanisms required, permitted, or prohibited](#_Toc81400020)
 
-[6.5 Clock identity 9](#_Toc81400021)
+[6.5 Clock identity](#_Toc81400021)
 
-[6.6 Path delay Measurement Mechanism 10](#_Toc81400022)
+[6.6 Path delay Measurement Mechanism](#_Toc81400022)
 
-[6.7 Class of Service 10](#_Toc81400023)
+[6.7 Class of Service](#_Toc81400023)
 
-[6.8 PTP Security 10](#_Toc81400024)
+[6.8 PTP Security](#_Toc81400024)
 
-[6.9 Profile Isolation and Domain Number 10](#_Toc81400025)
+[6.9 Profile Isolation and Domain Number](#_Toc81400025)
 
-[6.10 One-step and two-step operation 11](#_Toc81400026)
+[6.10 One-step and two-step operation](#_Toc81400026)
 
-[6.11 End-to-End TC with two-step operation 11](#_Toc81400027)
+[6.11 End-to-End TC with two-step operation](#_Toc81400027)
 
-[6.12 PTP message rate 12](#_Toc81400028)
+[6.12 PTP message rate](#_Toc81400028)
 
-[6.13 PTP inter-message interval 12](#_Toc81400029)
+[6.13 PTP inter-message interval](#_Toc81400029)
 
-[6.14 Unicast Communication 13](#_Toc81400030)
+[6.14 Unicast Communication](#_Toc81400030)
 
 [6.14.1 Unicast Discovery 13](#_Toc81400031)
 
