@@ -86,7 +86,7 @@ Time is a key element to get the highest efficiency in a distributed system. The
 
 The IEEE 1588 committee is working on a project to recommend alternative terminology that is more inclusive than some of terminology currently used in IEEE Std 1588-2019. The IEEE project has not yet decided on the alternative terminology as of August 2021.
 
-This document uses the following translation of terms used by <span style="color:red"> IEEE1588:
+This document uses the following translation of terms used by IEEE1588:
 
 | IEEE Std 1588-2019 terms | OCP DC PTP Profile terms |
 | --- | --- |
