@@ -1,13 +1,4 @@
-
-
-
-
-
- 
-
-
-
-Data Center PTP Profile 1
+# Data Center PTP Profile 1
 
 
 EDITOR(S):
@@ -16,7 +7,7 @@ CONTRIBUTOR(S):
 [name, company]
 
  
-Executive Summary
+## Executive Summary
 This document defines a PTP profile for time-sensitive applications within a data center environment. The document is developed within the Open Compute Project (OCP) Timing Appliances Project community [1]. The PTP profile is based on IEEE Std 1588 TM-2019 [2]. When applicable, the profile also references and reuses information from other PTP profiles or other industry specifications. The document provides a set of requirements for implementing, deploying and operating timing appliances within a data center. A timing appliance is an element that is PTP-aware such as a switch/router, time server, NIC card, software module, timing card, monitoring device, etc.
 
 
@@ -42,7 +33,7 @@ This document defines a PTP profile for time-sensitive applications within a dat
 
 
 
-Table of Contents
+## Table of Contents
 1	Introduction	5
 2	Terminology	5
 3	PTP Profile Definition	5
@@ -76,10 +67,10 @@ Table of Contents
 9	License	27
 
  
-Introduction
+## Introduction
 Time is a key element to get the highest efficiency in a distributed system. The performance of a distributed system depends in part on the level of synchronization between the elements. Several industries such as telecom, power, industrial, automotive, professional audio and video have embraced the need for highly accurate and reliable distribution and synchronization of time across packet networks. Although the use case scenario for each of the industries is different, they all share one common thing and that is, time synchronization. Each use case scenario defines a set of requirements and configurations that are specified in a ‘PTP profile’. This document defines a PTP profile to serve the needs of data center time-sensitive applications, data center network infrastructure and the use of synchronized clocks [3]. The profile specifies the set of PTP features and attribute values applicable to a PTP instance that operates in a single device (eg., such as a switch, router, server) and within exactly one PTP domain. Additionally, this specification also addresses additional requirements and use cases that are outside the definition of a PTP profile.
 
-Terminology
+## Terminology
 The IEEE 1588 committee is working on a project to recommend alternative terminology that is more inclusive than some of terminology currently used in IEEE Std 1588-2019. The IEEE project has not yet decided on the alternative terminology as of August 2021.
 This document uses the following translation of terms used by IEEE1588:
 IEEE Std 1588-2019 terms	OCP DC PTP Profile terms
@@ -87,7 +78,7 @@ Master	Leader
 Slave	Follower
 Grandmaster	Open Time Server or GM
 
-PTP Profile Definition
+## PTP Profile Definition
 A PTP profile is “a document, or a portion of a document, specifying the set of PTP features and attribute values applicable to a PTP instance, and written by an organization following the specification of IEEE Std IEEE1588-2019. The profile allows organizations to specify selections of attribute values and optional features of PTP for the purpose of meeting requirements of a particular application. A PTP profile applicable to data center is defined in this document.
 A PTP profile is a set of required options, prohibited options, and the ranges and defaults of configurable attributes. Some example are:
 	Path delay measurement option (delay request-response or peer delay)
@@ -98,11 +89,11 @@ A PTP profile is a set of required options, prohibited options, and the ranges a
 	Transport mechanisms required, permitted, or prohibited
 	If relevant, the value of the observation interval  used for PTP Variance measurements.
 
-Reference Model
+## Reference Model
 The model referenced in this section is designated as Model 1. The model consists of three layers. The time reference layer consists primarily of sourcing a time reference (e.g, GNSS) and the PTP Open Time Server (GM) functionality [4]. The network fabric layer consists of a set of network elements that support PTP clocks such as the transparent clock (TC) or the boundary clock (BC). The server layer consists of a group of end-hosts that support PTP clocks such as the ordinary clock (OC), and where the time-sensitive applications typically reside.
 In Model 1, the network fabric layer consists of a chain of TCs.
 
-Model 1 – Transparent Clock Model
+### Model 1 – Transparent Clock Model
 The high-level characteristics of Model 1 shown in Figure 1 are:
 	GM (or Open Time Server) has a single network physical port and always distribute time towards the network fabric layer and server layer. The GM defined in this PTP profile (and the term GM used in this document) is a leader-only  OC with a single PTP port according to 9.2.2.2 of IEEE Std 1588-2019.
 	TC can have multiple network physical ports (eg., 16, 48). The TC can have multiple capable PTP ports.
@@ -122,7 +113,7 @@ The high-level characteristics of Model 1 shown in Figure 1 are:
  
 Figure 1. Model 1 – Chain of Transparent Clocks
 
-Model 1 - Additional Requirements
+### Model 1 - Additional Requirements
 	The higher layer applications require UTC traceability. The PTP protocol transports the PTP Timescale (i.e., TAI) plus all information to derive the UTC Timescale from the TAI timescale. It is up to the application to perform timescale conversion.
 	The maximum time error between any two OCs must be within 5 microseconds, i.e., |TOC,j – TOC,k|  5 s for k  j.
 	The maximum time error between a GM and any OCs must be within 2.5 microseconds. i.e., |TGM – TOC|  2.5 s.
@@ -130,10 +121,10 @@ Model 1 - Additional Requirements
 	The maximum time error generated by a TC must be within 100 nanoseconds, i.e., |TTC,j |  200 ns.
 	In normal operating conditions, each OC has connectivity into multiple GMs. Under failure of a GM, an OC must be capable of having connectivity to at least another GM.
 
-PTP Profile
+## PTP Profile
 The PTP profile is based on IEEE Std 1588-2019.
 
-Profile Identifier
+## Profile Identifier
 The information below identifies the profile. The profile is defined by OCP.
 profileName: PTP profile for data center application (DC-PTP Profile 1)
 profileNumber: 1
@@ -143,14 +134,14 @@ profileIdentifier: 7A-4D-2F-01-01-00
 organizationName: Open Compute Project (OCP)
 sourceIdentification: This profile is specified by OCP and can be downloaded from https://www.opencompute.org
 
-Clock Types
+## Clock Types
 The profile allows for the following clocks to be used. See clause 3 of IEEE Std 1588-2019 for the full definitions.
 GM	The PTP clock that is the source of time for all clocks in the domain.
 TC	A PTP clock that measures the time for a PTP event message to transit the PTP clock and provides this information to PTP clocks receiving this PTP event message. The PTP clock in this profile supports the delay request – response mechanism (i.e., end-to-end Transparent Clock). 
 OC	A PTP clock that has a single PTP port in its domain and maintains the timescale used in the domain.
 Some additional requirements that pertain to the GM and that are outside the PTP Profile are defined in the OCP-TAP Open Time Server project [4].
 
-Message Types
+## Message Types
 The profile allows for the following messages:
 	Announce
 	Sync
@@ -160,33 +151,33 @@ The profile allows for the following messages:
 	Signaling
 	Management
 
-Transport mechanisms required, permitted, or prohibited
+## Transport mechanisms required, permitted, or prohibited
 The transport mechanism UDP over IPv6 per Annex D of IEEE Std 1588-2019 must be supported.
 The transport mechanism UDP over IPv4 per Annex C should be supported.
 The UDP checksum must be computed when a PTP message is retransmitted (see 3.1.65 of IEEE Std 1588-2019) by a TC.
 The UDP destination port numbers per Annex C.2 of IEEE Std 1588-2019 must be supported. The UDP source port number of a unicast PTP message can be any ephemeral port number and should be preserved throughout the lifetime of a PTP connection that has been established using the unicast negotiation mechanism.
 
-Clock identity
+## Clock identity
 The clockIdentity must be an EUI-64 as specified in 7.5.2.2 of IEEE Std 1588-2019. The EUI-64 must be globally unique. If the EUI-64 is formed from an existing EUI-48, it must be done by appending two octets after the final six octets of the EUI-48 such that the 64 bits of the clockIdentity are not the same as the bits of any EUI-64 that has previously been assigned or may be assigned in the future by an authorized assignee of the MA-L, MA-M, or MA-S from which the EUI-48 was assigned. This means that either the entity that forms the EUI-64 owns the MA-L, MA-M, or MA-S from which the EUI-48 was formed, or the owner of that MA-L, MA-M, or MA-S has given the entity that forms the EUI-64 the sole right to the clockIdentity being formed.
 Note: When using the MAC address, the clock identity is created by appending two octets after the final six octets of the MAC address. Note that in IEEE Std 1588-2008 the clock identity was formed by adding the two octets ‘FFFE’ between the 3rd octet and 4th octet of the MAC address, however, that mapping has been deprecated by the IEEE.
 
-Path delay Measurement Mechanism
+## Path delay Measurement Mechanism
 The path delay measurement mechanism must be the delay request-response mechanism. The value of the data set member portDS.delayMechanism must be E2E.
 
-Class of Service
+## Class of Service
 PTP event messages should set the DSCP field of the IPv6 Traffic Class field to the highest class of service possible. This should minimize latency and delay variation as PTP packets traverse a set of transparent clocks. In Model1, the GM and OC should set the traffic class value.
 
-PTP Security
+## PTP Security
 PTP security is out of scope given the network will be a single trusted domain managed by a single entity.
 
-Profile Isolation and Domain Number
+## Profile Isolation and Domain Number
 All PTP instances must communicate using a single domain number, and the domainNumber value must be 0.
 The sdoId is a new parameter in IEEE Std 1588-2019. A recognized standards organization, industry trade association, regulatory or government organization, or other organization as described in 20.3.2 of IEEE Std 1588-2019, can obtain an sdoId from the IEEE Registration Authority (RA). The sdoId is used to ensure that a PTP profile is isolated from any other PTP profiles running on the same network that are developed by other organizations.
 An organization can obtain only one sdoId. If the organization develops multiple PTP profiles and requires that they be isolated, the isolation is further done using domainNumber. If an organization does not obtain an sdoId, the PTP profile will use the sdoId 0x000.
 This PTP profile does not require an sdoId since it is assumed it will be the only profile within the data center network. If the assumption is not correct, another profile running on the network will conflict with this profile if the sdoId and domainNumber of the other profile are both 0.
 Note – The sdoId is backward compatible with IEEE Std 1588-2008. The first nibble of the sdoId, i.e., the majorSdoId, corresponds to the transportSpecific field of IEEE Std 1588-2008. The final 8 bits of the sdoId, i.e., the minorSdoId, was reserved in IEEE Std 1588-2008 and was specified as 0x00.
 
-One-step and two-step operation
+## One-step and two-step operation
 A GM defined in this profile must support one-step or two-step operation on transmit, or can support both on transmit.
 A TC defined in this profile must support one-step operation on transmit (i.e., egress) on all of its ports, or must support two-step operation on transmit on all of its ports.  A TC defined in this profile should support one-step operation on all of its ports (see 6.11).
 All PTP clocks must support both one-step and two-step operation on receive (i.e., ingress).
@@ -194,13 +185,13 @@ A PTP port can transmit a Sync message as one-step or two-step. If the transmiss
 Note: one-step operation reduces the number of PTP messages transmitted by a PTP port. This may be applicable when considering scalability of unicast communication that a GM can serve. A one-step operation might ease meeting the requirements regarding the transmission of Sync messages specified in 9.5.9 of IEEE Std 1588-2019.
 Note: IEEE Std 1588-2019 allows one-step versus two-step operation to be on a PTP port basis. However, IEEE Std 1588-2019 does not describe this capability. This profile requires that all PTP ports on a per clock basis be the same.
 
-End-to-End TC with two-step operation
+## End-to-End TC with two-step operation
 This section applies to the scenario where two-step TC operation may be used.
 If an end-to-end TC uses two-step operation, each Delay_Req and corresponding Delay_Resp message must traverse the same end-to-end TC. This is because the end-to-end TC timestamps the Delay_Req message on ingress and egress and computes the residence time of the Delay_Req message. However, in the two-step case the TC updates the residence time of the corresponding Delay_Resp message. This is described in detail in 10.2.2.2.2 and 10.2.2.2.3 of IEEE Std 1588-2019. The former subclause describes the one-step case and specifies that the “<residenceTime> of the Delay_Req message must be added to the correctionField of the Delay_Req message by the egress PTP Port of the TC prior to the retransmission of the Delay_Req message.” In this case, it is the Delay_Req message that is altered by the TC, and not the Delay_Resp message. However, the latter subclause describes the two-step case, and specifies that the “<residenceTime> must be added to the correctionField of the Delay_Resp message associated with the Delay_Req message prior to transmission of the Delay_Resp message on the egress PTP Port, which is the ingress PTP Port for the Delay_Req message.”
 If all the TCs are two-step, the Delay_Req and Delay_Resp must traverse the same set of transparent clocks (links and network elements) between the GM and OC in order to meet the subclause requirements. This property might not always hold true when using for example packet spraying, load balancing and equal cost multipath techniques. This is particularly applicable to data center environments and a reason for recommending the use of one-step operation TCs as noted in section 6.10.
 If all the TCs are one-step, the Delay_Req and Delay_Resp need not traverse the same set of TCs (links and network elements) between the GM and OC.
 
-PTP message rate
+## PTP message rate
 Table 1 defines the range of message rates for Announce, Sync, Delay_Req, and Delay_Resp messages. A GM must support the full range. An OC should support the full range but can support a subset of the range. The message rate selected by an OC relates to the performance expected. A TC is agnostic to the PTP message rate.
 
 Message	Upper end of logMessageInterval range	Mean rate corresponding to upper end of range (pps)	Lower end of logMessageInterval range	Mean rate corresponding to lower end of range (pps)	Default value of logMessageInterval
@@ -209,7 +200,7 @@ Sync	+3	0.125 (1 per 8 s)	-7	128	0
 Delay_Req & Delay_Resp	0	1	-7	128	0
 Table 1. Range of logMessageInterval for a PTP Port
 
-PTP inter-message interval
+## PTP inter-message interval
 The requirements for the actual inter-message intervals for unicast Announce, Sync, Delay_Req, and Delay_Resp messages are specified in 16.1 of IEEE Std 1588-2019. There are requirements for:
 	(a) the arithmetic mean of the successive inter-message interval computed over a suitable number of successive intervals
 	(b) the distribution of the inter-message intervals
@@ -220,13 +211,13 @@ Consider N successive inter-message intervals ti , i = 1, 2, …, N, where �
 For example, if the grantor port grants Sync or Announce messages with logMessageInterval equal to 0, the mean inter-message interval is 1 s. This means that (a) the average of the durations of a suitable number of successive inter-message intervals tav must be between 0.7 s and 1.3 s, and (b) 90% of the actual inter-message intervals must have durations that are between 0.7 s and 1.3 s. In addition, if the GM port grants Delay_Resp messages with logMessageInterval equal to 0, then (a) the average of the durations of a suitable number of successive Delay_Req inter-message intervals must be greater than or equal to 0.9 s, and (b) 90% of the actual Delay_Req inter-message intervals must have durations that are between 0.7 s and 1.3 s.
 In principle, the mean Sync rate and the mean Delay_Req/Delay_Resp rate need not be the same. If the actual delay on the PTP communication path is changing sufficiently slowly (after the OC has processed any correction field), then infrequent delay measurements compared to the mean Sync interval might give acceptable performance. In this case, the mean Delay_Req/Delay_Resp rate can be chosen to be smaller than the mean Sync rate. The Sync rate that is chosen depends on the implementation of the OC filter and how much noise the oscillator at the OC generates. If the oscillator has a large noise generation, then the Sync rate would likely be larger. In this case, the OC would use new Sync information more frequently to correct for time error.
 
-Unicast Communication
+## Unicast Communication
 PTP communication in this profile is based on unicast. Most PTP profiles in the industry are based on multicast, except for two of the ITU-T telecom profiles that are based on unicast [5, 6].
 Both unicast discovery (clause 17.4 of IEEE Std 1588-2019) and unicast negotiation (clause 16.1 of IEEE Std 1588-2019) must be supported. In Model 1, each OC first uses unicast discovery to determine the potential GMs, and then uses unicast negotiation to request Announce messages from the potential GMs. The OC then invokes the Best Clock Algorithm (BMCA) to determine which of the potential GMs becomes the actual GM, i.e., the active GM. Finally, the OC uses unicast negotiation to request Sync and Delay_Resp messages from the active GM and uses the Sync, Delay_Resp, and Delay_Req information to synchronize to the GM that was selected. The other potential GMs are available as backup in the event that the active GM fails or can be selected as active GM for other OCs.
 The unicast negotiation feature is permanently enabled. The unicastNegotiationPortDS.enable member (of the unicastNegotiationPortDS) must be TRUE for each PTP port (there is a unicastNegotiationPortDS for each PTP port). This dataset member applies to GM and OC and is not applicable to TC.
 The unicastFlag of all PTP messages must be set to TRUE.
 
-Unicast Discovery
+## Unicast Discovery
 Unicast discovery is specified in 17.4 of IEEE Std 1588-2019.
 In Model 1 of this PTP profile, a table of potential GMs is configured in each OC. The table is sometimes referred to as the Unicast Table (UMT) and is defined in the unicastDiscoveryPortDS data set in clause 17.4.3 of IEEE Std 1588-2019. This data set contains the following members:
 	maxTableSize: the maximum number of potential GMs that can be in the table
@@ -236,7 +227,7 @@ In Model 1 of this PTP profile, a table of potential GMs is configured in each O
 Each OC uses unicast negotiation to request Announce messages from each potential GM contained in the unicastDiscoveryPortDS. If a potential GM does not grant the request, the OC attempts again after a time interval corresponding to logQueryInterval. The received Announce messages cause a state decision event, which causes the BMCA to be invoked. This results in one of the potential GMs becoming the active GM. Any other potential GMs are standby GMs from the perspective of the OC. If the active GM fails, the OC will stop receiving announce messages and the accounceReceiptTimeout will expire. This will invoke the BMCA. The BMCA will result in one of the standby GMs (i.e., the best of the remaining potential GMs) becoming the active GM. If there are no GMs in the unicastDiscoveryPortDS or if none of the GMs in the unicastDiscoveryPortDS grants Announce messages to the OC, the OC will go into either free-run or holdover.
 After the GM is selected, the OC uses unicast negotiation to request Sync and Delay_Resp messages from the GM. Upon being granted Sync messages, the OC receives the Sync messages from the GM. Upon being granted Delay_Resp messages, the OC sends Delay_Req messages to the GM and receives a Delay_Resp message in response to each Delay_Req message.
 
-Unicast Negotiation
+## Unicast Negotiation
 An OC requests Announce messages and then selects the best potential GM using the BMCA. The OC then requests Sync and Delay_Resp messages from that GM. After the OC is granted Sync messages, the GM sends Sync (and Follow_Up if the communication is two-step) messages to the OC. After the OC is granted Delay_Resp messages, the OC sends Delay_Req messages to the GM and the GM responds with Delay_Resp. The requesting of Announce, Sync and Delay_Resp messages is done using the unicast negotiation feature of IEEE Std 1588-2019. The unicast negotiation feature is performed using the following four TLVs:
 	REQUEST_UNICAST_TRANSMISSION
 	GRANT_UNICAST_TRANSMISSION
