@@ -1,6 +1,7 @@
-![](RackMultipart20210902-4-1pjwd17_html_38b959f265f9c68.jpg)
 
-![](RackMultipart20210902-4-1pjwd17_html_90943af4ff31dc4c.gif)
+
+![Screen Shot 2021-09-01 at 10 20 09 PM](https://user-images.githubusercontent.com/50565500/131786227-38cb483b-6cbc-42b8-96b9-d520f9b4425a.jpg)
+
 
 # Data Center PTP Profile 1
 
