@@ -179,6 +179,7 @@ sourceIdentification: This profile is specified by OCP and can be downloaded fro
 
 The profile allows for the following clocks to be used. See clause 3 of IEEE Std 1588-2019 for the full definitions.
 
+| Clock | Definition |
 | --- | --- |
 | GM | The PTP clock that is the source of time for all clocks in the domain. |
 | TC | A PTP clock that measures the time for a PTP event message to transit the PTP clock and provides this information to PTP clocks receiving this PTP event message. The PTP clock in this profile supports the delay request – response mechanism (i.e., end-to-end Transparent Clock). |
