@@ -2219,8 +2219,9 @@ static int
 ptp_ocp_summary_show(struct seq_file *s, void *data)
 {
 	struct device *dev = s->private;
-	struct ts_reg __iomem *ts_reg;
+	struct ptp_system_timestamp sts;
 	u32 sma_in, sma_out, ctrl, val;
+	struct ts_reg __iomem *ts_reg;
 	struct timespec64 ts;
 	struct ptp_ocp *bp;
 	char *buf, *src;
@@ -2229,6 +2230,16 @@ ptp_ocp_summary_show(struct seq_file *s, void *data)
 	buf = (char *)__get_free_page(GFP_KERNEL);
 	if (!buf)
 		return -ENOMEM;
+
+	bp = dev_get_drvdata(dev);
+	sma_in = ioread32(&bp->sma->gpio1);
+	sma_out = ioread32(&bp->sma->gpio2);
+
+	seq_printf(s, "%7s: /dev/ptp%d\n", "PTP", ptp_clock_index(bp->ptp));
+	if (bp->gnss_port != -1)
+		seq_printf(s, "%7s: /dev/ttyS%d\n", "GNSS", bp->gnss_port);
+	if (bp->mac_port != -1)
+		seq_printf(s, "%7s: /dev/ttyS%d\n", "MAC", bp->mac_port);
 
 	sma1_out_show(dev, NULL, buf);
 	seq_printf(s, "   sma1: out from %s", buf);
@@ -2241,10 +2252,6 @@ ptp_ocp_summary_show(struct seq_file *s, void *data)
 
 	sma4_in_show(dev, NULL, buf);
 	seq_printf(s, "   sma4: input to %s", buf);
-
-	bp = dev_get_drvdata(dev);
-	sma_in = ioread32(&bp->sma->gpio1);
-	sma_out = ioread32(&bp->sma->gpio2);
 
 	if (bp->ts0) {
 		ts_reg = bp->ts0->mem;
@@ -2344,9 +2351,25 @@ ptp_ocp_summary_show(struct seq_file *s, void *data)
 	seq_printf(s, "%7s: %s, state: %s\n", "PHC src", buf,
 		   val & OCP_STATUS_IN_SYNC ? "sync" : "unsynced");
 
-	if (!ptp_ocp_gettimex(&bp->ptp_info, &ts, NULL))
-		seq_printf(s, "%7s: %lld.%ld == %ptT\n", "PHC",
+	if (!ptp_ocp_gettimex(&bp->ptp_info, &ts, &sts)) {
+		struct timespec64 sys_ts;
+		s64 pre_ns, post_ns, ns;
+
+		pre_ns = timespec64_to_ns(&sts.pre_ts);
+		post_ns = timespec64_to_ns(&sts.post_ts);
+		ns = (pre_ns + post_ns) / 2;
+		ns += (s64)bp->utc_tai_offset * NSEC_PER_SEC;
+		sys_ts = ns_to_timespec64(ns);
+
+		seq_printf(s, "%7s: %lld.%ld == %ptT TAI\n", "PHC",
 			   ts.tv_sec, ts.tv_nsec, &ts);
+		seq_printf(s, "%7s: %lld.%ld == %ptT UTC offset %d\n", "SYS",
+			   sys_ts.tv_sec, sys_ts.tv_nsec, &sys_ts,
+			   bp->utc_tai_offset);
+		seq_printf(s, "%7s: PHC:SYS offset: %lld  window: %lld\n", "",
+			   timespec64_to_ns(&ts) - ns,
+			   post_ns - pre_ns);
+	}
 
 	free_page((unsigned long)buf);
 	return 0;
