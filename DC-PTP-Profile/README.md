@@ -54,29 +54,29 @@ This document defines a PTP profile for time-sensitive applications within a dat
 
 [6.13. PTP inter-message interval](#613-ptp-inter-message-interval)
 
-[6.13.1. Unicast Communication](#613-ptp-inter-message-interval)
+[6.13.1. Unicast Communication](#6131unicast-communication)
 
 [6.14. Unicast Communication](#614-unicast-discovery)
 
-[6.14.1. Unicast Discovery 13](#_Toc81400031)
+[6.14.1. Unicast Discovery](#6141-unicast-negotiation)
 
-[6.14.2. Unicast Negotiation 14](#_Toc81400032)
+[6.14.2. Unicast Negotiation](#_Toc81400032)
 
-[6.14.3. Active Standby Scenario 17](#_Toc81400033)
+[6.14.3. Active Standby Scenario](#_Toc81400033)
 
-[6.14.4. Active Active Scenario 20](#_Toc81400034)
+[6.14.4. Active Active Scenario](#_Toc81400034)
 
-[6.15. Best Clock Algorithm and Clock Attributes 20](#_Toc81400035)
+[6.15. Best Clock Algorithm and Clock Attributes](#_Toc81400035)
 
-[6.16. Network Limits and Error Budget for Model 1 23](#_Toc81400036)
+[6.16. Network Limits and Error Budget for Model 1](#_Toc81400036)
 
-[6.17. PTP management messages 25](#_Toc81400037)
+[6.17. PTP management messages](#_Toc81400037)
 
-[7. References 26](#_Toc81400038)
+[7. References](#_Toc81400038)
 
-[8. Revision 26](#_Toc81400039)
+[8. Revision](#_Toc81400039)
 
-[9. License 27](#_Toc81400040)
+[9. License](#_Toc81400040)
 
 
 # 1. Introduction
@@ -383,7 +383,7 @@ Figure 3.Unicast negotiation for Sync messages
 Figure 4. Unicast negotiation for Delay\_Resp messages
 
 
-### 6.14.3. Active Standby Scenario
+### 6.14.2. Active Standby Scenario
 
 This section provides examples on how PTP and the default BMCA can be used to provide full and partial redundancy of GMs during normal operation and failure scenarios.
 
@@ -407,7 +407,7 @@ Figure 6. Example2 one active GM for each group and one standby GM for both grou
 Example 1 illustrates the case of full redundancy where there is one standby GM for each active GM. Example 2 illustrates the case of partial redundancy where there are fewer standby GMs than active GMs. To balance the load among the active GMs, the OCs should be divided as evenly as possible among the active GMs. To balance the load among the standby GMs and also achieve maximum robustness to failures, the standby GMs should be assigned to equal numbers of OC groups. For example, if there are 60000 OCs, 12 potential active GMs, and 4 potential standby GMs, the OCs should be divided into groups of 5000 OCs each (i.e., 60000 OCs/12 GMs), and each of the 12 potential active GMs should be entered in the unicastDiscoveryPortDS of the OCs of exactly one group. Each potential standby GM should be entered in the unicastDiscoveryPortDS of the OCs of exactly 3 groups (and no group should have two standby GMs entered in the unicastDiscoveryPortDS of any of its OCs). With this approach, a standby GM serves as a backup for up to 3 OC groups. In this example, if a standby GM can handle the load of up to _N_ groups (_N_ 3), then _N_ active failures can be tolerated.
 
 
-### 6.14.4. Active Active Scenario
+### 6.14.3. Active Active Scenario
 
 This section is for future, and will consist on providing examples on how PTP and the default BMCA can be used to provide load balancing and maximize the use of GMs in both normal operation and failure scenarios beyond active standby examples provided in section 6.14.2.
 
