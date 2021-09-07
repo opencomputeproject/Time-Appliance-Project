@@ -1,4 +1,5 @@
 
+*To save spec as PDF - select text below (including images) -> right click -> Print -> Save as PDF*
 
 ![GitHub Logo](https://github.com/opencomputeproject/Time-Appliance-Project/blob/master/Time-Card/images/OCP%20logo.jpg?raw=true)
 
