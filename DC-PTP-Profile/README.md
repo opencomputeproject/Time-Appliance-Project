@@ -298,9 +298,9 @@ For Announce and Sync messages, the arithmetic mean of the inter-message interva
 
 For the distribution of the inter-message intervals, at least 90% of the inter-message intervals must be within &lt; 30% of the granted mean inter-message interval. This requirement applies to Announce, Sync, and Delay\_Req.
 
-Consider _N_ successive inter-message intervals _t __i_ , _i_ = 1, 2, …, _N_, where _t__ i_ = (_t __i_ – _t__ i_-1) is as shown in the figure. The arithmetic mean of the inter-message intervals, _t_av, is
+Consider _N_ successive inter-message intervals _t __i_ , _i_ = 1, 2, …, _N_, where _t__ i_ = (_t __i_ – _t__ i_-1) is as shown in the figure. The arithmetic mean of the inter-message intervals, _t_av, is
 
-For example, if the grantor port grants Sync or Announce messages with logMessageInterval equal to 0, the mean inter-message interval is 1 s. This means that (a) the average of the durations of a suitable number of successive inter-message intervals _t_av must be between 0.7 s and 1.3 s, and (b) 90% of the actual inter-message intervals must have durations that are between 0.7 s and 1.3 s. In addition, if the GM port grants Delay\_Resp messages with logMessageInterval equal to 0, then (a) the average of the durations of a suitable number of successive Delay\_Req inter-message intervals must be greater than or equal to 0.9 s, and (b) 90% of the actual Delay\_Req inter-message intervals must have durations that are between 0.7 s and 1.3 s.
+For example, if the grantor port grants Sync or Announce messages with logMessageInterval equal to 0, the mean inter-message interval is 1 s. This means that (a) the average of the durations of a suitable number of successive inter-message intervals _t_av must be between 0.7 s and 1.3 s, and (b) 90% of the actual inter-message intervals must have durations that are between 0.7 s and 1.3 s. In addition, if the GM port grants Delay\_Resp messages with logMessageInterval equal to 0, then (a) the average of the durations of a suitable number of successive Delay\_Req inter-message intervals must be greater than or equal to 0.9 s, and (b) 90% of the actual Delay\_Req inter-message intervals must have durations that are between 0.7 s and 1.3 s.
 
 In principle, the mean Sync rate and the mean Delay\_Req/Delay\_Resp rate need not be the same. If the actual delay on the PTP communication path is changing sufficiently slowly (after the OC has processed any correction field), then infrequent delay measurements compared to the mean Sync interval might give acceptable performance. In this case, the mean Delay\_Req/Delay\_Resp rate can be chosen to be smaller than the mean Sync rate. The Sync rate that is chosen depends on the implementation of the OC filter and how much noise the oscillator at the OC generates. If the oscillator has a large noise generation, then the Sync rate would likely be larger. In this case, the OC would use new Sync information more frequently to correct for time error.
 
@@ -439,7 +439,7 @@ The data set members listed in Table 2 are not applicable to TCs. TCs do not par
 | **GM** | **OC** |
 | defaultDS | clockClass | 6 (traceable to a primary reference time source)7 (in holdover, and within holdover specifications)52 (in holdover but out of holdover specifications, or in free-run) | 255 |
 | defaultDS | clockAccuracy | 0x21 (100 ns) | 0xFE (unknown) |
-| defaultDS | offsetScaledLogVariance | 0x4E5D (PTPVAR = 1.144  10-15 s2, or TDEV = 30 ns) | 0xFFFF (maximum possible value, signifying unknown) |
+| defaultDS | offsetScaledLogVariance | 0x4E5D (PTPVAR = 1.144 x 10-15 s2, or TDEV = 30 ns) | 0xFFFF (maximum possible value, signifying unknown) |
 | defaultDS | priority1 | 128 (not used in this profile) | 128 (not used in this profile) |
 | defaultDS | priority2 | Configurable over [0, 255]. Default value is 128 | Configurable over [0,255]. Default value is 128 |
 | defaultDS | followerOnly | FALSE | TRUE |
@@ -497,7 +497,7 @@ Table 3 contains initial assumptions for the effects given above. The value in t
 
 Table 3. Maximum absolute time error budget
 
-The maximum error introduced by a TC due to free-run accuracy and residence time is (0.1  10-3 s)(10-4) = 10-8 s = 10 ns. A TC will also introduce errors of 8 ns due to timestamp granularity and 8 ns due to timestamp generation. These errors will be added at both ingress and egress, for a total of 32 ns. The total error introduced by a TC in going from ingress to egress is therefore 42 ns.
+The maximum error introduced by a TC due to free-run accuracy and residence time is (0.1 x 10-3 s)(10-4) = 10-8 s = 10 ns. A TC will also introduce errors of 8 ns due to timestamp granularity and 8 ns due to timestamp generation. These errors will be added at both ingress and egress, for a total of 32 ns. The total error introduced by a TC in going from ingress to egress is therefore 42 ns.
 
 The errors due to timestamp granularity and timestamp generation are also introduced at the GM egress and the OC ingress. These errors will add 16 ns, for a total of 32 ns.
 
