@@ -298,7 +298,7 @@ For Announce and Sync messages, the arithmetic mean of the inter-message interva
 
 For the distribution of the inter-message intervals, at least 90% of the inter-message intervals must be within &lt; 30% of the granted mean inter-message interval. This requirement applies to Announce, Sync, and Delay\_Req.
 
-Consider _N_ successive inter-message intervals _t_ _i_ , _i_ = 1, 2, …, _N_, where _t_ _i_ = (_t_ _i_ – _t_ _i_-1) is as shown in the figure. The arithmetic mean of the inter-message intervals, _t_av, is
+Consider _N_ successive inter-message intervals _t_ _i_ , _i_ = 1, 2, …, _N_, where _t_ _i_ = (_t_ _i_ – _t_ _i_-1) is as shown in the figure. The arithmetic mean of the inter-message intervals, _t_ av, is
 
 For example, if the grantor port grants Sync or Announce messages with logMessageInterval equal to 0, the mean inter-message interval is 1 s. This means that (a) the average of the durations of a suitable number of successive inter-message intervals _t_ av must be between 0.7 s and 1.3 s, and (b) 90% of the actual inter-message intervals must have durations that are between 0.7 s and 1.3 s. In addition, if the GM port grants Delay\_Resp messages with logMessageInterval equal to 0, then (a) the average of the durations of a suitable number of successive Delay\_Req inter-message intervals must be greater than or equal to 0.9 s, and (b) 90% of the actual Delay\_Req inter-message intervals must have durations that are between 0.7 s and 1.3 s.
 
