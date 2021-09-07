@@ -302,7 +302,7 @@ For example, if the grantor port grants Sync or Announce messages with logMessag
 In principle, the mean Sync rate and the mean Delay\_Req/Delay\_Resp rate need not be the same. If the actual delay on the PTP communication path is changing sufficiently slowly (after the OC has processed any correction field), then infrequent delay measurements compared to the mean Sync interval might give acceptable performance. In this case, the mean Delay\_Req/Delay\_Resp rate can be chosen to be smaller than the mean Sync rate. The Sync rate that is chosen depends on the implementation of the OC filter and how much noise the oscillator at the OC generates. If the oscillator has a large noise generation, then the Sync rate would likely be larger. In this case, the OC would use new Sync information more frequently to correct for time error.
 
 
-## 6.14. Unicast. Communication
+## 6.14. Unicast Communication
 
 PTP communication in this profile is based on unicast. Most PTP profiles in the industry are based on multicast, except for two of the ITU-T telecom profiles that are based on unicast [5, 6].
 
