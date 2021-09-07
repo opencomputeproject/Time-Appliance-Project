@@ -14,7 +14,7 @@ This document defines a PTP profile for time-sensitive applications within a dat
 
 ### Table of Contents
 
-[1. Introduction](#1. Introduction)
+[1. Introduction](#1-introduction)
 
 [2. Terminology](#_Toc81400011)
 
