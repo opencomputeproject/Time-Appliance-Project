@@ -461,8 +461,8 @@ Table 2. Data set members and values
 
 This section is an initial analysis. The network limit from Section 5, is:
 
-- The maximum absolute time error of any OC, relative to TAI, must be max|TEOC|  2.5 s.
-- The time accuracy difference between any two OCs must be within 5 microseconds, i.e., |TOC,_j_ – TOC,_k_|  5 s for _k__j_.
+- The maximum absolute time error of any OC, relative to TAI, must be max|TEOC| &lt; 2.5 µs.
+- The time accuracy difference between any two OCs must be within µ5 microseconds, i.e., |TOC,_j_ – TOC,_k_| &lt; 5 µs for _k_ ≠ _j_.
 
 The following effects contribute to max|TEOC|:
 
