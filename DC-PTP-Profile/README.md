@@ -16,45 +16,47 @@ This document defines a PTP profile for time-sensitive applications within a dat
 
 [1. Introduction](#1-introduction)
 
-[2. Terminology](#_Toc81400011)
+[2. Terminology](#2-terminology)
 
-[3. PTP Profile Definition](#_Toc81400012)
+[3. PTP Profile Definition](#3-ptp-profile-definition)
 
-[4. Reference Model](#_Toc81400013)
+[4. Reference Model](#4-reference-model)
 
-[4.1. Model 1 – Transparent Clock Model](#_Toc81400014)
+[4.1. Model 1 – Transparent Clock Model](#41-model-1--transparent-clock-model)
 
-[5. Model 1 - Additional Requirements](#_Toc81400015)
+[5. Model 1 - Additional Requirements](#5-model-1---additional-requirements)
 
-[6. PTP Profile](#_Toc81400016)
+[6. PTP Profile](#6-ptp-profile)
 
-[6.1. Profile Identifier](#_Toc81400017)
+[6.1. Profile Identifier](#61-profile-identifier)
 
-[6.2. Clock Types](#_Toc81400018)
+[6.2. Clock Types](#62-clock-types)
 
-[6.3. Message Types](#_Toc81400019)
+[6.3. Message Types](#63-message-types)
 
-[6.4. Transport mechanisms required, permitted, or prohibited](#_Toc81400020)
+[6.4. Transport mechanisms required, permitted, or prohibited](#64-transport-mechanisms-required-permitted-or-prohibited)
 
-[6.5. Clock identity](#_Toc81400021)
+[6.5. Clock identity](#65-clock-identity)
 
-[6.6. Path delay Measurement Mechanism](#_Toc81400022)
+[6.6. Path delay Measurement Mechanism](#66-path-delay-measurement-mechanism)
 
-[6.7. Class of Service](#_Toc81400023)
+[6.7. Class of Service](#67-class-of-service)
 
-[6.8. PTP Security](#_Toc81400024)
+[6.8. PTP Security](#68-ptp-security)
 
-[6.9. Profile Isolation and Domain Number](#_Toc81400025)
+[6.9. Profile Isolation and Domain Number](#69-profile-isolation-and-domain-number)
 
-[6.10. One-step and two-step operation](#_Toc81400026)
+[6.10. One-step and two-step operation](#610-one-step-and-two-step-operation)
 
-[6.11. End-to-End TC with two-step operation](#_Toc81400027)
+[6.11. End-to-End TC with two-step operation](#611-end-to-end-tc-with-two-step-operation)
 
-[6.12. PTP message rate](#_Toc81400028)
+[6.12. PTP message rate](#612-ptp-message-rate)
 
-[6.13. PTP inter-message interval](#_Toc81400029)
+[6.13. PTP inter-message interval](#613-ptp-inter-message-interval)
 
-[6.14. Unicast Communication](#_Toc81400030)
+[6.13.1. Unicast Communication](#613-ptp-inter-message-interval)
+
+[6.14. Unicast Communication](#614-unicast-discovery)
 
 [6.14.1. Unicast Discovery 13](#_Toc81400031)
 
@@ -304,7 +306,7 @@ For example, if the grantor port grants Sync or Announce messages with logMessag
 In principle, the mean Sync rate and the mean Delay\_Req/Delay\_Resp rate need not be the same. If the actual delay on the PTP communication path is changing sufficiently slowly (after the OC has processed any correction field), then infrequent delay measurements compared to the mean Sync interval might give acceptable performance. In this case, the mean Delay\_Req/Delay\_Resp rate can be chosen to be smaller than the mean Sync rate. The Sync rate that is chosen depends on the implementation of the OC filter and how much noise the oscillator at the OC generates. If the oscillator has a large noise generation, then the Sync rate would likely be larger. In this case, the OC would use new Sync information more frequently to correct for time error.
 
 
-## Unicast. Communication
+## 6.13.1.Unicast. Communication
 
 PTP communication in this profile is based on unicast. Most PTP profiles in the industry are based on multicast, except for two of the ITU-T telecom profiles that are based on unicast [5, 6].
 
