@@ -56,23 +56,25 @@ This document defines a PTP profile for time-sensitive applications within a dat
 
 [6.14. Unicast Communication](#614-unicast-communication)
 
-[6.14.1 Unicast Discovery](#615-unicast-discovery)
+[6.14.1 Unicast Discovery](#6141-unicast-discovery)
 
-[6.14.2 Active Standby Scenario](#6142-active-standby-scenario)
+[6.14.2. Unicast Negotiation](#6142-unicast-negotiation)
 
-[6.14.3. Active Active Scenario](#_Toc81400034)
+[6.14.3. Active Standby Scenario](#6143-active-standby-scenario)
 
-[6.15. Best Clock Algorithm and Clock Attributes](#_Toc81400035)
+[6.14.4. Active Active Scenario](#6144-active-active-scenario)
 
-[6.16. Network Limits and Error Budget for Model 1](#_Toc81400036)
+[6.15. Best Clock Algorithm and Clock Attributes](#615-best-clock-algorithm-and-clock-attributes)
 
-[6.17. PTP management messages](#_Toc81400037)
+[6.16. Network Limits and Error Budget for Model 1](#616-network-limits-and-error-budget-for-model-1)
 
-[7. References](#_Toc81400038)
+[6.17. PTP management messages](#617-ptp-management-messages)
 
-[8. Revision](#_Toc81400039)
+[7. References](#7-references)
 
-[9. License](#_Toc81400040)
+[8. Revision](#8-revision)
+
+[9. License](#9-license)
 
 
 # 1. Introduction
