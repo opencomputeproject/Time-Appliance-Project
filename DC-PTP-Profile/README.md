@@ -54,13 +54,13 @@ This document defines a PTP profile for time-sensitive applications within a dat
 
 [6.13. PTP inter-message interval](#613-ptp-inter-message-interval)
 
-[6.13.1. Unicast Communication](#6131unicast-communication)
+[6.14. Unicast Communication](#614-unicast-communication)
 
-[6.14. Unicast Discovery](#614-unicast-discovery)
+[6.14.1 Unicast Discovery](#615-unicast-discovery)
 
 [6.14.2 Active Standby Scenario](#6142-active-standby-scenario)
 
-[6.14.4. Active Active Scenario](#_Toc81400034)
+[6.14.3. Active Active Scenario](#_Toc81400034)
 
 [6.15. Best Clock Algorithm and Clock Attributes](#_Toc81400035)
 
@@ -313,7 +313,7 @@ The unicast negotiation feature is permanently enabled. The unicastNegotiationPo
 The unicastFlag of all PTP messages must be set to TRUE.
 
 
-## 6.15. Unicast Discovery
+### 6.14.1. Unicast Discovery
 
 Unicast discovery is specified in 17.4 of IEEE Std 1588-2019.
 
@@ -329,7 +329,7 @@ Each OC uses unicast negotiation to request Announce messages from each potentia
 After the GM is selected, the OC uses unicast negotiation to request Sync and Delay\_Resp messages from the GM. Upon being granted Sync messages, the OC receives the Sync messages from the GM. Upon being granted Delay\_Resp messages, the OC sends Delay\_Req messages to the GM and receives a Delay\_Resp message in response to each Delay\_Req message.
 
 
-### 6.15.1. Unicast Negotiation
+### 6.14.2. Unicast Negotiation
 
 An OC requests Announce messages and then selects the best potential GM using the BMCA. The OC then requests Sync and Delay\_Resp messages from that GM. After the OC is granted Sync messages, the GM sends Sync (and Follow\_Up if the communication is two-step) messages to the OC. After the OC is granted Delay\_Resp messages, the OC sends Delay\_Req messages to the GM and the GM responds with Delay\_Resp. The requesting of Announce, Sync and Delay\_Resp messages is done using the unicast negotiation feature of IEEE Std 1588-2019. The unicast negotiation feature is performed using the following four TLVs:
 
@@ -379,7 +379,7 @@ Figure 3.Unicast negotiation for Sync messages
 Figure 4. Unicast negotiation for Delay\_Resp messages
 
 
-### 6.15.2. Active Standby Scenario
+### 6.14.3. Active Standby Scenario
 
 This section provides examples on how PTP and the default BMCA can be used to provide full and partial redundancy of GMs during normal operation and failure scenarios.
 
@@ -403,12 +403,12 @@ Figure 6. Example2 one active GM for each group and one standby GM for both grou
 Example 1 illustrates the case of full redundancy where there is one standby GM for each active GM. Example 2 illustrates the case of partial redundancy where there are fewer standby GMs than active GMs. To balance the load among the active GMs, the OCs should be divided as evenly as possible among the active GMs. To balance the load among the standby GMs and also achieve maximum robustness to failures, the standby GMs should be assigned to equal numbers of OC groups. For example, if there are 60000 OCs, 12 potential active GMs, and 4 potential standby GMs, the OCs should be divided into groups of 5000 OCs each (i.e., 60000 OCs/12 GMs), and each of the 12 potential active GMs should be entered in the unicastDiscoveryPortDS of the OCs of exactly one group. Each potential standby GM should be entered in the unicastDiscoveryPortDS of the OCs of exactly 3 groups (and no group should have two standby GMs entered in the unicastDiscoveryPortDS of any of its OCs). With this approach, a standby GM serves as a backup for up to 3 OC groups. In this example, if a standby GM can handle the load of up to _N_ groups (_N_ 3), then _N_ active failures can be tolerated.
 
 
-### 6.15.3. Active Active Scenario
+### 6.14.4. Active Active Scenario
 
 This section is for future, and will consist on providing examples on how PTP and the default BMCA can be used to provide load balancing and maximize the use of GMs in both normal operation and failure scenarios beyond active standby examples provided in section 6.14.2.
 
 
-## 6.16. Best Clock Algorithm and Clock Attributes
+## 6.15. Best Clock Algorithm and Clock Attributes
 
 This profile is based on the default BMCA of IEEE Std 1588-2019.
 
@@ -454,7 +454,7 @@ The data set members listed in Table 2 are not applicable to TCs. TCs do not par
 Table 2. Data set members and values
 
 
-## 6.17. Network Limits and Error Budget for Model 1
+## 6.16. Network Limits and Error Budget for Model 1
 
 This section is an initial analysis. The network limit from Section 5, is:
 
@@ -508,7 +508,7 @@ The total error at the input of the application is 584 ns + 100 ns + 200 ns + 20
 
 If the OC loses its connection to the network and enters holdover or the GM loses its connection to its time source (e.g., GNSS) and enters holdover with clockClass = 7, it can be assumed that the application already has already built-up an error of 1100 ns relative to TAI. In worst case, the application could drift another 1400 ns before it exceeds the 2.5 s requirement. This means that the holdover requirement for the OC or the GM can be taken as 1400 ns over a time period T. This period T should be specified by the OC or GM datasheet. In addition, if the OC switches from one active GM to another active GM, any transient during this switch must be within 1400 ns.
 
-## 6.18. PTP management messages
+## 6.17. PTP management messages
 
 The profile uses the PTP management mechanism and PTP management messages (TLVs) defined in clause 15 of IEEE Std 1588-2019. The management messages are used by a PTP management node for the purpose of configuration and/or monitoring PTP Instances.
 
