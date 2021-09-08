@@ -249,7 +249,6 @@ struct ptp_ocp {
 	struct ptp_ocp_ext_src	*ts0;
 	struct ptp_ocp_ext_src	*ts1;
 	struct ptp_ocp_ext_src	*ts2;
-	struct ocp_phase_reg	__iomem *phasemeter;
 	struct ocp_art_osc_reg	__iomem *osc;
 	struct img_reg __iomem	*image;
 	struct ptp_clock	*ptp;
@@ -523,13 +522,6 @@ struct ocp_art_pps_reg {
 	u32	intr;
 };
 
-struct ocp_phase_reg {
-	u32	__pad0;
-	u32	phase_offset;
-	u32	__pad1[9];
-	u32	intr;
-};
-
 static struct ocp_resource ocp_art_resource[] = {
 	{
 		OCP_MEM_RESOURCE(reg),
@@ -538,10 +530,6 @@ static struct ocp_resource ocp_art_resource[] = {
 	{
 		OCP_SERIAL_RESOURCE(gnss_port),
 		.offset = 0x00160000 + 0x1000, .irq_vec = 3,
-	},
-	{
-		OCP_MEM_RESOURCE(phasemeter),
-		.offset = 0x00320000, .size = 0x30,
 	},
 	/* Timestamp associated with Internal PPS of the card */
 	{
@@ -834,20 +822,9 @@ ptp_ocp_null_adjfine(struct ptp_clock_info *ptp_info, long scaled_ppm)
 }
 
 static int
-ptp_ocp_adjphase(struct ptp_clock_info *ptp_info, s32 phase_ns)
+ptp_ocp_null_adjphase(struct ptp_clock_info *ptp_info, s32 phase_ns)
 {
-	struct ptp_ocp *bp = container_of(ptp_info, struct ptp_ocp, ptp_info);
-	struct ocp_phase_reg __iomem *reg = bp->phasemeter;
-	unsigned long flags;
-
-	if (!bp->phasemeter)
-		return -EOPNOTSUPP;
-
-	spin_lock_irqsave(&bp->lock, flags);
-	iowrite32(phase_ns, &reg->phase_offset);
-	spin_unlock_irqrestore(&bp->lock, flags);
-
-	return 0;
+	return -EOPNOTSUPP;
 }
 
 static int
@@ -911,7 +888,7 @@ static const struct ptp_clock_info ptp_ocp_clock_info = {
 	.settime64	= ptp_ocp_settime,
 	.adjtime	= ptp_ocp_adjtime,
 	.adjfine	= ptp_ocp_null_adjfine,
-	.adjphase	= ptp_ocp_adjphase,
+	.adjphase	= ptp_ocp_null_adjphase,
 	.enable		= ptp_ocp_enable,
 	.pps		= true,
 	.n_ext_ts	= 4,
