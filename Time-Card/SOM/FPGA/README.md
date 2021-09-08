@@ -22,6 +22,7 @@ In the [Doc folder](https://github.com/opencomputeproject/Time-Appliance-Project
 * All Timestampers are disabled
 * IRIG Slave/Master are disabled
 * DCF Slave/Master are disabled
+* TOD/NMEA Master is disabled
 
 ## In the Binaries folder are the bitstreams for the SOM Module. ## 
 * TimeCard.bit to flash the FPGA (volatile)
