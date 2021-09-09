@@ -966,6 +966,30 @@ ptp_ocp_watchdog(struct timer_list *t)
 	mod_timer(&bp->watchdog, jiffies + HZ);
 }
 
+static void
+ptp_ocp_estimate_pci_timing(struct ptp_ocp *bp)
+{
+	ktime_t start, mid, end;
+	ktime_t delay;
+	u32 ctrl;
+
+	ctrl = ioread32(&bp->reg->ctrl);
+	ctrl = OCP_CTRL_READ_TIME_REQ | OCP_CTRL_ENABLE;
+
+	start = ktime_get();
+
+	iowrite32(ctrl, &bp->reg->ctrl);
+
+	mid = ktime_get_ns();
+
+	ctrl = ioread32(&bp->reg->ctrl);
+
+	end = ktime_get_ns();
+
+	delay = end - mid;
+	bp->pci_delay = (delay >> 5) * 3;
+}
+
 static int
 ptp_ocp_init_clock(struct ptp_ocp *bp)
 {
@@ -991,6 +1015,8 @@ ptp_ocp_init_clock(struct ptp_ocp *bp)
 		dev_err(&bp->pdev->dev, "clock not enabled\n");
 		return -ENODEV;
 	}
+
+	ptp_ocp_estimate_pci_timing(bp);
 
 	sync = ioread32(&bp->reg->status) & OCP_STATUS_IN_SYNC;
 	if (!sync) {
