@@ -74,8 +74,8 @@ Atomic clock examples:
 * [SA.45s](https://www.microsemi.com/product-directory/embedded-clocks-frequency-references/5207-space-csac)
 
 <img width="666" alt="microchip-mac-sa5x" src="https://user-images.githubusercontent.com/1751211/132625791-9dc61d55-9a7b-445b-a9d4-b23cd026848a.png">
-![Spectratime-mRO-50-2-e1626828324702](https://user-images.githubusercontent.com/1751211/132625857-12b92625-4d08-4ae7-be18-f8ff6b79b49d.png)
-![csac_new](https://user-images.githubusercontent.com/1751211/132625863-4a053483-61bf-4617-9bbe-95c464014563.png)
+<img width="666" alt="microchip-mac-sa5x" src="https://user-images.githubusercontent.com/1751211/132625857-12b92625-4d08-4ae7-be18-f8ff6b79b49d.png">
+<img width="666" alt="microchip-mac-sa5x" src="https://user-images.githubusercontent.com/1751211/132625863-4a053483-61bf-4617-9bbe-95c464014563.png">
 
 
 
