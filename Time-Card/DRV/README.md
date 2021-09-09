@@ -11,19 +11,29 @@ Run the remake followed by modprobe ptp_ocp
 ```
 $ ls -g /sys/class/timecard/ocp0/
 total 0
--r--r--r--. 1 root 4096 Aug  3 19:49 available_clock_sources
--rw-r--r--. 1 root 4096 Aug  3 19:49 clock_source
-lrwxrwxrwx. 1 root    0 Aug  3 19:49 device -> ../../../0000:04:00.0/
--r--r--r--. 1 root 4096 Aug  3 19:49 gnss_sync
-lrwxrwxrwx. 1 root    0 Aug  3 19:49 i2c -> ../../xiic-i2c.1024/i2c-2/
-drwxr-xr-x. 2 root    0 Aug  3 19:49 power/
-lrwxrwxrwx. 1 root    0 Aug  3 19:49 pps -> ../../../../../virtual/pps/pps1/
-lrwxrwxrwx. 1 root    0 Aug  3 19:49 ptp -> ../../ptp/ptp2/
--r--r--r--. 1 root 4096 Aug  3 19:49 serialnum
-lrwxrwxrwx. 1 root    0 Aug  3 19:49 subsystem -> ../../../../../../class/timecard/
-lrwxrwxrwx. 1 root    0 Aug  3 19:49 ttyGNSS -> ../../tty/ttyS7/
-lrwxrwxrwx. 1 root    0 Aug  3 19:49 ttyMAC -> ../../tty/ttyS8/
--rw-r--r--. 1 root 4096 Aug  3 19:39 uevent
+-r--r--r--. 1 root 4096 Sep  8 18:20 available_clock_sources
+-r--r--r--. 1 root 4096 Sep  8 18:20 available_sma_inputs
+-r--r--r--. 1 root 4096 Sep  8 18:20 available_sma_outputs
+-rw-r--r--. 1 root 4096 Sep  8 18:20 clock_source
+lrwxrwxrwx. 1 root    0 Sep  8 18:20 device -> ../../../0000:02:00.0
+-rw-r--r--. 1 root 4096 Sep  8 18:20 external_pps_cable_delay
+-r--r--r--. 1 root 4096 Sep  8 18:20 gnss_sync
+-rw-r--r--. 1 root 4096 Sep  8 18:20 internal_pps_cable_delay
+-rw-r--r--. 1 root 4096 Sep  8 18:20 irig_b_mode
+-rw-r--r--. 1 root 4096 Sep  8 18:20 pci_delay
+drwxr-xr-x. 2 root    0 Sep  8 18:20 power
+lrwxrwxrwx. 1 root    0 Sep  8 18:20 ptp -> ../../ptp/ptp4
+-r--r--r--. 1 root 4096 Sep  8 18:20 serialnum
+-rw-r--r--. 1 root 4096 Sep  8 18:20 sma1_in
+-rw-r--r--. 1 root 4096 Sep  8 18:20 sma2_in
+-rw-r--r--. 1 root 4096 Sep  8 21:04 sma3_out
+-rw-r--r--. 1 root 4096 Sep  8 21:04 sma4_out
+lrwxrwxrwx. 1 root    0 Sep  8 18:20 subsystem -> ../../../../../../class/timecard
+lrwxrwxrwx. 1 root    0 Sep  8 18:20 ttyGNSS -> ../../tty/ttyS5
+lrwxrwxrwx. 1 root    0 Sep  8 18:20 ttyMAC -> ../../tty/ttyS6
+lrwxrwxrwx. 1 root    0 Sep  8 18:20 ttyNMEA -> ../../tty/ttyS7
+-rw-r--r--. 1 root 4096 Sep  8 18:20 uevent
+-rw-r--r--. 1 root 4096 Sep  8 18:20 utc_tai_offset
 ```
 
 The main resource directory is accessed through the /sys/class/timecard/ocpN directory, which provides links to the various TimeCard resources.  The device links can easily be used in scripts:
@@ -37,9 +47,10 @@ The main resource directory is accessed through the /sys/class/timecard/ocpN dir
 ```
 
 After successfully loading the driver, one will see:
-* PTP POSIX clock, linking to the physical hardware clock (PHC) on the Time Card (`/dev/ptp2`) 
-* GNSS serial `/dev/ttyS7` 
-* Atomic clock serial `/dev/ttyS8`
+* PTP POSIX clock, linking to the physical hardware clock (PHC) on the Time Card (`/dev/ptp4`) 
+* GNSS serial `/dev/ttyS5` 
+* Atomic clock serial `/dev/ttyS6`
+* NMEA Master serial `/dev/ttyS7`
 * i2c (`/dev/i2c-*`) device
 
 Now, once can use standard `linuxptp` tools such as `phc2sys` or `ts2phc` to copy, sync, tune, etc... See more in [software](/Software) section
