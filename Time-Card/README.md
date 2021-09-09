@@ -75,9 +75,9 @@ Atomic clock examples:
 
 <img width="666" alt="microchip-mac-sa5x" src="https://user-images.githubusercontent.com/1751211/132626512-3fded23e-dcad-4325-ba4a-0825a9191dce.png">
 <img width="666" alt="microchip-mac-sa5x" src="https://user-images.githubusercontent.com/1751211/132625857-12b92625-4d08-4ae7-be18-f8ff6b79b49d.png">
-<img width="666" alt="microchip-mac-sa5x" src="https://user-images.githubusercontent.com/1751211/132625863-4a053483-61bf-4617-9bbe-95c464014563.png">
+<img width="555" alt="microchip-mac-sa5x" src="https://user-images.githubusercontent.com/1751211/132625863-4a053483-61bf-4617-9bbe-95c464014563.png">
 
-<p align="center">Figure 2. Atomic Clock Example</p>
+<p align="center">Figure 2. Atomic Clock Examples</p>
 
 OCXO examples:
 * [SiT5711](https://www.sitime.com/products/stratum-3e-ocxos/sit5711)
