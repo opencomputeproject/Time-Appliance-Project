@@ -46,9 +46,7 @@ The GNSS receiver can be a product from ublock or any other vendor as long as it
 
 This is the recommended module:  **u-blox RCB-F9T GNSS time module**
 
-<p align="center">
 <a id="Figure-1">![GNSS Receiver](https://www.u-blox.com/sites/default/files/styles/product_full/public/products/RCB-F9T_PCBVer-C.png)</a>
-</p>
    
 <p align="center">Figure 1. GNSS Receiver</p>
 
