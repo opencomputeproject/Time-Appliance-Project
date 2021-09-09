@@ -73,9 +73,10 @@ Atomic clock examples:
 * [mRO-50](https://www.orolia.com/products/atomic-clocks-oscillators/mro-50)
 * [SA.45s](https://www.microsemi.com/product-directory/embedded-clocks-frequency-references/5207-space-csac)
 
-<a id="Figure-2">![Atomic Clock Example]<img width="666" alt="microchip-mac-sa5x" src="https://user-images.githubusercontent.com/1751211/132625694-3b4b623d-4752-4786-920a-3cd6f41276f1.png">
-![csac_new](https://user-images.githubusercontent.com/1751211/132625704-19c6ca58-f45c-4682-a579-b021067df0d7.png)
-(https://user-images.githubusercontent.com/4749052/98942099-6bd27f00-24e5-11eb-868a-a813986e5e94.png)</a>
+<img width="666" alt="microchip-mac-sa5x" src="https://user-images.githubusercontent.com/1751211/132625791-9dc61d55-9a7b-445b-a9d4-b23cd026848a.png">
+![Spectratime-mRO-50-2-e1626828324702](https://user-images.githubusercontent.com/1751211/132625857-12b92625-4d08-4ae7-be18-f8ff6b79b49d.png)
+![csac_new](https://user-images.githubusercontent.com/1751211/132625863-4a053483-61bf-4617-9bbe-95c464014563.png)
+
 
 
 <p align="center">Figure 2. Atomic Clock Example</p>
