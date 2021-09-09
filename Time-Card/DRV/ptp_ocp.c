@@ -846,14 +846,6 @@ ptp_ocp_adjphase(struct ptp_clock_info *ptp_info, s32 phase_ns)
 }
 
 static int
-ptp_ocp_perout_req(struct ptp_ocp *bp, struct ptp_perout_request *perout)
-{
-	pr_err("NOTYET .. idx: %d, period: %lld.%d\n",
-		perout->index, perout->period.sec, perout->period.nsec);
-	return -EOPNOTSUPP;
-}
-
-static int
 ptp_ocp_enable(struct ptp_clock_info *ptp_info, struct ptp_clock_request *rq,
 	       int on)
 {
@@ -885,10 +877,9 @@ ptp_ocp_enable(struct ptp_clock_info *ptp_info, struct ptp_clock_request *rq,
 		ext = bp->pps;
 		break;
 	case PTP_CLK_REQ_PEROUT:
-		req = OCP_REQ_PEROUT;
-		err = ptp_ocp_perout_req(bp, &rq->perout);
-		if (err)
-			return err;
+		if (rq->perout.period.sec != 1 || rq->perout.period.nsec != 0)
+			return -EINVAL;
+		req = OCP_REQ_TIMESTAMP;
 		ext = bp->pps;
 		break;
 	default:
@@ -915,7 +906,8 @@ static const struct ptp_clock_info ptp_ocp_clock_info = {
 	.pps		= true,
 	.n_ext_ts	= 4,
 
-	.n_per_out	= 0,
+	.n_per_out	= 1,
+
 	.n_pins		= 0,
 	.pin_config	= (struct ptp_pin_desc[]) {
 				{ .name = "testing",
