@@ -1,3 +1,5 @@
+![MAC-SA_drawing_iso](https://user-images.githubusercontent.com/1751211/132626311-03faa1a5-705e-413d-b71b-bb58de563bc0.png)
+![MAC-SA_drawing_iso](https://user-images.githubusercontent.com/1751211/132626346-f4a72669-10c7-44ed-a4bb-79f9e2bf2596.png)
 To save spec as PDF - select text below (including images) -> right click -> Print -> Save as PDF
 # Time Card
 #### Spec revision № 1.0
@@ -73,10 +75,9 @@ Atomic clock examples:
 * [mRO-50](https://www.orolia.com/products/atomic-clocks-oscillators/mro-50)
 * [SA.45s](https://www.microsemi.com/product-directory/embedded-clocks-frequency-references/5207-space-csac)
 
-<img width="666" alt="microchip-mac-sa5x" src="https://user-images.githubusercontent.com/1751211/132625791-9dc61d55-9a7b-445b-a9d4-b23cd026848a.png">
+<img width="666" alt="microchip-mac-sa5x" src="https://user-images.githubusercontent.com/1751211/132626357-47dabe1d-fee2-4a6f-8059-7afab1c33e66.png">
 <img width="666" alt="microchip-mac-sa5x" src="https://user-images.githubusercontent.com/1751211/132625857-12b92625-4d08-4ae7-be18-f8ff6b79b49d.png">
 <img width="666" alt="microchip-mac-sa5x" src="https://user-images.githubusercontent.com/1751211/132625863-4a053483-61bf-4617-9bbe-95c464014563.png">
-
 
 
 <p align="center">Figure 2. Atomic Clock Example</p>
