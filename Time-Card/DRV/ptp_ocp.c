@@ -877,10 +877,15 @@ ptp_ocp_enable(struct ptp_clock_info *ptp_info, struct ptp_clock_request *rq,
 		ext = bp->pps;
 		break;
 	case PTP_CLK_REQ_PEROUT:
-		if (rq->perout.period.sec != 1 || rq->perout.period.nsec != 0)
+		/* This is a request to enable 1PPS on an output sma. */
+		return 0;
+#if 0
+		if (on &&
+		    (rq->perout.period.sec != 1 || rq->perout.period.nsec != 0))
 			return -EINVAL;
 		req = OCP_REQ_TIMESTAMP;
 		ext = bp->pps;
+#endif
 		break;
 	default:
 		return -EOPNOTSUPP;
@@ -1431,7 +1436,7 @@ ptp_ocp_ts_irq(int irq, void *priv)
 			ptp_clock_event(ext->bp->ptp, &ev);
 		}
 
-		if ((ext->bp->pps_req_map & OCP_REQ_TIMESTAMP) == 0)
+		if ((ext->bp->pps_req_map & ~OCP_REQ_PPS) == 0)
 			goto out;
 	}
 
