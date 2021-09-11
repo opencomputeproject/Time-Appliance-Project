@@ -265,6 +265,7 @@ struct ptp_ocp {
 	int			id;
 	int			n_irqs;
 	int			gnss_port;
+	int			gnss2_port;
 	int			mac_port;	/* miniature atomic clock */
 	int			nmea_port;
 	u8			serial[6];
@@ -333,7 +334,7 @@ static const struct attribute_group *art_timecard_groups[];
  * 1: TS0
  * 2: TS1
  * 3: GPS
- * 4: GPS2 (n/c)
+ * 4: GPS2
  * 5: MAC
  * 6: TS2
  * 7: I2C controller
@@ -457,6 +458,10 @@ static struct ocp_resource ocp_fb_resource[] = {
 	{
 		OCP_SERIAL_RESOURCE(gnss_port),
 		.offset = 0x00160000 + 0x1000, .irq_vec = 3,
+	},
+	{
+		OCP_SERIAL_RESOURCE(gnss2_port),
+		.offset = 0x00170000 + 0x1000, .irq_vec = 4,
 	},
 	{
 		OCP_SERIAL_RESOURCE(mac_port),
@@ -2505,6 +2510,8 @@ ptp_ocp_summary_show(struct seq_file *s, void *data)
 	seq_printf(s, "%7s: /dev/ptp%d\n", "PTP", ptp_clock_index(bp->ptp));
 	if (bp->gnss_port != -1)
 		seq_printf(s, "%7s: /dev/ttyS%d\n", "GNSS", bp->gnss_port);
+	if (bp->gnss2_port != -1)
+		seq_printf(s, "%7s: /dev/ttyS%d\n", "GNSS2", bp->gnss2_port);
 	if (bp->mac_port != -1)
 		seq_printf(s, "%7s: /dev/ttyS%d\n", "MAC", bp->mac_port);
 	if (bp->nmea_port != -1)
@@ -2598,11 +2605,22 @@ ptp_ocp_summary_show(struct seq_file *s, void *data)
 			   on ? " ON" : "OFF", val);
 	}
 
-	src = gpio_map(sma_in, 1, "sma1", "sma2", "GNSS");
-	sprintf(buf, "%s via PPS2", src);
-	seq_printf(s, " MAC PPS src: %s\n", buf);
+	/* compute src for PPS1, use this later. */
+	if (bp->pps_select) {
+		val = ioread32(&bp->pps_select->gpio1);
+		if (val & 0x01) {
+			src = gpio_map(sma_in, 0, "sma1", "sma2", "----");
+		} else if (val & 0x02)
+			src = "MAC";
+		else if (val & 0x04)
+			src = "GNSS";
+		else
+			src = "----";
+	} else {
+		src = "?";
+	}
 
-	/* assumes automatic switchover/selection */
+	/* assumes automatic switchover/selection, use PPS1 src from above. */
 	val = ioread32(&bp->reg->select);
 	switch (val >> 16) {
 	case 0:
@@ -2612,21 +2630,7 @@ ptp_ocp_summary_show(struct seq_file *s, void *data)
 		sprintf(buf, "IRIG");
 		break;
 	case 3:
-		if (bp->pps_select) {
-			val = ioread32(&bp->pps_select->gpio1);
-			if (val & 0x01) {
-				src = gpio_map(sma_in, 0,
-					       "sma1", "sma2", "----");
-			} else if (val & 0x02)
-				src = "MAC";
-			else if (val & 0x04)
-				src = "GNSS";
-			else
-				src = "----";
-			sprintf(buf, "%s via PPS1", src);
-		} else {
-			strcpy(buf, "PPS1");
-		}
+		sprintf(buf, "%s via PPS1", src);
 		break;
 	case 6:
 		sprintf(buf, "DCF");
@@ -2638,6 +2642,13 @@ ptp_ocp_summary_show(struct seq_file *s, void *data)
 	val = ioread32(&bp->reg->status);
 	seq_printf(s, "%7s: %s, state: %s\n", "PHC src", buf,
 		   val & OCP_STATUS_IN_SYNC ? "sync" : "unsynced");
+
+	/* reuses PPS1 src from earlier */
+	seq_printf(s, "MAC PPS1 src: %s\n", src);
+
+	src = gpio_map(sma_in, 1, "sma1", "sma2", "GNSS2");
+	seq_printf(s, "MAC PPS2 src: %s\n", src);
+
 
 	if (!ptp_ocp_gettimex(&bp->ptp_info, &ts, &sts)) {
 		struct timespec64 sys_ts;
@@ -2751,6 +2762,7 @@ ptp_ocp_device_init(struct ptp_ocp *bp, struct pci_dev *pdev)
 	spin_lock_init(&bp->lock);
 	mutex_init(&bp->mutex);
 	bp->gnss_port = -1;
+	bp->gnss2_port = -1;
 	bp->mac_port = -1;
 	bp->nmea_port = -1;
 	bp->pdev = pdev;
@@ -2813,6 +2825,10 @@ ptp_ocp_complete(struct ptp_ocp *bp)
 	if (bp->gnss_port != -1) {
 		sprintf(buf, "ttyS%d", bp->gnss_port);
 		ptp_ocp_link_child(bp, buf, "ttyGNSS");
+	}
+	if (bp->gnss2_port != -1) {
+		sprintf(buf, "ttyS%d", bp->gnss2_port);
+		ptp_ocp_link_child(bp, buf, "ttyGNSS2");
 	}
 	if (bp->mac_port != -1) {
 		sprintf(buf, "ttyS%d", bp->mac_port);
@@ -2878,15 +2894,17 @@ ptp_ocp_startup_summary(struct ptp_ocp *bp)
 				 ver >> 16);
 	}
 	if (bp->gnss_port != -1)
-		dev_info(dev, "GNSS @ /dev/ttyS%d 115200\n", bp->gnss_port);
+		dev_info(dev, " GNSS @ /dev/ttyS%d 115200\n", bp->gnss_port);
+	if (bp->gnss2_port != -1)
+		dev_info(dev, "GNSS2 @ /dev/ttyS%d 115200\n", bp->gnss2_port);
 	if (bp->mac_port != -1)
-		dev_info(dev, " MAC @ /dev/ttyS%d   57600\n", bp->mac_port);
+		dev_info(dev, "  MAC @ /dev/ttyS%d 57600\n", bp->mac_port);
 	if (bp->nmea_out && bp->nmea_port != -1) {
 		const char *spd = "-----";
 		reg = ioread32(&bp->nmea_out->uart_baud);
 		if (reg < ARRAY_SIZE(nmea_baud))
 			spd = nmea_baud[reg];
-		dev_info(dev, "NMEA @ /dev/ttyS%d %6s\n", bp->nmea_port, spd);
+		dev_info(dev, " NMEA @ /dev/ttyS%d %6s\n", bp->nmea_port, spd);
 	}
 }
 
@@ -2919,6 +2937,8 @@ ptp_ocp_detach(struct ptp_ocp *bp)
 		ptp_ocp_unregister_ext(bp->pps);
 	if (bp->gnss_port != -1)
 		serial8250_unregister_port(bp->gnss_port);
+	if (bp->gnss2_port != -1)
+		serial8250_unregister_port(bp->gnss2_port);
 	if (bp->mac_port != -1)
 		serial8250_unregister_port(bp->mac_port);
 	if (bp->nmea_port != -1)
