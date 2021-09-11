@@ -1943,11 +1943,14 @@ static ssize_t
 ptp_ocp_show_output(u32 val, char *buf, int default_idx)
 {
 	const char *name;
+	ssize_t count;
 
+	count = sysfs_emit(buf, "OUT: ");
 	name = ptp_ocp_select_name_from_val(ptp_ocp_sma_out, val);
 	if (!name)
 		name = ptp_ocp_sma_out[default_idx].name;
-	return sysfs_emit(buf, "%s\n", name);
+	count += sysfs_emit_at(buf, count, "%s\n", name);
+	return count;
 }
 
 static ssize_t
@@ -1957,14 +1960,14 @@ ptp_ocp_show_inputs(u32 val, char *buf, const char *zero_in)
 	ssize_t count;
 	int i;
 
-	count = 0;
+	count = sysfs_emit(buf, "IN: ");
 	for (i = 0; i < ARRAY_SIZE(ptp_ocp_sma_in); i++) {
 		if (val & ptp_ocp_sma_in[i].value) {
 			name = ptp_ocp_sma_in[i].name;
 			count += sysfs_emit_at(buf, count, "%s ", name);
 		}
 	}
-	if (!count && zero_in)
+	if (!val && zero_in)
 		count += sysfs_emit_at(buf, count, "%s ", zero_in);
 	if (count)
 		count--;
@@ -2088,7 +2091,7 @@ ptp_ocp_sma_store_output(struct ptp_ocp *bp, u32 val, u32 shift)
 	spin_lock_irqsave(&bp->lock, flags);
 
 	gpio = ioread32(&bp->sma->gpio2);
-	gpio = (gpio & ~mask) | (val & mask);
+	gpio = (gpio & mask) | (val << shift);
 
 	__handle_signal_outputs(bp, gpio);
 
@@ -2508,16 +2511,16 @@ ptp_ocp_summary_show(struct seq_file *s, void *data)
 		seq_printf(s, "%7s: /dev/ttyS%d\n", "NMEA", bp->nmea_port);
 
 	sma1_show(dev, NULL, buf);
-	seq_printf(s, "   sma1: input to %s", buf);
+	seq_printf(s, "   sma1: %s", buf);
 
 	sma2_show(dev, NULL, buf);
-	seq_printf(s, "   sma2: input to %s", buf);
+	seq_printf(s, "   sma2: %s", buf);
 
 	sma3_show(dev, NULL, buf);
-	seq_printf(s, "   sma3: out from %s", buf);
+	seq_printf(s, "   sma3: %s", buf);
 
 	sma4_show(dev, NULL, buf);
-	seq_printf(s, "   sma4: out from %s", buf);
+	seq_printf(s, "   sma4: %s", buf);
 
 	if (bp->ts0) {
 		ts_reg = bp->ts0->mem;
