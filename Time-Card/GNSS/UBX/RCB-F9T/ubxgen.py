@@ -10,9 +10,8 @@ parser = argparse.ArgumentParser(
     description="Generate ublox 8+ commands from u-center config file"
 )
 parser.add_argument("--cfg", "-c", type=str, required=True, help="Ublox config file")
-parser.add_argument(
-    "--raw", "-r", action="store_true", help="Print raw string. Useful for debugging"
-)
+parser.add_argument("--raw", "-r", action="store_true", help="Print raw string. Useful for debugging")
+parser.add_argument("--lay", "-l", type=str, default="RAM", help="Target layer to configure")
 parser.add_argument(
     "--tty",
     "-t",
@@ -25,7 +24,7 @@ args = parser.parse_args()
 with open(args.cfg, "r") as f:
     for line in f.readlines():
         linesplit = line.split(" - ")
-        if len(linesplit) is not 2:
+        if len(linesplit) != 2:
             continue
         cmd = linesplit[1]
         cs0 = 0
@@ -35,7 +34,17 @@ with open(args.cfg, "r") as f:
         if linesplit[0] == "CFG-VALGET":
             cmd = cmd.replace("06 8B", "06 8A", 1)
 
-        for d in cmd.split(" "):
+        cmdsplit = cmd.split(" ")
+        if cmdsplit[5] == "00":
+            if args.lay == "RAM":
+                cmdsplit[5] = "01"
+            if args.lay == "BBR":
+                cmdsplit[5] = "02"
+            if args.lay == "Flash":
+                cmdsplit[5] = "04"
+        print(cmdsplit)
+
+        for d in cmdsplit:
             i = int(d, base=16)
             c = "0x{:02x}".format(i)
             ubx = r"{}\x{}".format(ubx, c[2:])
@@ -61,3 +70,4 @@ with open(args.cfg, "r") as f:
             if args.tty:
                 redirect = " > {}".format(args.tty)
             print("echo -n -e '{}'{}".format(ubx, redirect))
+
