@@ -1,0 +1,1501 @@
+========================Statistics after 0s============
+==ClientData=============
+0: TotalClients = 1, rate 1
+1: TotalPacketsSent = 0, rate 0
+2: TotalPacketsRcvd = 0, rate 0
+3: TotalTXTSPacketsSent = 0, rate 0
+4: TotalTXTSRead = 0, rate 0
+5: MaxTXTSBytesOutstanding = 0, rate 0
+6: TotalGenMsgSent = 0, rate 0
+7: TotalGenMsgRcvd = 0, rate 0
+8: TotalEventMsgSent = 0, rate 0
+9: TotalEventMsgRcvd = 0, rate 0
+10: TotalClientAnnounceReq = 0, rate 0
+11: TotalClientAnnounceReqResend = 0, rate 0
+12: TotalClientAnnounceGrant = 0, rate 0
+13: TotalClientSyncReq = 0, rate 0
+14: TotalClientSyncReqResend = 0, rate 0
+15: TotalClientSyncGrant = 0, rate 0
+16: TotalClientDelayRespReq = 0, rate 0
+17: TotalClientDelayRespReqResend = 0, rate 0
+18: TotalClientDelayRespGrant = 0, rate 0
+19: TotalSyncRcvd = 0, rate 0
+20: TotalPDelayRespRcvd = 0, rate 0
+21: TotalFollowUpRcvd = 0, rate 0
+22: TotalPDelayRespFollowUpRcvd = 0, rate 0
+23: TotalAnnounceRcvd = 0, rate 0
+24: TotalDelayReqSent = 0, rate 0
+25: TotalDelayRespRcvd = 0, rate 0
+Client states
+Total: 1, Max: 0 , Min: 0
+Announce Grant Latency
+ 0 samples of 0 events
+Cumulative:	0s
+HMean:		0s
+Avg.:		0s
+p50: 		0s
+p75:		0s
+p95:		0s
+p99:		0s
+p999:		0s
+Long 5%:	0s
+Short 5%:	0s
+Max:		0s
+Min:		0s
+Range:		0s
+StdDev:		0s
+Rate/sec.:	0.00
+Sync Grant Latency
+ 0 samples of 0 events
+Cumulative:	0s
+HMean:		0s
+Avg.:		0s
+p50: 		0s
+p75:		0s
+p95:		0s
+p99:		0s
+p999:		0s
+Long 5%:	0s
+Short 5%:	0s
+Max:		0s
+Min:		0s
+Range:		0s
+StdDev:		0s
+Rate/sec.:	0.00
+Delay Resp Grant Latency
+ 0 samples of 0 events
+Cumulative:	0s
+HMean:		0s
+Avg.:		0s
+p50: 		0s
+p75:		0s
+p95:		0s
+p99:		0s
+p999:		0s
+Long 5%:	0s
+Short 5%:	0s
+Max:		0s
+Min:		0s
+Range:		0s
+StdDev:		0s
+Rate/sec.:	0.00
+Delay Req Latency
+ 0 samples of 0 events
+Cumulative:	0s
+HMean:		0s
+Avg.:		0s
+p50: 		0s
+p75:		0s
+p95:		0s
+p99:		0s
+p999:		0s
+Long 5%:	0s
+Short 5%:	0s
+Max:		0s
+Min:		0s
+Range:		0s
+StdDev:		0s
+Rate/sec.:	0.00
+Time Between Syncs
+ 0 samples of 0 events
+Cumulative:	0s
+HMean:		0s
+Avg.:		0s
+p50: 		0s
+p75:		0s
+p95:		0s
+p99:		0s
+p999:		0s
+Long 5%:	0s
+Short 5%:	0s
+Max:		0s
+Min:		0s
+Range:		0s
+StdDev:		0s
+Rate/sec.:	0.00
+==Software Performance=============
+Profiler RX Worker 0 last busy 0.00%
+Profiler RX Worker 1 last busy 0.00%
+Profiler RX Worker 2 last busy 0.00%
+Profiler RX Worker 3 last busy 0.00%
+Profiler TX worker 0 last busy 0.00%
+Profiler TX worker 0 TSRead worker 0 last busy 0.00%
+Profiler TX worker 0 TSRead worker 1 last busy 0.00%
+Profiler TX worker 0 TSRead worker 2 last busy 0.00%
+Profiler TX worker 1 last busy 0.00%
+Profiler TX worker 1 TSRead worker 0 last busy 0.00%
+Profiler TX worker 1 TSRead worker 1 last busy 0.00%
+Profiler TX worker 1 TSRead worker 2 last busy 0.00%
+Profiler TX worker 2 last busy 0.00%
+Profiler TX worker 2 TSRead worker 0 last busy 0.00%
+Profiler TX worker 2 TSRead worker 1 last busy 0.00%
+Profiler TX worker 2 TSRead worker 2 last busy 0.00%
+Profiler TX worker 3 last busy 0.00%
+Profiler TX worker 3 TSRead worker 0 last busy 0.00%
+Profiler TX worker 3 TSRead worker 1 last busy 0.00%
+Profiler TX worker 3 TSRead worker 2 last busy 0.00%
+Profiler PacketParser 0 last busy 0.00%
+Profiler PacketParser 1 last busy 0.00%
+Profiler PacketParser 2 last busy 0.00%
+Profiler PacketParser 3 last busy 0.00%
+Profiler PacketProcessor 0 last busy 0.00%
+Profiler PacketProcessor 1 last busy 0.00%
+Profiler PacketProcessor 2 last busy 0.00%
+Profiler PacketProcessor 3 last busy 0.00%
+Profiler Client Retransmit Proc 0 last busy 0.00%
+Profiler Client Retransmit Proc 1 last busy 0.00%
+Profiler Client Retransmit Proc 2 last busy 0.00%
+Profiler Client Retransmit Proc 3 last busy 0.00%
+Profiler CounterProcessor last busy 0.00%
+========================Statistics end at 0s============
+========================Statistics after 1.000011s============
+==ClientData=============
+0: TotalClients = 1, rate 0
+1: TotalPacketsSent = 4, rate 4
+2: TotalPacketsRcvd = 7, rate 7
+3: TotalTXTSPacketsSent = 4, rate 4
+4: TotalTXTSRead = 4, rate 4
+5: MaxTXTSBytesOutstanding = 98, rate 98
+6: TotalGenMsgSent = 3, rate 3
+7: TotalGenMsgRcvd = 5, rate 5
+8: TotalEventMsgSent = 1, rate 1
+9: TotalEventMsgRcvd = 2, rate 2
+10: TotalClientAnnounceReq = 1, rate 1
+11: TotalClientAnnounceReqResend = 0, rate 0
+12: TotalClientAnnounceGrant = 1, rate 1
+13: TotalClientSyncReq = 1, rate 1
+14: TotalClientSyncReqResend = 0, rate 0
+15: TotalClientSyncGrant = 1, rate 1
+16: TotalClientDelayRespReq = 1, rate 1
+17: TotalClientDelayRespReqResend = 0, rate 0
+18: TotalClientDelayRespGrant = 1, rate 1
+19: TotalSyncRcvd = 1, rate 1
+20: TotalPDelayRespRcvd = 0, rate 0
+21: TotalFollowUpRcvd = 1, rate 1
+22: TotalPDelayRespFollowUpRcvd = 0, rate 0
+23: TotalAnnounceRcvd = 1, rate 1
+24: TotalDelayReqSent = 1, rate 1
+25: TotalDelayRespRcvd = 1, rate 1
+Client states
+Total: 1, Max: 1 , Min: 1
+Announce Grant Latency
+ 1 samples of 1 events
+Cumulative:	354.558µs
+HMean:		354.558µs
+Avg.:		354.558µs
+p50: 		354.558µs
+p75:		354.558µs
+p95:		354.558µs
+p99:		354.558µs
+p999:		354.558µs
+Long 5%:	354.558µs
+Short 5%:	354.558µs
+Max:		354.558µs
+Min:		354.558µs
+Range:		0s
+StdDev:		0s
+Rate/sec.:	2820.41
+Sync Grant Latency
+ 1 samples of 1 events
+Cumulative:	186.978µs
+HMean:		186.978µs
+Avg.:		186.978µs
+p50: 		186.978µs
+p75:		186.978µs
+p95:		186.978µs
+p99:		186.978µs
+p999:		186.978µs
+Long 5%:	186.978µs
+Short 5%:	186.978µs
+Max:		186.978µs
+Min:		186.978µs
+Range:		0s
+StdDev:		0s
+Rate/sec.:	5348.22
+Delay Resp Grant Latency
+ 1 samples of 1 events
+Cumulative:	39.974µs
+HMean:		39.974µs
+Avg.:		39.974µs
+p50: 		39.974µs
+p75:		39.974µs
+p95:		39.974µs
+p99:		39.974µs
+p999:		39.974µs
+Long 5%:	39.974µs
+Short 5%:	39.974µs
+Max:		39.974µs
+Min:		39.974µs
+Range:		0s
+StdDev:		0s
+Rate/sec.:	25016.26
+Delay Req Latency
+ 1 samples of 1 events
+Cumulative:	137.838µs
+HMean:		137.838µs
+Avg.:		137.838µs
+p50: 		137.838µs
+p75:		137.838µs
+p95:		137.838µs
+p99:		137.838µs
+p999:		137.838µs
+Long 5%:	137.838µs
+Short 5%:	137.838µs
+Max:		137.838µs
+Min:		137.838µs
+Range:		0s
+StdDev:		0s
+Rate/sec.:	7254.89
+Time Between Syncs
+ 0 samples of 0 events
+Cumulative:	0s
+HMean:		0s
+Avg.:		0s
+p50: 		0s
+p75:		0s
+p95:		0s
+p99:		0s
+p999:		0s
+Long 5%:	0s
+Short 5%:	0s
+Max:		0s
+Min:		0s
+Range:		0s
+StdDev:		0s
+Rate/sec.:	0.00
+==Software Performance=============
+Profiler RX Worker 0 last busy 0.00%
+Profiler RX Worker 1 last busy 0.00%
+Profiler RX Worker 2 last busy 0.00%
+Profiler RX Worker 3 last busy 0.00%
+Profiler TX worker 0 last busy 0.00%
+Profiler TX worker 0 TSRead worker 0 last busy 0.00%
+Profiler TX worker 0 TSRead worker 1 last busy 0.00%
+Profiler TX worker 0 TSRead worker 2 last busy 0.00%
+Profiler TX worker 1 last busy 0.00%
+Profiler TX worker 1 TSRead worker 0 last busy 0.00%
+Profiler TX worker 1 TSRead worker 1 last busy 0.00%
+Profiler TX worker 1 TSRead worker 2 last busy 0.00%
+Profiler TX worker 2 last busy 0.00%
+Profiler TX worker 2 TSRead worker 0 last busy 0.00%
+Profiler TX worker 2 TSRead worker 1 last busy 0.00%
+Profiler TX worker 2 TSRead worker 2 last busy 0.00%
+Profiler TX worker 3 last busy 0.00%
+Profiler TX worker 3 TSRead worker 0 last busy 0.00%
+Profiler TX worker 3 TSRead worker 1 last busy 0.00%
+Profiler TX worker 3 TSRead worker 2 last busy 0.00%
+Profiler PacketParser 0 last busy 0.00%
+Profiler PacketParser 1 last busy 0.00%
+Profiler PacketParser 2 last busy 0.00%
+Profiler PacketParser 3 last busy 0.00%
+Profiler PacketProcessor 0 last busy 0.00%
+Profiler PacketProcessor 1 last busy 0.00%
+Profiler PacketProcessor 2 last busy 0.00%
+Profiler PacketProcessor 3 last busy 0.00%
+Profiler Client Retransmit Proc 0 last busy 0.00%
+Profiler Client Retransmit Proc 1 last busy 0.00%
+Profiler Client Retransmit Proc 2 last busy 0.00%
+Profiler Client Retransmit Proc 3 last busy 0.00%
+Profiler CounterProcessor last busy 0.00%
+========================Statistics end at 1.000011s============
+========================Statistics after 2.000204s============
+==ClientData=============
+0: TotalClients = 1, rate 0
+1: TotalPacketsSent = 5, rate 1
+2: TotalPacketsRcvd = 8, rate 1
+3: TotalTXTSPacketsSent = 5, rate 1
+4: TotalTXTSRead = 5, rate 1
+5: MaxTXTSBytesOutstanding = 98, rate 0
+6: TotalGenMsgSent = 3, rate 0
+7: TotalGenMsgRcvd = 5, rate 0
+8: TotalEventMsgSent = 2, rate 1
+9: TotalEventMsgRcvd = 3, rate 1
+10: TotalClientAnnounceReq = 1, rate 0
+11: TotalClientAnnounceReqResend = 0, rate 0
+12: TotalClientAnnounceGrant = 1, rate 0
+13: TotalClientSyncReq = 1, rate 0
+14: TotalClientSyncReqResend = 0, rate 0
+15: TotalClientSyncGrant = 1, rate 0
+16: TotalClientDelayRespReq = 1, rate 0
+17: TotalClientDelayRespReqResend = 0, rate 0
+18: TotalClientDelayRespGrant = 1, rate 0
+19: TotalSyncRcvd = 1, rate 0
+20: TotalPDelayRespRcvd = 0, rate 0
+21: TotalFollowUpRcvd = 1, rate 0
+22: TotalPDelayRespFollowUpRcvd = 0, rate 0
+23: TotalAnnounceRcvd = 1, rate 0
+24: TotalDelayReqSent = 2, rate 1
+25: TotalDelayRespRcvd = 2, rate 1
+Client states
+Total: 1, Max: 1 , Min: 1
+Announce Grant Latency
+ 1 samples of 1 events
+Cumulative:	354.558µs
+HMean:		354.558µs
+Avg.:		354.558µs
+p50: 		354.558µs
+p75:		354.558µs
+p95:		354.558µs
+p99:		354.558µs
+p999:		354.558µs
+Long 5%:	354.558µs
+Short 5%:	354.558µs
+Max:		354.558µs
+Min:		354.558µs
+Range:		0s
+StdDev:		0s
+Rate/sec.:	2820.41
+Sync Grant Latency
+ 1 samples of 1 events
+Cumulative:	186.978µs
+HMean:		186.978µs
+Avg.:		186.978µs
+p50: 		186.978µs
+p75:		186.978µs
+p95:		186.978µs
+p99:		186.978µs
+p999:		186.978µs
+Long 5%:	186.978µs
+Short 5%:	186.978µs
+Max:		186.978µs
+Min:		186.978µs
+Range:		0s
+StdDev:		0s
+Rate/sec.:	5348.22
+Delay Resp Grant Latency
+ 1 samples of 1 events
+Cumulative:	39.974µs
+HMean:		39.974µs
+Avg.:		39.974µs
+p50: 		39.974µs
+p75:		39.974µs
+p95:		39.974µs
+p99:		39.974µs
+p999:		39.974µs
+Long 5%:	39.974µs
+Short 5%:	39.974µs
+Max:		39.974µs
+Min:		39.974µs
+Range:		0s
+StdDev:		0s
+Rate/sec.:	25016.26
+Delay Req Latency
+ 1 samples of 1 events
+Cumulative:	288.426µs
+HMean:		288.426µs
+Avg.:		288.426µs
+p50: 		288.426µs
+p75:		288.426µs
+p95:		288.426µs
+p99:		288.426µs
+p999:		288.426µs
+Long 5%:	288.426µs
+Short 5%:	288.426µs
+Max:		288.426µs
+Min:		288.426µs
+Range:		0s
+StdDev:		0s
+Rate/sec.:	3467.09
+Time Between Syncs
+ 0 samples of 0 events
+Cumulative:	0s
+HMean:		0s
+Avg.:		0s
+p50: 		0s
+p75:		0s
+p95:		0s
+p99:		0s
+p999:		0s
+Long 5%:	0s
+Short 5%:	0s
+Max:		0s
+Min:		0s
+Range:		0s
+StdDev:		0s
+Rate/sec.:	0.00
+==Software Performance=============
+Profiler RX Worker 0 last busy 0.00%
+Profiler RX Worker 1 last busy 0.00%
+Profiler RX Worker 2 last busy 0.00%
+Profiler RX Worker 3 last busy 0.00%
+Profiler TX worker 0 last busy 0.00%
+Profiler TX worker 0 TSRead worker 0 last busy 0.00%
+Profiler TX worker 0 TSRead worker 1 last busy 0.00%
+Profiler TX worker 0 TSRead worker 2 last busy 0.00%
+Profiler TX worker 1 last busy 0.00%
+Profiler TX worker 1 TSRead worker 0 last busy 0.00%
+Profiler TX worker 1 TSRead worker 1 last busy 0.00%
+Profiler TX worker 1 TSRead worker 2 last busy 0.00%
+Profiler TX worker 2 last busy 0.00%
+Profiler TX worker 2 TSRead worker 0 last busy 0.00%
+Profiler TX worker 2 TSRead worker 1 last busy 0.00%
+Profiler TX worker 2 TSRead worker 2 last busy 0.00%
+Profiler TX worker 3 last busy 0.00%
+Profiler TX worker 3 TSRead worker 0 last busy 0.00%
+Profiler TX worker 3 TSRead worker 1 last busy 0.00%
+Profiler TX worker 3 TSRead worker 2 last busy 0.00%
+Profiler PacketParser 0 last busy 0.00%
+Profiler PacketParser 1 last busy 0.00%
+Profiler PacketParser 2 last busy 0.00%
+Profiler PacketParser 3 last busy 0.00%
+Profiler PacketProcessor 0 last busy 0.00%
+Profiler PacketProcessor 1 last busy 0.00%
+Profiler PacketProcessor 2 last busy 0.00%
+Profiler PacketProcessor 3 last busy 0.00%
+Profiler Client Retransmit Proc 0 last busy 0.00%
+Profiler Client Retransmit Proc 1 last busy 0.00%
+Profiler Client Retransmit Proc 2 last busy 0.00%
+Profiler Client Retransmit Proc 3 last busy 0.00%
+Profiler CounterProcessor last busy 0.00%
+========================Statistics end at 2.000204s============
+========================Statistics after 3.005384s============
+==ClientData=============
+0: TotalClients = 1, rate 0
+1: TotalPacketsSent = 7, rate 2
+2: TotalPacketsRcvd = 12, rate 4
+3: TotalTXTSPacketsSent = 7, rate 2
+4: TotalTXTSRead = 7, rate 2
+5: MaxTXTSBytesOutstanding = 98, rate 0
+6: TotalGenMsgSent = 3, rate 0
+7: TotalGenMsgRcvd = 7, rate 2
+8: TotalEventMsgSent = 4, rate 2
+9: TotalEventMsgRcvd = 5, rate 2
+10: TotalClientAnnounceReq = 1, rate 0
+11: TotalClientAnnounceReqResend = 0, rate 0
+12: TotalClientAnnounceGrant = 1, rate 0
+13: TotalClientSyncReq = 1, rate 0
+14: TotalClientSyncReqResend = 0, rate 0
+15: TotalClientSyncGrant = 1, rate 0
+16: TotalClientDelayRespReq = 1, rate 0
+17: TotalClientDelayRespReqResend = 0, rate 0
+18: TotalClientDelayRespGrant = 1, rate 0
+19: TotalSyncRcvd = 2, rate 1
+20: TotalPDelayRespRcvd = 0, rate 0
+21: TotalFollowUpRcvd = 2, rate 1
+22: TotalPDelayRespFollowUpRcvd = 0, rate 0
+23: TotalAnnounceRcvd = 2, rate 1
+24: TotalDelayReqSent = 4, rate 2
+25: TotalDelayRespRcvd = 3, rate 1
+Client states
+Total: 1, Max: 1 , Min: 1
+Announce Grant Latency
+ 1 samples of 1 events
+Cumulative:	354.558µs
+HMean:		354.558µs
+Avg.:		354.558µs
+p50: 		354.558µs
+p75:		354.558µs
+p95:		354.558µs
+p99:		354.558µs
+p999:		354.558µs
+Long 5%:	354.558µs
+Short 5%:	354.558µs
+Max:		354.558µs
+Min:		354.558µs
+Range:		0s
+StdDev:		0s
+Rate/sec.:	2820.41
+Sync Grant Latency
+ 1 samples of 1 events
+Cumulative:	186.978µs
+HMean:		186.978µs
+Avg.:		186.978µs
+p50: 		186.978µs
+p75:		186.978µs
+p95:		186.978µs
+p99:		186.978µs
+p999:		186.978µs
+Long 5%:	186.978µs
+Short 5%:	186.978µs
+Max:		186.978µs
+Min:		186.978µs
+Range:		0s
+StdDev:		0s
+Rate/sec.:	5348.22
+Delay Resp Grant Latency
+ 1 samples of 1 events
+Cumulative:	39.974µs
+HMean:		39.974µs
+Avg.:		39.974µs
+p50: 		39.974µs
+p75:		39.974µs
+p95:		39.974µs
+p99:		39.974µs
+p999:		39.974µs
+Long 5%:	39.974µs
+Short 5%:	39.974µs
+Max:		39.974µs
+Min:		39.974µs
+Range:		0s
+StdDev:		0s
+Rate/sec.:	25016.26
+Delay Req Latency
+ 0 samples of 0 events
+Cumulative:	0s
+HMean:		0s
+Avg.:		0s
+p50: 		0s
+p75:		0s
+p95:		0s
+p99:		0s
+p999:		0s
+Long 5%:	0s
+Short 5%:	0s
+Max:		0s
+Min:		0s
+Range:		0s
+StdDev:		0s
+Rate/sec.:	0.00
+Time Between Syncs
+ 1 samples of 1 events
+Cumulative:	2.001017844s
+HMean:		2.001017844s
+Avg.:		2.001017844s
+p50: 		2.001017844s
+p75:		2.001017844s
+p95:		2.001017844s
+p99:		2.001017844s
+p999:		2.001017844s
+Long 5%:	2.001017844s
+Short 5%:	2.001017844s
+Max:		2.001017844s
+Min:		2.001017844s
+Range:		0s
+StdDev:		0s
+Rate/sec.:	0.50
+==Software Performance=============
+Profiler RX Worker 0 last busy 0.00%
+Profiler RX Worker 1 last busy 0.00%
+Profiler RX Worker 2 last busy 0.00%
+Profiler RX Worker 3 last busy 0.00%
+Profiler TX worker 0 last busy 0.00%
+Profiler TX worker 0 TSRead worker 0 last busy 0.00%
+Profiler TX worker 0 TSRead worker 1 last busy 0.00%
+Profiler TX worker 0 TSRead worker 2 last busy 0.00%
+Profiler TX worker 1 last busy 0.00%
+Profiler TX worker 1 TSRead worker 0 last busy 0.00%
+Profiler TX worker 1 TSRead worker 1 last busy 0.00%
+Profiler TX worker 1 TSRead worker 2 last busy 0.00%
+Profiler TX worker 2 last busy 0.00%
+Profiler TX worker 2 TSRead worker 0 last busy 0.00%
+Profiler TX worker 2 TSRead worker 1 last busy 0.00%
+Profiler TX worker 2 TSRead worker 2 last busy 0.00%
+Profiler TX worker 3 last busy 0.00%
+Profiler TX worker 3 TSRead worker 0 last busy 0.00%
+Profiler TX worker 3 TSRead worker 1 last busy 0.00%
+Profiler TX worker 3 TSRead worker 2 last busy 0.00%
+Profiler PacketParser 0 last busy 0.00%
+Profiler PacketParser 1 last busy 0.00%
+Profiler PacketParser 2 last busy 0.00%
+Profiler PacketParser 3 last busy 0.00%
+Profiler PacketProcessor 0 last busy 0.00%
+Profiler PacketProcessor 1 last busy 0.00%
+Profiler PacketProcessor 2 last busy 0.00%
+Profiler PacketProcessor 3 last busy 0.00%
+Profiler Client Retransmit Proc 0 last busy 0.00%
+Profiler Client Retransmit Proc 1 last busy 0.00%
+Profiler Client Retransmit Proc 2 last busy 0.00%
+Profiler Client Retransmit Proc 3 last busy 0.00%
+Profiler CounterProcessor last busy 0.00%
+========================Statistics end at 3.005384s============
+========================Statistics after 4.005003s============
+==ClientData=============
+0: TotalClients = 1, rate 0
+1: TotalPacketsSent = 7, rate 0
+2: TotalPacketsRcvd = 13, rate 1
+3: TotalTXTSPacketsSent = 7, rate 0
+4: TotalTXTSRead = 7, rate 0
+5: MaxTXTSBytesOutstanding = 98, rate 0
+6: TotalGenMsgSent = 3, rate 0
+7: TotalGenMsgRcvd = 7, rate 0
+8: TotalEventMsgSent = 4, rate 0
+9: TotalEventMsgRcvd = 6, rate 1
+10: TotalClientAnnounceReq = 1, rate 0
+11: TotalClientAnnounceReqResend = 0, rate 0
+12: TotalClientAnnounceGrant = 1, rate 0
+13: TotalClientSyncReq = 1, rate 0
+14: TotalClientSyncReqResend = 0, rate 0
+15: TotalClientSyncGrant = 1, rate 0
+16: TotalClientDelayRespReq = 1, rate 0
+17: TotalClientDelayRespReqResend = 0, rate 0
+18: TotalClientDelayRespGrant = 1, rate 0
+19: TotalSyncRcvd = 2, rate 0
+20: TotalPDelayRespRcvd = 0, rate 0
+21: TotalFollowUpRcvd = 2, rate 0
+22: TotalPDelayRespFollowUpRcvd = 0, rate 0
+23: TotalAnnounceRcvd = 2, rate 0
+24: TotalDelayReqSent = 4, rate 0
+25: TotalDelayRespRcvd = 4, rate 1
+Client states
+Total: 1, Max: 1 , Min: 1
+Announce Grant Latency
+ 1 samples of 1 events
+Cumulative:	354.558µs
+HMean:		354.558µs
+Avg.:		354.558µs
+p50: 		354.558µs
+p75:		354.558µs
+p95:		354.558µs
+p99:		354.558µs
+p999:		354.558µs
+Long 5%:	354.558µs
+Short 5%:	354.558µs
+Max:		354.558µs
+Min:		354.558µs
+Range:		0s
+StdDev:		0s
+Rate/sec.:	2820.41
+Sync Grant Latency
+ 1 samples of 1 events
+Cumulative:	186.978µs
+HMean:		186.978µs
+Avg.:		186.978µs
+p50: 		186.978µs
+p75:		186.978µs
+p95:		186.978µs
+p99:		186.978µs
+p999:		186.978µs
+Long 5%:	186.978µs
+Short 5%:	186.978µs
+Max:		186.978µs
+Min:		186.978µs
+Range:		0s
+StdDev:		0s
+Rate/sec.:	5348.22
+Delay Resp Grant Latency
+ 1 samples of 1 events
+Cumulative:	39.974µs
+HMean:		39.974µs
+Avg.:		39.974µs
+p50: 		39.974µs
+p75:		39.974µs
+p95:		39.974µs
+p99:		39.974µs
+p999:		39.974µs
+Long 5%:	39.974µs
+Short 5%:	39.974µs
+Max:		39.974µs
+Min:		39.974µs
+Range:		0s
+StdDev:		0s
+Rate/sec.:	25016.26
+Delay Req Latency
+ 1 samples of 1 events
+Cumulative:	327.718µs
+HMean:		327.718µs
+Avg.:		327.718µs
+p50: 		327.718µs
+p75:		327.718µs
+p95:		327.718µs
+p99:		327.718µs
+p999:		327.718µs
+Long 5%:	327.718µs
+Short 5%:	327.718µs
+Max:		327.718µs
+Min:		327.718µs
+Range:		0s
+StdDev:		0s
+Rate/sec.:	3051.40
+Time Between Syncs
+ 1 samples of 1 events
+Cumulative:	2.001017844s
+HMean:		2.001017844s
+Avg.:		2.001017844s
+p50: 		2.001017844s
+p75:		2.001017844s
+p95:		2.001017844s
+p99:		2.001017844s
+p999:		2.001017844s
+Long 5%:	2.001017844s
+Short 5%:	2.001017844s
+Max:		2.001017844s
+Min:		2.001017844s
+Range:		0s
+StdDev:		0s
+Rate/sec.:	0.50
+==Software Performance=============
+Profiler RX Worker 0 last busy 0.00%
+Profiler RX Worker 1 last busy 0.00%
+Profiler RX Worker 2 last busy 0.00%
+Profiler RX Worker 3 last busy 0.00%
+Profiler TX worker 0 last busy 0.00%
+Profiler TX worker 0 TSRead worker 0 last busy 0.00%
+Profiler TX worker 0 TSRead worker 1 last busy 0.00%
+Profiler TX worker 0 TSRead worker 2 last busy 0.00%
+Profiler TX worker 1 last busy 0.00%
+Profiler TX worker 1 TSRead worker 0 last busy 0.00%
+Profiler TX worker 1 TSRead worker 1 last busy 0.00%
+Profiler TX worker 1 TSRead worker 2 last busy 0.00%
+Profiler TX worker 2 last busy 0.00%
+Profiler TX worker 2 TSRead worker 0 last busy 0.00%
+Profiler TX worker 2 TSRead worker 1 last busy 0.00%
+Profiler TX worker 2 TSRead worker 2 last busy 0.00%
+Profiler TX worker 3 last busy 0.00%
+Profiler TX worker 3 TSRead worker 0 last busy 0.00%
+Profiler TX worker 3 TSRead worker 1 last busy 0.00%
+Profiler TX worker 3 TSRead worker 2 last busy 0.00%
+Profiler PacketParser 0 last busy 0.00%
+Profiler PacketParser 1 last busy 0.00%
+Profiler PacketParser 2 last busy 0.00%
+Profiler PacketParser 3 last busy 0.00%
+Profiler PacketProcessor 0 last busy 0.00%
+Profiler PacketProcessor 1 last busy 0.00%
+Profiler PacketProcessor 2 last busy 0.00%
+Profiler PacketProcessor 3 last busy 0.00%
+Profiler Client Retransmit Proc 0 last busy 0.00%
+Profiler Client Retransmit Proc 1 last busy 0.00%
+Profiler Client Retransmit Proc 2 last busy 0.00%
+Profiler Client Retransmit Proc 3 last busy 0.00%
+Profiler CounterProcessor last busy 0.00%
+========================Statistics end at 4.005003s============
+========================Statistics after 5.005002s============
+==ClientData=============
+0: TotalClients = 1, rate 0
+1: TotalPacketsSent = 7, rate 0
+2: TotalPacketsRcvd = 13, rate 0
+3: TotalTXTSPacketsSent = 7, rate 0
+4: TotalTXTSRead = 7, rate 0
+5: MaxTXTSBytesOutstanding = 98, rate 0
+6: TotalGenMsgSent = 3, rate 0
+7: TotalGenMsgRcvd = 7, rate 0
+8: TotalEventMsgSent = 4, rate 0
+9: TotalEventMsgRcvd = 6, rate 0
+10: TotalClientAnnounceReq = 1, rate 0
+11: TotalClientAnnounceReqResend = 0, rate 0
+12: TotalClientAnnounceGrant = 1, rate 0
+13: TotalClientSyncReq = 1, rate 0
+14: TotalClientSyncReqResend = 0, rate 0
+15: TotalClientSyncGrant = 1, rate 0
+16: TotalClientDelayRespReq = 1, rate 0
+17: TotalClientDelayRespReqResend = 0, rate 0
+18: TotalClientDelayRespGrant = 1, rate 0
+19: TotalSyncRcvd = 2, rate 0
+20: TotalPDelayRespRcvd = 0, rate 0
+21: TotalFollowUpRcvd = 2, rate 0
+22: TotalPDelayRespFollowUpRcvd = 0, rate 0
+23: TotalAnnounceRcvd = 2, rate 0
+24: TotalDelayReqSent = 4, rate 0
+25: TotalDelayRespRcvd = 4, rate 0
+Client states
+Total: 1, Max: 1 , Min: 1
+Announce Grant Latency
+ 1 samples of 1 events
+Cumulative:	354.558µs
+HMean:		354.558µs
+Avg.:		354.558µs
+p50: 		354.558µs
+p75:		354.558µs
+p95:		354.558µs
+p99:		354.558µs
+p999:		354.558µs
+Long 5%:	354.558µs
+Short 5%:	354.558µs
+Max:		354.558µs
+Min:		354.558µs
+Range:		0s
+StdDev:		0s
+Rate/sec.:	2820.41
+Sync Grant Latency
+ 1 samples of 1 events
+Cumulative:	186.978µs
+HMean:		186.978µs
+Avg.:		186.978µs
+p50: 		186.978µs
+p75:		186.978µs
+p95:		186.978µs
+p99:		186.978µs
+p999:		186.978µs
+Long 5%:	186.978µs
+Short 5%:	186.978µs
+Max:		186.978µs
+Min:		186.978µs
+Range:		0s
+StdDev:		0s
+Rate/sec.:	5348.22
+Delay Resp Grant Latency
+ 1 samples of 1 events
+Cumulative:	39.974µs
+HMean:		39.974µs
+Avg.:		39.974µs
+p50: 		39.974µs
+p75:		39.974µs
+p95:		39.974µs
+p99:		39.974µs
+p999:		39.974µs
+Long 5%:	39.974µs
+Short 5%:	39.974µs
+Max:		39.974µs
+Min:		39.974µs
+Range:		0s
+StdDev:		0s
+Rate/sec.:	25016.26
+Delay Req Latency
+ 1 samples of 1 events
+Cumulative:	327.718µs
+HMean:		327.718µs
+Avg.:		327.718µs
+p50: 		327.718µs
+p75:		327.718µs
+p95:		327.718µs
+p99:		327.718µs
+p999:		327.718µs
+Long 5%:	327.718µs
+Short 5%:	327.718µs
+Max:		327.718µs
+Min:		327.718µs
+Range:		0s
+StdDev:		0s
+Rate/sec.:	3051.40
+Time Between Syncs
+ 1 samples of 1 events
+Cumulative:	2.001017844s
+HMean:		2.001017844s
+Avg.:		2.001017844s
+p50: 		2.001017844s
+p75:		2.001017844s
+p95:		2.001017844s
+p99:		2.001017844s
+p999:		2.001017844s
+Long 5%:	2.001017844s
+Short 5%:	2.001017844s
+Max:		2.001017844s
+Min:		2.001017844s
+Range:		0s
+StdDev:		0s
+Rate/sec.:	0.50
+==Software Performance=============
+Profiler RX Worker 0 last busy 0.00%
+Profiler RX Worker 1 last busy 0.00%
+Profiler RX Worker 2 last busy 0.00%
+Profiler RX Worker 3 last busy 0.00%
+Profiler TX worker 0 last busy 0.00%
+Profiler TX worker 0 TSRead worker 0 last busy 0.00%
+Profiler TX worker 0 TSRead worker 1 last busy 0.00%
+Profiler TX worker 0 TSRead worker 2 last busy 0.00%
+Profiler TX worker 1 last busy 0.00%
+Profiler TX worker 1 TSRead worker 0 last busy 0.00%
+Profiler TX worker 1 TSRead worker 1 last busy 0.00%
+Profiler TX worker 1 TSRead worker 2 last busy 0.00%
+Profiler TX worker 2 last busy 0.00%
+Profiler TX worker 2 TSRead worker 0 last busy 0.00%
+Profiler TX worker 2 TSRead worker 1 last busy 0.00%
+Profiler TX worker 2 TSRead worker 2 last busy 0.00%
+Profiler TX worker 3 last busy 0.00%
+Profiler TX worker 3 TSRead worker 0 last busy 0.00%
+Profiler TX worker 3 TSRead worker 1 last busy 0.00%
+Profiler TX worker 3 TSRead worker 2 last busy 0.00%
+Profiler PacketParser 0 last busy 0.00%
+Profiler PacketParser 1 last busy 0.00%
+Profiler PacketParser 2 last busy 0.00%
+Profiler PacketParser 3 last busy 0.00%
+Profiler PacketProcessor 0 last busy 0.00%
+Profiler PacketProcessor 1 last busy 0.00%
+Profiler PacketProcessor 2 last busy 0.00%
+Profiler PacketProcessor 3 last busy 0.00%
+Profiler Client Retransmit Proc 0 last busy 0.00%
+Profiler Client Retransmit Proc 1 last busy 0.00%
+Profiler Client Retransmit Proc 2 last busy 0.00%
+Profiler Client Retransmit Proc 3 last busy 0.00%
+Profiler CounterProcessor last busy 0.00%
+========================Statistics end at 5.005002s============
+========================Statistics after 6.005305s============
+==ClientData=============
+0: TotalClients = 1, rate 0
+1: TotalPacketsSent = 8, rate 1
+2: TotalPacketsRcvd = 14, rate 1
+3: TotalTXTSPacketsSent = 7, rate 0
+4: TotalTXTSRead = 7, rate 0
+5: MaxTXTSBytesOutstanding = 98, rate 0
+6: TotalGenMsgSent = 3, rate 0
+7: TotalGenMsgRcvd = 7, rate 0
+8: TotalEventMsgSent = 4, rate 0
+9: TotalEventMsgRcvd = 6, rate 0
+10: TotalClientAnnounceReq = 1, rate 0
+11: TotalClientAnnounceReqResend = 0, rate 0
+12: TotalClientAnnounceGrant = 1, rate 0
+13: TotalClientSyncReq = 1, rate 0
+14: TotalClientSyncReqResend = 0, rate 0
+15: TotalClientSyncGrant = 1, rate 0
+16: TotalClientDelayRespReq = 1, rate 0
+17: TotalClientDelayRespReqResend = 0, rate 0
+18: TotalClientDelayRespGrant = 1, rate 0
+19: TotalSyncRcvd = 2, rate 0
+20: TotalPDelayRespRcvd = 0, rate 0
+21: TotalFollowUpRcvd = 2, rate 0
+22: TotalPDelayRespFollowUpRcvd = 0, rate 0
+23: TotalAnnounceRcvd = 2, rate 0
+24: TotalDelayReqSent = 4, rate 0
+25: TotalDelayRespRcvd = 4, rate 0
+Client states
+Total: 1, Max: 1 , Min: 1
+Announce Grant Latency
+ 1 samples of 1 events
+Cumulative:	354.558µs
+HMean:		354.558µs
+Avg.:		354.558µs
+p50: 		354.558µs
+p75:		354.558µs
+p95:		354.558µs
+p99:		354.558µs
+p999:		354.558µs
+Long 5%:	354.558µs
+Short 5%:	354.558µs
+Max:		354.558µs
+Min:		354.558µs
+Range:		0s
+StdDev:		0s
+Rate/sec.:	2820.41
+Sync Grant Latency
+ 1 samples of 1 events
+Cumulative:	186.978µs
+HMean:		186.978µs
+Avg.:		186.978µs
+p50: 		186.978µs
+p75:		186.978µs
+p95:		186.978µs
+p99:		186.978µs
+p999:		186.978µs
+Long 5%:	186.978µs
+Short 5%:	186.978µs
+Max:		186.978µs
+Min:		186.978µs
+Range:		0s
+StdDev:		0s
+Rate/sec.:	5348.22
+Delay Resp Grant Latency
+ 1 samples of 1 events
+Cumulative:	39.974µs
+HMean:		39.974µs
+Avg.:		39.974µs
+p50: 		39.974µs
+p75:		39.974µs
+p95:		39.974µs
+p99:		39.974µs
+p999:		39.974µs
+Long 5%:	39.974µs
+Short 5%:	39.974µs
+Max:		39.974µs
+Min:		39.974µs
+Range:		0s
+StdDev:		0s
+Rate/sec.:	25016.26
+Delay Req Latency
+ 1 samples of 1 events
+Cumulative:	327.718µs
+HMean:		327.718µs
+Avg.:		327.718µs
+p50: 		327.718µs
+p75:		327.718µs
+p95:		327.718µs
+p99:		327.718µs
+p999:		327.718µs
+Long 5%:	327.718µs
+Short 5%:	327.718µs
+Max:		327.718µs
+Min:		327.718µs
+Range:		0s
+StdDev:		0s
+Rate/sec.:	3051.40
+Time Between Syncs
+ 1 samples of 1 events
+Cumulative:	2.001017844s
+HMean:		2.001017844s
+Avg.:		2.001017844s
+p50: 		2.001017844s
+p75:		2.001017844s
+p95:		2.001017844s
+p99:		2.001017844s
+p999:		2.001017844s
+Long 5%:	2.001017844s
+Short 5%:	2.001017844s
+Max:		2.001017844s
+Min:		2.001017844s
+Range:		0s
+StdDev:		0s
+Rate/sec.:	0.50
+==Software Performance=============
+Profiler RX Worker 0 last busy 0.00%
+Profiler RX Worker 1 last busy 0.00%
+Profiler RX Worker 2 last busy 0.00%
+Profiler RX Worker 3 last busy 0.00%
+Profiler TX worker 0 last busy 0.00%
+Profiler TX worker 0 TSRead worker 0 last busy 0.00%
+Profiler TX worker 0 TSRead worker 1 last busy 0.00%
+Profiler TX worker 0 TSRead worker 2 last busy 0.00%
+Profiler TX worker 1 last busy 0.00%
+Profiler TX worker 1 TSRead worker 0 last busy 0.00%
+Profiler TX worker 1 TSRead worker 1 last busy 0.00%
+Profiler TX worker 1 TSRead worker 2 last busy 0.00%
+Profiler TX worker 2 last busy 0.00%
+Profiler TX worker 2 TSRead worker 0 last busy 0.00%
+Profiler TX worker 2 TSRead worker 1 last busy 0.00%
+Profiler TX worker 2 TSRead worker 2 last busy 0.00%
+Profiler TX worker 3 last busy 0.00%
+Profiler TX worker 3 TSRead worker 0 last busy 0.00%
+Profiler TX worker 3 TSRead worker 1 last busy 0.00%
+Profiler TX worker 3 TSRead worker 2 last busy 0.00%
+Profiler PacketParser 0 last busy 0.00%
+Profiler PacketParser 1 last busy 0.00%
+Profiler PacketParser 2 last busy 0.00%
+Profiler PacketParser 3 last busy 0.00%
+Profiler PacketProcessor 0 last busy 0.00%
+Profiler PacketProcessor 1 last busy 0.00%
+Profiler PacketProcessor 2 last busy 0.00%
+Profiler PacketProcessor 3 last busy 0.00%
+Profiler Client Retransmit Proc 0 last busy 0.00%
+Profiler Client Retransmit Proc 1 last busy 0.00%
+Profiler Client Retransmit Proc 2 last busy 0.00%
+Profiler Client Retransmit Proc 3 last busy 0.00%
+Profiler CounterProcessor last busy 0.00%
+========================Statistics end at 6.005305s============
+========================Statistics after 7.005003s============
+==ClientData=============
+0: TotalClients = 1, rate 0
+1: TotalPacketsSent = 8, rate 0
+2: TotalPacketsRcvd = 14, rate 0
+3: TotalTXTSPacketsSent = 7, rate 0
+4: TotalTXTSRead = 7, rate 0
+5: MaxTXTSBytesOutstanding = 98, rate 0
+6: TotalGenMsgSent = 3, rate 0
+7: TotalGenMsgRcvd = 7, rate 0
+8: TotalEventMsgSent = 4, rate 0
+9: TotalEventMsgRcvd = 6, rate 0
+10: TotalClientAnnounceReq = 1, rate 0
+11: TotalClientAnnounceReqResend = 0, rate 0
+12: TotalClientAnnounceGrant = 1, rate 0
+13: TotalClientSyncReq = 1, rate 0
+14: TotalClientSyncReqResend = 0, rate 0
+15: TotalClientSyncGrant = 1, rate 0
+16: TotalClientDelayRespReq = 1, rate 0
+17: TotalClientDelayRespReqResend = 0, rate 0
+18: TotalClientDelayRespGrant = 1, rate 0
+19: TotalSyncRcvd = 2, rate 0
+20: TotalPDelayRespRcvd = 0, rate 0
+21: TotalFollowUpRcvd = 2, rate 0
+22: TotalPDelayRespFollowUpRcvd = 0, rate 0
+23: TotalAnnounceRcvd = 2, rate 0
+24: TotalDelayReqSent = 4, rate 0
+25: TotalDelayRespRcvd = 4, rate 0
+Client states
+Total: 1, Max: 1 , Min: 1
+Announce Grant Latency
+ 1 samples of 1 events
+Cumulative:	354.558µs
+HMean:		354.558µs
+Avg.:		354.558µs
+p50: 		354.558µs
+p75:		354.558µs
+p95:		354.558µs
+p99:		354.558µs
+p999:		354.558µs
+Long 5%:	354.558µs
+Short 5%:	354.558µs
+Max:		354.558µs
+Min:		354.558µs
+Range:		0s
+StdDev:		0s
+Rate/sec.:	2820.41
+Sync Grant Latency
+ 1 samples of 1 events
+Cumulative:	186.978µs
+HMean:		186.978µs
+Avg.:		186.978µs
+p50: 		186.978µs
+p75:		186.978µs
+p95:		186.978µs
+p99:		186.978µs
+p999:		186.978µs
+Long 5%:	186.978µs
+Short 5%:	186.978µs
+Max:		186.978µs
+Min:		186.978µs
+Range:		0s
+StdDev:		0s
+Rate/sec.:	5348.22
+Delay Resp Grant Latency
+ 1 samples of 1 events
+Cumulative:	39.974µs
+HMean:		39.974µs
+Avg.:		39.974µs
+p50: 		39.974µs
+p75:		39.974µs
+p95:		39.974µs
+p99:		39.974µs
+p999:		39.974µs
+Long 5%:	39.974µs
+Short 5%:	39.974µs
+Max:		39.974µs
+Min:		39.974µs
+Range:		0s
+StdDev:		0s
+Rate/sec.:	25016.26
+Delay Req Latency
+ 1 samples of 1 events
+Cumulative:	327.718µs
+HMean:		327.718µs
+Avg.:		327.718µs
+p50: 		327.718µs
+p75:		327.718µs
+p95:		327.718µs
+p99:		327.718µs
+p999:		327.718µs
+Long 5%:	327.718µs
+Short 5%:	327.718µs
+Max:		327.718µs
+Min:		327.718µs
+Range:		0s
+StdDev:		0s
+Rate/sec.:	3051.40
+Time Between Syncs
+ 1 samples of 1 events
+Cumulative:	2.001017844s
+HMean:		2.001017844s
+Avg.:		2.001017844s
+p50: 		2.001017844s
+p75:		2.001017844s
+p95:		2.001017844s
+p99:		2.001017844s
+p999:		2.001017844s
+Long 5%:	2.001017844s
+Short 5%:	2.001017844s
+Max:		2.001017844s
+Min:		2.001017844s
+Range:		0s
+StdDev:		0s
+Rate/sec.:	0.50
+==Software Performance=============
+Profiler RX Worker 0 last busy 0.00%
+Profiler RX Worker 1 last busy 0.00%
+Profiler RX Worker 2 last busy 0.00%
+Profiler RX Worker 3 last busy 0.00%
+Profiler TX worker 0 last busy 0.00%
+Profiler TX worker 0 TSRead worker 0 last busy 0.00%
+Profiler TX worker 0 TSRead worker 1 last busy 0.00%
+Profiler TX worker 0 TSRead worker 2 last busy 0.00%
+Profiler TX worker 1 last busy 0.00%
+Profiler TX worker 1 TSRead worker 0 last busy 0.00%
+Profiler TX worker 1 TSRead worker 1 last busy 0.00%
+Profiler TX worker 1 TSRead worker 2 last busy 0.00%
+Profiler TX worker 2 last busy 0.00%
+Profiler TX worker 2 TSRead worker 0 last busy 0.00%
+Profiler TX worker 2 TSRead worker 1 last busy 0.00%
+Profiler TX worker 2 TSRead worker 2 last busy 0.00%
+Profiler TX worker 3 last busy 0.00%
+Profiler TX worker 3 TSRead worker 0 last busy 0.00%
+Profiler TX worker 3 TSRead worker 1 last busy 0.00%
+Profiler TX worker 3 TSRead worker 2 last busy 0.00%
+Profiler PacketParser 0 last busy 0.00%
+Profiler PacketParser 1 last busy 0.00%
+Profiler PacketParser 2 last busy 0.00%
+Profiler PacketParser 3 last busy 0.00%
+Profiler PacketProcessor 0 last busy 0.00%
+Profiler PacketProcessor 1 last busy 0.00%
+Profiler PacketProcessor 2 last busy 0.00%
+Profiler PacketProcessor 3 last busy 0.00%
+Profiler Client Retransmit Proc 0 last busy 0.00%
+Profiler Client Retransmit Proc 1 last busy 0.00%
+Profiler Client Retransmit Proc 2 last busy 0.00%
+Profiler Client Retransmit Proc 3 last busy 0.00%
+Profiler CounterProcessor last busy 0.00%
+========================Statistics end at 7.005003s============
+========================Statistics after 8.005007s============
+==ClientData=============
+0: TotalClients = 1, rate 0
+1: TotalPacketsSent = 8, rate 0
+2: TotalPacketsRcvd = 14, rate 0
+3: TotalTXTSPacketsSent = 7, rate 0
+4: TotalTXTSRead = 7, rate 0
+5: MaxTXTSBytesOutstanding = 98, rate 0
+6: TotalGenMsgSent = 3, rate 0
+7: TotalGenMsgRcvd = 7, rate 0
+8: TotalEventMsgSent = 4, rate 0
+9: TotalEventMsgRcvd = 6, rate 0
+10: TotalClientAnnounceReq = 1, rate 0
+11: TotalClientAnnounceReqResend = 0, rate 0
+12: TotalClientAnnounceGrant = 1, rate 0
+13: TotalClientSyncReq = 1, rate 0
+14: TotalClientSyncReqResend = 0, rate 0
+15: TotalClientSyncGrant = 1, rate 0
+16: TotalClientDelayRespReq = 1, rate 0
+17: TotalClientDelayRespReqResend = 0, rate 0
+18: TotalClientDelayRespGrant = 1, rate 0
+19: TotalSyncRcvd = 2, rate 0
+20: TotalPDelayRespRcvd = 0, rate 0
+21: TotalFollowUpRcvd = 2, rate 0
+22: TotalPDelayRespFollowUpRcvd = 0, rate 0
+23: TotalAnnounceRcvd = 2, rate 0
+24: TotalDelayReqSent = 4, rate 0
+25: TotalDelayRespRcvd = 4, rate 0
+Client states
+Total: 1, Max: 1 , Min: 1
+Announce Grant Latency
+ 1 samples of 1 events
+Cumulative:	354.558µs
+HMean:		354.558µs
+Avg.:		354.558µs
+p50: 		354.558µs
+p75:		354.558µs
+p95:		354.558µs
+p99:		354.558µs
+p999:		354.558µs
+Long 5%:	354.558µs
+Short 5%:	354.558µs
+Max:		354.558µs
+Min:		354.558µs
+Range:		0s
+StdDev:		0s
+Rate/sec.:	2820.41
+Sync Grant Latency
+ 1 samples of 1 events
+Cumulative:	186.978µs
+HMean:		186.978µs
+Avg.:		186.978µs
+p50: 		186.978µs
+p75:		186.978µs
+p95:		186.978µs
+p99:		186.978µs
+p999:		186.978µs
+Long 5%:	186.978µs
+Short 5%:	186.978µs
+Max:		186.978µs
+Min:		186.978µs
+Range:		0s
+StdDev:		0s
+Rate/sec.:	5348.22
+Delay Resp Grant Latency
+ 1 samples of 1 events
+Cumulative:	39.974µs
+HMean:		39.974µs
+Avg.:		39.974µs
+p50: 		39.974µs
+p75:		39.974µs
+p95:		39.974µs
+p99:		39.974µs
+p999:		39.974µs
+Long 5%:	39.974µs
+Short 5%:	39.974µs
+Max:		39.974µs
+Min:		39.974µs
+Range:		0s
+StdDev:		0s
+Rate/sec.:	25016.26
+Delay Req Latency
+ 1 samples of 1 events
+Cumulative:	327.718µs
+HMean:		327.718µs
+Avg.:		327.718µs
+p50: 		327.718µs
+p75:		327.718µs
+p95:		327.718µs
+p99:		327.718µs
+p999:		327.718µs
+Long 5%:	327.718µs
+Short 5%:	327.718µs
+Max:		327.718µs
+Min:		327.718µs
+Range:		0s
+StdDev:		0s
+Rate/sec.:	3051.40
+Time Between Syncs
+ 1 samples of 1 events
+Cumulative:	2.001017844s
+HMean:		2.001017844s
+Avg.:		2.001017844s
+p50: 		2.001017844s
+p75:		2.001017844s
+p95:		2.001017844s
+p99:		2.001017844s
+p999:		2.001017844s
+Long 5%:	2.001017844s
+Short 5%:	2.001017844s
+Max:		2.001017844s
+Min:		2.001017844s
+Range:		0s
+StdDev:		0s
+Rate/sec.:	0.50
+==Software Performance=============
+Profiler RX Worker 0 last busy 0.00%
+Profiler RX Worker 1 last busy 0.00%
+Profiler RX Worker 2 last busy 0.00%
+Profiler RX Worker 3 last busy 0.00%
+Profiler TX worker 0 last busy 0.00%
+Profiler TX worker 0 TSRead worker 0 last busy 0.00%
+Profiler TX worker 0 TSRead worker 1 last busy 0.00%
+Profiler TX worker 0 TSRead worker 2 last busy 0.00%
+Profiler TX worker 1 last busy 0.00%
+Profiler TX worker 1 TSRead worker 0 last busy 0.00%
+Profiler TX worker 1 TSRead worker 1 last busy 0.00%
+Profiler TX worker 1 TSRead worker 2 last busy 0.00%
+Profiler TX worker 2 last busy 0.00%
+Profiler TX worker 2 TSRead worker 0 last busy 0.00%
+Profiler TX worker 2 TSRead worker 1 last busy 0.00%
+Profiler TX worker 2 TSRead worker 2 last busy 0.00%
+Profiler TX worker 3 last busy 0.00%
+Profiler TX worker 3 TSRead worker 0 last busy 0.00%
+Profiler TX worker 3 TSRead worker 1 last busy 0.00%
+Profiler TX worker 3 TSRead worker 2 last busy 0.00%
+Profiler PacketParser 0 last busy 0.00%
+Profiler PacketParser 1 last busy 0.00%
+Profiler PacketParser 2 last busy 0.00%
+Profiler PacketParser 3 last busy 0.00%
+Profiler PacketProcessor 0 last busy 0.00%
+Profiler PacketProcessor 1 last busy 0.00%
+Profiler PacketProcessor 2 last busy 0.00%
+Profiler PacketProcessor 3 last busy 0.00%
+Profiler Client Retransmit Proc 0 last busy 0.00%
+Profiler Client Retransmit Proc 1 last busy 0.00%
+Profiler Client Retransmit Proc 2 last busy 0.00%
+Profiler Client Retransmit Proc 3 last busy 0.00%
+Profiler CounterProcessor last busy 0.00%
+========================Statistics end at 8.005007s============
+========================Statistics after 9.005001s============
+==ClientData=============
+0: TotalClients = 1, rate 0
+1: TotalPacketsSent = 8, rate 0
+2: TotalPacketsRcvd = 14, rate 0
+3: TotalTXTSPacketsSent = 7, rate 0
+4: TotalTXTSRead = 7, rate 0
+5: MaxTXTSBytesOutstanding = 98, rate 0
+6: TotalGenMsgSent = 3, rate 0
+7: TotalGenMsgRcvd = 7, rate 0
+8: TotalEventMsgSent = 4, rate 0
+9: TotalEventMsgRcvd = 6, rate 0
+10: TotalClientAnnounceReq = 1, rate 0
+11: TotalClientAnnounceReqResend = 0, rate 0
+12: TotalClientAnnounceGrant = 1, rate 0
+13: TotalClientSyncReq = 1, rate 0
+14: TotalClientSyncReqResend = 0, rate 0
+15: TotalClientSyncGrant = 1, rate 0
+16: TotalClientDelayRespReq = 1, rate 0
+17: TotalClientDelayRespReqResend = 0, rate 0
+18: TotalClientDelayRespGrant = 1, rate 0
+19: TotalSyncRcvd = 2, rate 0
+20: TotalPDelayRespRcvd = 0, rate 0
+21: TotalFollowUpRcvd = 2, rate 0
+22: TotalPDelayRespFollowUpRcvd = 0, rate 0
+23: TotalAnnounceRcvd = 2, rate 0
+24: TotalDelayReqSent = 4, rate 0
+25: TotalDelayRespRcvd = 4, rate 0
+Client states
+Total: 1, Max: 1 , Min: 1
+Announce Grant Latency
+ 1 samples of 1 events
+Cumulative:	354.558µs
+HMean:		354.558µs
+Avg.:		354.558µs
+p50: 		354.558µs
+p75:		354.558µs
+p95:		354.558µs
+p99:		354.558µs
+p999:		354.558µs
+Long 5%:	354.558µs
+Short 5%:	354.558µs
+Max:		354.558µs
+Min:		354.558µs
+Range:		0s
+StdDev:		0s
+Rate/sec.:	2820.41
+Sync Grant Latency
+ 1 samples of 1 events
+Cumulative:	186.978µs
+HMean:		186.978µs
+Avg.:		186.978µs
+p50: 		186.978µs
+p75:		186.978µs
+p95:		186.978µs
+p99:		186.978µs
+p999:		186.978µs
+Long 5%:	186.978µs
+Short 5%:	186.978µs
+Max:		186.978µs
+Min:		186.978µs
+Range:		0s
+StdDev:		0s
+Rate/sec.:	5348.22
+Delay Resp Grant Latency
+ 1 samples of 1 events
+Cumulative:	39.974µs
+HMean:		39.974µs
+Avg.:		39.974µs
+p50: 		39.974µs
+p75:		39.974µs
+p95:		39.974µs
+p99:		39.974µs
+p999:		39.974µs
+Long 5%:	39.974µs
+Short 5%:	39.974µs
+Max:		39.974µs
+Min:		39.974µs
+Range:		0s
+StdDev:		0s
+Rate/sec.:	25016.26
+Delay Req Latency
+ 1 samples of 1 events
+Cumulative:	327.718µs
+HMean:		327.718µs
+Avg.:		327.718µs
+p50: 		327.718µs
+p75:		327.718µs
+p95:		327.718µs
+p99:		327.718µs
+p999:		327.718µs
+Long 5%:	327.718µs
+Short 5%:	327.718µs
+Max:		327.718µs
+Min:		327.718µs
+Range:		0s
+StdDev:		0s
+Rate/sec.:	3051.40
+Time Between Syncs
+ 1 samples of 1 events
+Cumulative:	2.001017844s
+HMean:		2.001017844s
+Avg.:		2.001017844s
+p50: 		2.001017844s
+p75:		2.001017844s
+p95:		2.001017844s
+p99:		2.001017844s
+p999:		2.001017844s
+Long 5%:	2.001017844s
+Short 5%:	2.001017844s
+Max:		2.001017844s
+Min:		2.001017844s
+Range:		0s
+StdDev:		0s
+Rate/sec.:	0.50
+==Software Performance=============
+Profiler RX Worker 0 last busy 0.00%
+Profiler RX Worker 1 last busy 0.00%
+Profiler RX Worker 2 last busy 0.00%
+Profiler RX Worker 3 last busy 0.00%
+Profiler TX worker 0 last busy 0.00%
+Profiler TX worker 0 TSRead worker 0 last busy 0.00%
+Profiler TX worker 0 TSRead worker 1 last busy 0.00%
+Profiler TX worker 0 TSRead worker 2 last busy 0.00%
+Profiler TX worker 1 last busy 0.00%
+Profiler TX worker 1 TSRead worker 0 last busy 0.00%
+Profiler TX worker 1 TSRead worker 1 last busy 0.00%
+Profiler TX worker 1 TSRead worker 2 last busy 0.00%
+Profiler TX worker 2 last busy 0.00%
+Profiler TX worker 2 TSRead worker 0 last busy 0.00%
+Profiler TX worker 2 TSRead worker 1 last busy 0.00%
+Profiler TX worker 2 TSRead worker 2 last busy 0.00%
+Profiler TX worker 3 last busy 0.00%
+Profiler TX worker 3 TSRead worker 0 last busy 0.00%
+Profiler TX worker 3 TSRead worker 1 last busy 0.00%
+Profiler TX worker 3 TSRead worker 2 last busy 0.00%
+Profiler PacketParser 0 last busy 0.00%
+Profiler PacketParser 1 last busy 0.00%
+Profiler PacketParser 2 last busy 0.00%
+Profiler PacketParser 3 last busy 0.00%
+Profiler PacketProcessor 0 last busy 0.00%
+Profiler PacketProcessor 1 last busy 0.00%
+Profiler PacketProcessor 2 last busy 0.00%
+Profiler PacketProcessor 3 last busy 0.00%
+Profiler Client Retransmit Proc 0 last busy 0.00%
+Profiler Client Retransmit Proc 1 last busy 0.00%
+Profiler Client Retransmit Proc 2 last busy 0.00%
+Profiler Client Retransmit Proc 3 last busy 0.00%
+Profiler CounterProcessor last busy 0.00%
+========================Statistics end at 9.005001s============
+Done!
