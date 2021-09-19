@@ -114,12 +114,14 @@ Software implementation still requires most of the components, however the commu
 
 ## Interfaces
 * PCIe
-    * PCIe x1 (18 pins) generation 3.0 or above
+    * PCIe x1 (18 pins) generation 1.0 or above on a x4 form-factor
     * Generic, supporting multiple OS versions
     * Exposes PHC device in Linux (/dev/ptpX) as well as PPS (/dev/ppsY)
     * Exposes leap second indicator to a shared memory segment read by chrony/ptp4l
 * 1PPS / 10MHz SMA output
 * 1PPS / 10MHz SMA input
+* IRIG-B input output
+* DCF77 input output
 * GNSS Antenna SMA input
 
 ### LED
