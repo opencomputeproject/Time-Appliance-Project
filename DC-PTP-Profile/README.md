@@ -4,7 +4,7 @@
 ![GitHub Logo](https://github.com/opencomputeproject/Time-Appliance-Project/blob/master/Time-Card/images/OCP%20logo.jpg?raw=true)
 
 
-# Data Center PTP Profile № 1.0
+# Data Center PTP Profile № 1
 
 
 
