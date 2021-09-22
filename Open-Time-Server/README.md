@@ -123,7 +123,7 @@ For the extremely high precision 1PPS output of the Time Card will be connected 
 
 # Detailed Architecture 
 Real life assembly components can be 
-<a id="Figure-3">![Open Time Server Assembly](/Time-Card/images/OTS_assembly.png)</a>
+<a id="Figure-3">![Open Time Server Assembly](/Time-Card/images/OTS_assembly.jpeg)</a>
 <p align="center">Figure 3. Open Time Server Assembly</p>
 
 ## COTS Server
