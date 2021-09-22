@@ -260,7 +260,7 @@ A PTP port can transmit a Sync message as one-step or two-step. If the transmiss
 
 Note: one-step operation reduces the number of PTP messages transmitted by a PTP port. This may be applicable when considering scalability of unicast communication that a GM can serve. A one-step operation might ease meeting the requirements regarding the transmission of Sync messages specified in 9.5.9 of IEEE Std 1588-2019.
 
-Note: IEEE Std 1588-2019 allows one-step versus two-step operation to be on a PTP port basis. However, IEEE Std 1588-2019 does not describe this capability. This profile requires that all PTP ports on a per clock basis be the same.
+Note: IEEE Std 1588-2019 allows one-step versus two-step operation to be configured on a PTP port basis. This profile requires that all PTP ports on a per clock basis be the same.
 
 
 ## 6.11. End-to-End TC with two-step operation
