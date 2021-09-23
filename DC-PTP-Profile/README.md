@@ -294,9 +294,9 @@ The requirements for the actual inter-message intervals for unicast Announce, Sy
 - (a) the arithmetic mean of the successive inter-message interval computed over a suitable number of successive intervals
 - (b) the distribution of the inter-message intervals
 
-For Announce and Sync messages, the arithmetic mean of the inter-message intervals must be within &lt; 30% of the granted inter-message period. For Delay\_Req and Del\_Resp messages, the arithmetic mean of the Delay\_Req inter-message intervals must not be less than 90% of the granted inter-message interval for the Delay\_Resp messages. The purpose of this requirement is to ensure that the GM port receives Delay\_Req messages at rates that it is able to handle. If the mean inter-message interval of the Delay\_Req messages is less than 90% of the granted inter-message interval for the Delay\_Resp messages, the grantor port may ignore any Delay\_Req messages in excess of the granted interval.
+For Announce and Sync messages, the arithmetic mean of the inter-message intervals must be within ± 30% of the granted inter-message period. For Delay\_Req and Del\_Resp messages, the arithmetic mean of the Delay\_Req inter-message intervals must not be less than 90% of the granted inter-message interval for the Delay\_Resp messages. The purpose of this requirement is to ensure that the GM port receives Delay\_Req messages at rates that it is able to handle. If the mean inter-message interval of the Delay\_Req messages is less than 90% of the granted inter-message interval for the Delay\_Resp messages, the grantor port may ignore any Delay\_Req messages in excess of the granted interval.
 
-For the distribution of the inter-message intervals, at least 90% of the inter-message intervals must be within &lt; 30% of the granted mean inter-message interval. This requirement applies to Announce, Sync, and Delay\_Req.
+For the distribution of the inter-message intervals, at least 90% of the inter-message intervals must be within ± 30% of the granted mean inter-message interval. This requirement applies to Announce, Sync, and Delay\_Req.
 
 Consider _N_ successive inter-message intervals _t_ _i_ , _i_ = 1, 2, …, _N_, where _t_ _i_ = (_t_ _i_ – _t_ _i_-1) is as shown in the figure. The arithmetic mean of the inter-message intervals, _t_ av, is
 
