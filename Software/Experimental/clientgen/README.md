@@ -84,7 +84,7 @@ More details can be found here
 
 ### Pull clientgen
 ```console
-git clone https://github.com/facebookincubator/ptp
+git clone https://github.com/opencomputeproject/Time-Appliance-Project
 ```
 
 ### Build clientgen
@@ -98,7 +98,7 @@ C_INCLUDE_PATH=~/ptp/PF_RING/kernel; export C_INCLUDE_PATH
 ```
 3. Go to clientgen directory and build
 ```console
-cd ptp/clientgen/
+cd Software/Experimental/clientgen/
 go build
 ```
 

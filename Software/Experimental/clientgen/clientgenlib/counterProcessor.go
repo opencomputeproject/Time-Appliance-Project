@@ -217,6 +217,7 @@ func startCounterProcessor(cfg *ClientGenConfig) {
 						for i := 0; i < latencyMeasCount-1; i++ {
 							if cl.lastSyncTimes[i].IsZero() ||
 								cl.lastSyncTimes[i+1].IsZero() {
+								//fmt.Printf("Debug lastSyncTimes %v\n", cl.lastSyncTimes)
 								break
 							}
 							latency := cl.lastSyncTimes[i].Sub(cl.lastSyncTimes[i+1])

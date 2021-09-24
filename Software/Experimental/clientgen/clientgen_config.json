@@ -4,12 +4,12 @@
 	"ServerMAC": "0c:42:a1:80:31:66",
 	"ServerAddress": "2401:db00:eef0:1120:3520:0:1401:eb11",
 	"ClientIPStart": "2401:db00:eef0:1120:3520:0:1401:eb14",
-	"ClientIPEnd": "2401:db00:eef0:1120:3520:0:1402:73cc",
+        "ClientIPEnd": "2401:db00:eef0:1120:3520:0:1403:e6e4",
 	"ClientIPStep": 1,
 	"SoftStartRate": 1000000000000000,
 	
 	"TimeoutSec": 90,
-	"DurationSec": 60,
+        "DurationSec": 5,
 	"TimeAfterDurationBeforeRestartSec": 1,
 	"TimeBetweenDelayReqSec": 1,
 	"ClientRetranTimeWhenNoResponseSec": 1,
@@ -23,7 +23,7 @@
 	"NumClientRetransmitProcs": 4,
 	"NumClientRestartProcs": 4,
 
-	"RestartClientsAfterDuration": false,
+	"RestartClientsAfterDuration": true,
 
 	"DebugPrint": false,
 	"DebugLogClient": false,

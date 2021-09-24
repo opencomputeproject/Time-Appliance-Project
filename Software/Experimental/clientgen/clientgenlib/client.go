@@ -240,7 +240,7 @@ func getClientFromIP(cfg *ClientGenConfig, ip net.IP) (*SingleClientGen, error) 
 	}
 	if diff%uint64(cfg.ClientIPStep) == 0 {
 		index := int(diff / uint64(cfg.ClientIPStep))
-		if index > len(cfg.RunData.clients) {
+		if index >= len(cfg.RunData.clients) {
 			return nil, fmt.Errorf("Could not find client with ip %v", ip)
 		}
 		return &cfg.RunData.clients[index], nil
@@ -519,6 +519,11 @@ func handleRestart(cfg *ClientGenConfig, cl *SingleClientGen) {
 	cl.state = stateInit
 	cl.genSequence = 0
 	cl.eventSequence = 0
+	for i := 0; i < latencyMeasCount; i++ {
+		cl.lastAnnounceTimes[i] = time.Time{}
+		cl.lastSyncTimes[i] = time.Time{}
+		cl.lastFollowupTimes[i] = time.Time{}
+	}
 	cl.stateSem.Release(1)
 
 	removeClientRetransmit(cfg, cl)
