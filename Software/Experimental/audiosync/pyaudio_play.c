@@ -26,7 +26,7 @@ struct HEADER {
 
 #define CHUNK_SIZE 1024
 #define FRAMES_PER_BUFFER (CHUNK_SIZE / (header.channels * (header.bits_per_sample/8)))
-#define NUM_FRAMES(x) (x / (header.channels * (header.bits_per_sample/8)))
+#define NUM_FRAMES(x) (x / size_of_each_sample)
 
 
 /**
@@ -72,22 +72,24 @@ int main(int argc, char ** argv) {
 	char device[16];
 	FILE * ptr;
 	int read = 0;
+	unsigned long nano_offset = 0;
 	struct HEADER header;
 	char c;
 	unsigned char buffer4[4];
 	unsigned char buffer2[2];
-	unsigned char soundbuf[CHUNK_SIZE];
+	unsigned char soundbuf[CHUNK_SIZE*16];
 
 	printf("Start!\n");
 
 
-	if (argc != 5) {
+	if (argc < 5) {
 		printf("Not enough arguments!\n");
-		printf("%s -d <devicenum> -f <file>\n", argv[1]);
+		printf("%s -d <devicenum> -f <file> [-o <nanosecond offset>]\n", argv[1]);
 		printf("Use python3.9 test_audio_devices.py to find devicenum\n");
+		printf("By default will start audio on the next multiple of 30 seconds\n");
 		return 0;
 	}
-	while ((c = getopt (argc, argv, "d:f:")) != -1) {
+	while ((c = getopt (argc, argv, "d:f:o:")) != -1) {
 		switch (c)
 		{
 		case 'd':
@@ -95,6 +97,10 @@ int main(int argc, char ** argv) {
 			break;
 		case 'f':
 			strcpy(filename, optarg);
+			break;
+		case 'o':
+			sscanf(optarg, "%lu", &nano_offset);
+			printf("Adding start offset %lu\n", nano_offset);
 			break;
 		default:
 			break;
@@ -266,10 +272,10 @@ int main(int argc, char ** argv) {
 	// set seconds to next 30 seconds
 	seconds = now.tv_sec % 30;
 	now.tv_sec += (30 - seconds);
-	printf("Waiting until %d\n", now.tv_sec);
+	printf("Waiting until %d sec %lu nsec\n", now.tv_sec, nano_offset);
 
 	timerval.it_value.tv_sec = now.tv_sec;
-	timerval.it_value.tv_nsec = now.tv_nsec;
+	timerval.it_value.tv_nsec = nano_offset; // usually zero, add offset here
 	timerval.it_interval.tv_sec = 0;
 	timerval.it_interval.tv_nsec = 0;
 
@@ -285,7 +291,6 @@ int main(int argc, char ** argv) {
 	 if (header.format_type == 1) { // PCM
 		long i =0;
 		int j = 0;
-		char data_buffer[size_of_each_sample];
 		int  size_is_correct = 1;
 
 		// make sure that the bytes-per-sample is completely divisible by num.of channels
@@ -294,8 +299,8 @@ int main(int argc, char ** argv) {
 			printf("Error: %ld x %ud <> %ldn", bytes_in_each_channel, header.channels, size_of_each_sample);
 			size_is_correct = 0;
 		}
-		for (i =1; i <= num_samples/CHUNK_SIZE; i++) {
-			read = fread(soundbuf, 1, CHUNK_SIZE, ptr);
+		for (i =1; i <= num_samples; i++) {
+			read = fread(soundbuf, 1, size_of_each_sample*CHUNK_SIZE, ptr);
 			//printf("Write chunk %d read %d samplesize %d\n", i, read, size_of_each_sample);
 			if ( first == 1 ) {
 				//printf("Waiting!\n");
