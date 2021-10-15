@@ -87,6 +87,7 @@ int main(int argc, char ** argv) {
 		printf("%s -d <devicenum> -f <file> [-o <nanosecond offset>]\n", argv[1]);
 		printf("Use python3.9 test_audio_devices.py to find devicenum\n");
 		printf("By default will start audio on the next multiple of 30 seconds\n");
+		printf("BE SURE TO ADD snd_timer.timer_tstamp_monotonic=0 TO GRUB CMDLINE\n");
 		return 0;
 	}
 	while ((c = getopt (argc, argv, "d:f:o:")) != -1) {
