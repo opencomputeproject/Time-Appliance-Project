@@ -4,6 +4,7 @@ Default baudrate is 57600
 \{set,Disciplining,1}
 \{set,PpsWidth,80000000}
 \{set,TauPps0,10000}
+\{set,PpsOffset,-30}
 \{set,DisciplineThresholdPps0,20}
 \{store}
 
