@@ -1,3 +1,4 @@
 
 all:
-	gcc pyaudio_play.c -o pyaudio_play -lrt -lasound -lpthread -lportaudio
+	gcc pyaudio_play.c -o pyaudio_play -lrt -lasound -lpthread -lportaudio -lm -g -ggdb
+	gcc demo_sine_play.c -o demo_sine_play -lrt -lasound -lpthread -lportaudio -lm -g -ggdb
