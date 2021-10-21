@@ -264,16 +264,14 @@ int main(int argc, char ** argv) {
 	struct itimerspec timerval;
 	int first = 1;
 	timerfd = timerfd_create(CLOCK_REALTIME, TFD_NONBLOCK);
-
 	clock_gettime(CLOCK_REALTIME, &now);
-
-	printf("Now seconds %d\n", now.tv_sec);
+	printf("Now seconds %lu\n", now.tv_sec);
 	// set nanoseconds to zero
 	now.tv_nsec = 0;
 	// set seconds to next 30 seconds
 	seconds = now.tv_sec % 30;
 	now.tv_sec += (30 - seconds);
-	printf("Waiting until %d sec %lu nsec\n", now.tv_sec, nano_offset);
+	printf("Waiting until %lu sec %lu nsec\n", now.tv_sec, nano_offset);
 
 	timerval.it_value.tv_sec = now.tv_sec;
 	timerval.it_value.tv_nsec = nano_offset; // usually zero, add offset here
@@ -291,14 +289,11 @@ int main(int argc, char ** argv) {
 	 // read each sample from data chunk if PCM
 	 if (header.format_type == 1) { // PCM
 		long i =0;
-		int j = 0;
-		int  size_is_correct = 1;
 
 		// make sure that the bytes-per-sample is completely divisible by num.of channels
 		long bytes_in_each_channel = (size_of_each_sample / header.channels);
 		if ((bytes_in_each_channel  * header.channels) != size_of_each_sample) {
 			printf("Error: %ld x %ud <> %ldn", bytes_in_each_channel, header.channels, size_of_each_sample);
-			size_is_correct = 0;
 		}
 		for (i =1; i <= num_samples; i++) {
 			read = fread(soundbuf, 1, size_of_each_sample*CHUNK_SIZE, ptr);
