@@ -145,7 +145,7 @@ Please detailed [software description](https://github.com/opencomputeproject/Tim
 * Linux operating system with the [ocp_ptp driver](https://github.com/opencomputeproject/Time-Appliance-Project/tree/master/Time-Card/DRV) (included in Linux kernel 5.12 and newer). Driver may require vt-d CPU flag enabled in BIOS
 * NTP server - [Chrony](https://github.com/mlichvar/chrony)/NTPd reading `/dev/ptpX` of the Time Card 
 * PTP server - [ptp4u](https://github.com/facebookincubator/ptp) or [ptp4l](https://github.com/richardcochran/linuxptp) reading `/dev/ptpX` of the NIC
-  * [phc2sys](https://github.com/richardcochran/linuxptp) to copy clock values from the Time Card to the NIC
+  * [phc2sys](https://github.com/richardcochran/linuxptp)/[ts2phc](https://github.com/richardcochran/linuxptp)/ to copy clock values from the Time Card to the NIC
 ## NIC
 Most of the general purpose hardware can be used.  
 For the improved precision of NTP or PTP there can be extra requirements below.
@@ -192,9 +192,9 @@ Examples:
 Please see [Time Card details architecture](https://github.com/opencomputeproject/Time-Appliance-Project/tree/master/Time-Card) document or simply visit www.timingcard.com.
 
 
-General Idea is this card will be connected via PCIe to the server and provide Time Of Day (TOD) via `/dev/ptpX` interface. Using this interface ptp4l will continuously synchronize PHC on the network card from the atomic clock on the Time Card. This provides precision < 1us.
+General Idea is this card will be connected via PCIe to the server and provide Time Of Day (TOD) via `/dev/ptpX` interface. Using this interface `phc2sys` will continuously synchronize PHC on the network card from the atomic clock on the Time Card. This provides precision < 1us.
 
-For the extremely high precision 1PPS output of the Time Card will be connected to the 1PPS input of the NIC, providing &lt;100ns precision. 
+For the extremely high precision 1PPS output of the Time Card should be connected to the 1PPS input of the NIC. In this setup `ts2phc` can provide < 100ns precision. 
 
 # License
 OCP encourages participants to share their proposals, specifications and designs with the community. This is to promote openness and encourage continuous and open feedback. It is important to remember that by providing feedback for any such documents, whether in written or verbal form, that the contributor or the contributor's organization grants OCP and its members irrevocable right to use this feedback for any purpose without any further obligation. 
