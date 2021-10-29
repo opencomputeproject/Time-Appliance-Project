@@ -11,6 +11,10 @@ Default baudrate is 57600
 
 A handful of other commands
 
+\{get,PpsOffset}
+
+\{set,PpsOffset,0}
+
 \{get,DisciplineLocked}
 
 \{set,PpsWidth,80000000}
