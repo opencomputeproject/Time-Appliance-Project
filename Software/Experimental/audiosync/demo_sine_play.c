@@ -39,7 +39,8 @@
 
 #include <stdio.h>
 #include <math.h>
-#include "portaudio.h"
+#include <alsa/asoundlib.h>
+#include <alsa/pcm.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/timerfd.h>
@@ -94,12 +95,6 @@ void fill_chord(int channel, struct chord *chord, float buffer[FRAMES_PER_BUFFER
 
 int main(int argc, char ** argv)
 {
-    PaStreamParameters outputParameters;
-    const PaDeviceInfo * paDev = NULL;
-    PaStream *stream;
-	int devnum = -1;
-    PaError err;
-	char device[16];
 	char c;
     float buffer[FRAMES_PER_BUFFER][2]; /* stereo output buffer */
 
@@ -108,19 +103,16 @@ int main(int argc, char ** argv)
     int i;
     int bufferCount;
     int sync_time = 10;
+    int err;
 
 	unsigned long nano_offset = 0;
 
-	strcpy(device, "");
-	while ((c = getopt (argc, argv, "s:l:r:d:o:")) != -1) {
+	while ((c = getopt (argc, argv, "s:l:r:o:")) != -1) {
 		switch (c)
 		{
 		case 's':
 			sscanf(optarg, "%d", &sync_time);
 			printf("Starting at the nearest multiple of %d seconds\n", sync_time);
-			break;
-		case 'd':
-			strcpy(device,optarg);
 			break;
 		case 'o':
 			sscanf(optarg, "%lu", &nano_offset);
@@ -155,19 +147,15 @@ int main(int argc, char ** argv)
 	}
 
 
-    printf("PortAudio Test: output sine wave. SR = %d, BufSize = %d\n", SAMPLE_RATE, FRAMES_PER_BUFFER);
+    printf("PulseAudio Test: output sine wave. SR = %d, BufSize = %d\n", SAMPLE_RATE, FRAMES_PER_BUFFER);
 
     /* initialise sinusoidal wavetable */
     for (i = 0; i < TABLE_SIZE; i++) {
         sine[i] = (float)sin(((double)i / (double)TABLE_SIZE) * M_PI * 2.);
     }
 
-    err = Pa_Initialize();
-    if (err != paNoError) {
-        goto error;
-    }
 
-
+	/*
 	if ( strlen(device) > 0 ) {
 		if ( sscanf(device, "%d", &devnum) != 1 ) {
 			printf("Failed to parse %s as a device number, using default\n", device);
@@ -182,30 +170,31 @@ int main(int argc, char ** argv)
 			}
 		}
 	} 
-
-    if (outputParameters.device == paNoDevice) {
-	fprintf(stderr, "Error: No default output device.\n");
-	goto error;
-    }
-    outputParameters.channelCount = 2;  /* stereo output */
-    outputParameters.sampleFormat = paFloat32;  /* 32 bit floating point output */
-
-    if ( devnum == -1 ) {
-	    outputParameters.device = Pa_GetDefaultOutputDevice();
-    }
-    outputParameters.suggestedLatency = Pa_GetDeviceInfo( outputParameters.device)->defaultLowOutputLatency; 
-    //outputParameters.suggestedLatency = 0.050;  // Pa_GetDeviceInfo( outputParameters.device )->defaultLowOutputLatency;
-    outputParameters.hostApiSpecificStreamInfo = NULL;
-
-    err = Pa_OpenStream(&stream, NULL,  /* no input */
-                        &outputParameters, SAMPLE_RATE, FRAMES_PER_BUFFER, paClipOff,   /* we won't output out of range samples so don't bother clipping them */
-                        NULL,   /* no callback, use blocking API */
-                        NULL);  /* no callback, so no callback userData */
-    if (err != paNoError)
-        goto error;
+	*/
 
 
-    err = Pa_StartStream(stream);
+
+	snd_pcm_t *handle;
+
+	static char *device = "default";                       //soundcard
+	if ((err = snd_pcm_open(&handle, device, SND_PCM_STREAM_PLAYBACK, 0)) < 0) {
+	    printf("Playback open error: %s\n", snd_strerror(err));
+	    exit(EXIT_FAILURE);
+	}
+
+	if ((err = snd_pcm_set_params(handle,
+				  SND_PCM_FORMAT_FLOAT,
+				  SND_PCM_ACCESS_RW_INTERLEAVED,
+				  2,
+				  44100,
+				  1,
+				  500000)) < 0) {   
+	    printf("Playback open error: %s\n", snd_strerror(err));
+	    exit(EXIT_FAILURE);
+
+
+	}
+
 
 
 	/* Use Linux kernel timerfd to synchronize start */
@@ -240,12 +229,10 @@ int main(int argc, char ** argv)
 
 
 
-
+	snd_pcm_sframes_t frames_sent;
 
 
     while (1) {
-        if (err != paNoError)
-            goto error;
 
         for (int chord = 0; chord < demo.chord_count; chord++) {
 
@@ -258,41 +245,24 @@ int main(int argc, char ** argv)
 		if ( first == 1 ) {
 			select(timerfd+1, &rfds, NULL, NULL, NULL); /* Last parameter = NULL --> wait forever */
 		}
-                err = Pa_WriteStream(stream, buffer, FRAMES_PER_BUFFER);
+		frames_sent = snd_pcm_writei(handle, (void**)buffer, FRAMES_PER_BUFFER);
 		if ( first == 1 ) {
 			close(timerfd);
 			first = 0;
 		}
-                if (err != paNoError)
-                    goto error;
+		if ( frames_sent <= 0 ) {
+			printf("Got bad frame count %ld\n", frames_sent);
+			    snd_pcm_close(handle);
+			return 0;
+		}
             }
-
-            if (err != paNoError)
-                goto error;
         }
 
     }
 
-    err = Pa_CloseStream(stream);
-    if (err != paNoError)
-        goto error;
-
-    Pa_Terminate();
+    snd_pcm_close(handle);
     printf("Test finished.\n");
 
-    return err;
+    return 0;
 
- error:
-    fprintf(stderr, "An error occured while using the portaudio stream\n");
-    fprintf(stderr, "Error number: %d\n", err);
-    fprintf(stderr, "Error message: %s\n", Pa_GetErrorText(err));
-    // Print more information about the error.
-    if (err == paUnanticipatedHostError) {
-        const PaHostErrorInfo *hostErrorInfo = Pa_GetLastHostErrorInfo();
-        fprintf(stderr, "Host API error = #%ld, hostApiType = %d\n",
-                hostErrorInfo->errorCode, hostErrorInfo->hostApiType);
-        fprintf(stderr, "Host API error = %s\n", hostErrorInfo->errorText);
-    }
-    Pa_Terminate();
-    return err;
 }
