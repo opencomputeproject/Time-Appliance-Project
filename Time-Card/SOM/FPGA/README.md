@@ -36,5 +36,5 @@ The version for AX7103 will be not longer maintained.
 $ dmesg | grep ptp_ocp | head -1
 [   21.527678] ptp_ocp 0000:11:00.0: enabling device (0140 -> 0142)
 $ cp Production_TimeCard.bin /lib/firmware
-$ devlink dev flash pci/0000:11:00.0 file Production_TimeCard.bin
+$ devlink dev flash pci/0000:11:00.0 file TimeCard.bin
 ```
