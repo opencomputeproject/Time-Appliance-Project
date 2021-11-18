@@ -408,7 +408,7 @@ Example 1 illustrates the case of full redundancy where there is one standby GM 
 
 ### 6.14.4. Active Active Scenario
 
-This section is for future, and will consist on providing examples on how PTP and the default BMCA can be used to provide load balancing and maximize the use of GMs in both normal operation and failure scenarios beyond active standby examples provided in section 6.14.2.
+This section is for future, and will consist in providing examples on how PTP and the default BMCA can be used to provide load balancing and maximize the use of GMs in both normal operation and failure scenarios beyond the active standby examples provided in section 6.14.3.
 
 
 ## 6.15. Best Clock Algorithm and Clock Attributes
