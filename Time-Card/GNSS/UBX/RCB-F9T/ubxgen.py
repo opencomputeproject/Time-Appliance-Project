@@ -42,7 +42,6 @@ with open(args.cfg, "r") as f:
                 cmdsplit[5] = "02"
             if args.lay == "Flash":
                 cmdsplit[5] = "04"
-        print(cmdsplit)
 
         for d in cmdsplit:
             i = int(d, base=16)
