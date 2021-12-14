@@ -24,7 +24,7 @@ import (
 	"sync/atomic"
 
 	"golang.org/x/sync/semaphore"
-	ptp "github.com/facebookincubator/ptp/protocol"
+	ptp "github.com/facebook/time/ptp/protocol"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/kpango/fastime"

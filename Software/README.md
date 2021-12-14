@@ -61,7 +61,7 @@ Keep in mind synchronization of PHC between time card and the Network card is re
 The example shown is for unicast server only.
 ### Server
 #### ptp4u
-https://github.com/facebookincubator/ptp
+https://github.com/facebook/time/ptp
 ```
 $ /usr/local/bin/ptp4u -iface eth1
 ```
@@ -73,7 +73,7 @@ $ /sbin/ptp4l -f /etc/ptp4l.conf -i eth0 -m
 ```
 ### Monitoring
 #### ptpcheck
-https://github.com/facebookincubator/ptp
+https://github.com/facebook/time/ptp
 ptpcheck is the tool allowing to debug ptp server and a client.  
 Server:
 ```

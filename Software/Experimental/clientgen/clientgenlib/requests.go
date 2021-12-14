@@ -20,7 +20,7 @@ import (
 	"time"
 	"encoding/binary"
 
-	ptp "github.com/facebookincubator/ptp/protocol"
+	ptp "github.com/facebook/time/ptp/protocol"
 )
 
 // reqUnicast is a helper to build ptp.RequestUnicastTransmission

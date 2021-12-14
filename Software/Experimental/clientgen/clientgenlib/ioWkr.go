@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"golang.org/x/sys/unix"
-	ptp "github.com/facebookincubator/ptp/protocol"
+	ptp "github.com/facebook/time/ptp/protocol"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pfring"
