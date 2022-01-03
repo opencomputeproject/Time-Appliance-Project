@@ -1,8 +1,10 @@
-# FPGA for the production version of the Time Card
+***!! Important !!***
 
-The other binaries for the Time Card with the System On Module (SOM) can be found here:
+The other binaries for the Time Card with the **System On Module (SOM)** can be found here:
 [SOM Version](https://github.com/opencomputeproject/Time-Appliance-Project/tree/master/Time-Card/SOM)
 
+
+# FPGA for the production version of the Time Card
 ![Production Time Card FPGA](Production_TimeCard_FPGA.png)
 
 The FPGA bitstream can be configured to various options. Currently it is based on the [NetTimeLogic clock module](https://www.nettimelogic.com/clock-products.php). <br />
