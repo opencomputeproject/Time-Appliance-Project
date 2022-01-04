@@ -1,4 +1,5 @@
 ***!! Important !!***
+
 This version is **NOT** compatible with the SOM Module (e.g. AC7100B).
 The binaries for the Time Card with the **System On Module (SOM)** can be found here:
 [SOM Version](https://github.com/opencomputeproject/Time-Appliance-Project/tree/master/Time-Card/SOM)
