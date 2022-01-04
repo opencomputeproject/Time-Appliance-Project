@@ -6,7 +6,7 @@ The FPGA bitstream can be configured to various options. Currently it is based o
 
 Check the [Readme.pdf](https://github.com/opencomputeproject/Time-Appliance-Project/blob/master/Time-Card/SOM/FPGA/Readme.pdf) for more details about the implementation.  <br />
 
-In the [Doc folder](https://github.com/opencomputeproject/Time-Appliance-Project/tree/master/Time-Card/SOM/FPGA/Doc) are all relevant documents about the integrated IP Core (e.g. register description). <br />
+In the [Doc folder](https://github.com/opencomputeproject/Time-Appliance-Project/tree/master/Time-Card/SOM/FPGA/Doc) are all relevant documents about the integrated IP Cores (e.g. register description). <br />
 
 ## The FPGA starts with a static configuration with following settings: ##
 * PPS (including TOD) is used as correction input for the clock  
@@ -26,7 +26,7 @@ In the [Doc folder](https://github.com/opencomputeproject/Time-Appliance-Project
 
 ## In the Binaries folder are the bitstreams for the SOM Module. ## 
 * TimeCard.bit to flash the FPGA (volatile)
-* Production_TimeCard.bin to load the SPI flash via JTAG (Golden Image + Update Image)
+* Factory_TimeCard.bin to load the SPI flash via JTAG (Golden Image + Update Image)
 * TimeCard.bin to updated the SPI flash via SPI starting @ 0x00400000 (Update Image only)
     
 The version for AX7103 will be not longer maintained. 
