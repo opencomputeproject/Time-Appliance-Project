@@ -1582,9 +1582,6 @@ ptp_ocp_signal_enable(void *priv, u32 req, bool enable)
 	struct ptp_ocp *bp = ext->bp;
 	struct timespec64 ts;
 
-	pr_err("reg: %px  enable: %d\n", reg, enable);
-	pr_err("set, start: %llu\n", bp->signal.start);
-
 	iowrite32(0, &reg->intr_mask);
 	iowrite32(0, &reg->enable);
 	bp->signal.running = false;
@@ -2468,14 +2465,14 @@ signal_store(struct device *dev, struct device_attribute *attr,
 	struct ptp_ocp *bp = dev_get_drvdata(dev);
 	struct ptp_ocp_signal s = { };
 	struct timespec64 ts;
-	int ret, argc;
+	int err, ret, argc;
 	char **argv;
 
 	argv = argv_split(GFP_KERNEL, buf, &argc);
 	if (!argv)
 		return -ENOMEM;
 
-	ret = -EINVAL;
+	err = -EINVAL;
 	s.duty = bp->signal.duty;
 	s.phase = bp->signal.phase;
 	s.period = bp->signal.period;
@@ -2483,48 +2480,48 @@ signal_store(struct device *dev, struct device_attribute *attr,
 
 	switch (argc) {
 	case 4:
-		ret = kstrtobool(argv[2], &s.polarity);
-		if (!ret)
+		argc--;
+		err = kstrtobool(argv[argc], &s.polarity);
+		if (err)
 			goto out;
 		fallthrough;
 	case 3:
-		ret = sscanf(argv[0], "%llu.%lu", &ts.tv_sec, &ts.tv_nsec);
-		if (ret != 2) {
-			ret = sscanf(argv[0], "%llu", &ts.tv_sec);
-			if (ret != 1)
-				goto out;
-			ts.tv_nsec = 0;
-		}
+		argc--;
+		err = -EINVAL;
+		ts.tv_nsec = 0;
+		ret = sscanf(argv[argc], "%llu.%lu", &ts.tv_sec, &ts.tv_nsec);
+		if (!ret)
+			goto out;
 		s.phase = ktime_set(ts.tv_sec, ts.tv_nsec);
 		fallthrough;
 	case 2:
-		ret = kstrtoint(argv[2], 0, &s.duty);
-		if (!ret)
+		argc--;
+		err = kstrtoint(argv[argc], 0, &s.duty);
+		if (err)
 			goto out;
 		fallthrough;
 	case 1:
-		ret = sscanf(argv[0], "%llu.%lu", &ts.tv_sec, &ts.tv_nsec);
-		if (ret != 2) {
-			ret = sscanf(argv[0], "%llu", &ts.tv_sec);
-			if (ret != 1)
-				goto out;
-			ts.tv_nsec = 0;
-		}
+		argc--;
+		err = -EINVAL;
+		ts.tv_nsec = 0;
+		ret = sscanf(argv[argc], "%llu.%lu", &ts.tv_sec, &ts.tv_nsec);
+		if (!ret)
+			goto out;
 		s.period = ktime_set(ts.tv_sec, ts.tv_nsec);
 		break;
 	default:
 		goto out;
 	}
 
-	ret = ptp_ocp_signal_set(bp, &s);
-	if (ret)
+	err = ptp_ocp_signal_set(bp, &s);
+	if (err)
 		goto out;
 
-	ret = ptp_ocp_signal_enable(bp->signal_out, 0, s.period != 0);
+	err = ptp_ocp_signal_enable(bp->signal_out, 0, s.period != 0);
 
 out:
 	argv_free(argv);
-	return ret ? ret : count;
+	return err ? err : count;
 }
 
 static ssize_t
