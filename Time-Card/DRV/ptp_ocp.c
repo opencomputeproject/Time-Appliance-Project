@@ -391,7 +391,8 @@ static const struct attribute_group *art_timecard_groups[];
  * 8: HWICAP (notused)
  * 9: SPI Flash
  * 10: NMEA
- * 11: Signal Generator
+ * 11: Signal Generator 1
+ * 12: Signal Generator 2
  --
  * 11: Orolia TS0
  * 12: Orolia TS1
@@ -444,6 +445,15 @@ static struct ocp_resource ocp_fb_resource[] = {
 		.offset = 0x010D0000, .size = 0x10000, .irq_vec = 11,
 		.extra = &(struct ptp_ocp_ext_info) {
 			.index = 1,
+			.irq_fcn = ptp_ocp_signal_irq,
+			.enable = ptp_ocp_signal_enable,
+		},
+	},
+	{
+		OCP_EXT_RESOURCE(signal2_out),
+		.offset = 0x010E0000, .size = 0x10000, .irq_vec = 12,
+		.extra = &(struct ptp_ocp_ext_info) {
+			.index = 2,
 			.irq_fcn = ptp_ocp_signal_irq,
 			.enable = ptp_ocp_signal_enable,
 		},
@@ -1583,12 +1593,15 @@ ptp_ocp_signal_from_perout(struct ptp_ocp *bp, int gen,
 }
 
 static int
-ptp_ocp_signal_enable(void *priv, u32 gen, bool enable)
+ptp_ocp_signal_enable(void *priv, u32 req, bool enable)
 {
 	struct ptp_ocp_ext_src *ext = priv;
 	struct signal_reg __iomem *reg = ext->mem;
 	struct ptp_ocp *bp = ext->bp;
 	struct timespec64 ts;
+	int gen;
+
+	gen = ext->info->index - 1;
 
 	iowrite32(0, &reg->intr_mask);
 	iowrite32(0, &reg->enable);
@@ -2564,7 +2577,7 @@ signal_show(struct device *dev, struct device_attribute *attr, char *buf)
 	count += sysfs_emit_at(buf, count, " %d", bp->signal[i].polarity);
 
 	ts = ktime_to_timespec64(bp->signal[i].start);
-	count += sysfs_emit_at(buf, count, " %ptT\n", &ts);
+	count += sysfs_emit_at(buf, count, " %ptT TAI\n", &ts);
 
 	return count;
 }
@@ -2645,7 +2658,7 @@ start_show(struct device *dev, struct device_attribute *attr, char *buf)
 	struct timespec64 ts;
 
 	ts = ktime_to_timespec64(bp->signal[i].start);
-	return sysfs_emit(buf, "%ptT\n", &ts);
+	return sysfs_emit(buf, "%llu.%lu\n", ts.tv_sec, ts.tv_nsec);
 }
 static SIGNAL_ATTR_RO(start, 0);
 static SIGNAL_ATTR_RO(start, 1);
