@@ -288,7 +288,8 @@ struct ptp_ocp {
 	struct dcf_master_reg	__iomem *dcf_out;
 	struct dcf_slave_reg	__iomem *dcf_in;
 	struct tod_reg		__iomem *nmea_out;
-	struct ptp_ocp_ext_src	*signal_out;
+	struct ptp_ocp_ext_src	*signal1_out;
+	struct ptp_ocp_ext_src	*signal2_out;
 	struct ptp_ocp_ext_src	*pps;
 	struct ptp_ocp_ext_src	*ts0;
 	struct ptp_ocp_ext_src	*ts1;
@@ -317,7 +318,7 @@ struct ptp_ocp {
 	int			flash_start;
 	u32			utc_tai_offset;
 	u32			ts_window_adjust;
-	struct ptp_ocp_signal	signal;
+	struct ptp_ocp_signal	signal[2];
 	struct ptp_ocp_sma_connector sma[4];
 };
 
@@ -343,7 +344,7 @@ static int ptp_ocp_fb_board_init(struct ptp_ocp *bp, struct ocp_resource *r);
 static irqreturn_t ptp_ocp_ts_irq(int irq, void *priv);
 static irqreturn_t ptp_ocp_signal_irq(int irq, void *priv);
 static int ptp_ocp_ts_enable(void *priv, u32 req, bool enable);
-static int ptp_ocp_signal_from_perout(struct ptp_ocp *bp,
+static int ptp_ocp_signal_from_perout(struct ptp_ocp *bp, int gen,
 				      struct ptp_perout_request *req);
 static int ptp_ocp_signal_enable(void *priv, u32 req, bool enable);
 static int ptp_ocp_sma_store(struct ptp_ocp *bp, const char *buf, int sma_nr);
@@ -439,7 +440,7 @@ static struct ocp_resource ocp_fb_resource[] = {
 		},
 	},
 	{
-		OCP_EXT_RESOURCE(signal_out),
+		OCP_EXT_RESOURCE(signal1_out),
 		.offset = 0x010D0000, .size = 0x10000, .irq_vec = 11,
 		.extra = &(struct ptp_ocp_ext_info) {
 			.index = 1,
@@ -717,7 +718,8 @@ static struct ocp_selector ptp_ocp_sma_out[] = {
 	{ .name = "GNSS2",	.value = 0x08 },
 	{ .name = "IRIG",	.value = 0x10 },
 	{ .name = "DCF",	.value = 0x20 },
-	{ .name = "GEN",	.value = 0x40 },
+	{ .name = "GEN1",	.value = 0x40 },
+	{ .name = "GEN2",	.value = 0x80 },
 	{ .name = "GND",	.value = 0x2000 },
 	{ .name = "VCC",	.value = 0x4000 },
 	{ }
@@ -939,9 +941,10 @@ ptp_ocp_enable(struct ptp_clock_info *ptp_info, struct ptp_clock_request *rq,
 				return -EINVAL;
 			return 0;
 		case 1:
-			req = 0;
-			ext = bp->signal_out;
-			err = ptp_ocp_signal_from_perout(bp, &rq->perout);
+		case 2:
+			req = rq->perout.index - 1;
+			ext = req ? bp->signal2_out : bp->signal1_out;
+			err = ptp_ocp_signal_from_perout(bp, req, &rq->perout);
 			if (err)
 				return err;
 			break;
@@ -963,7 +966,7 @@ ptp_ocp_verify(struct ptp_clock_info *ptp_info, unsigned pin,
 	       enum ptp_pin_function func, unsigned chan)
 {
 	struct ptp_ocp *bp = container_of(ptp_info, struct ptp_ocp, ptp_info);
-	const char *str;
+	char buf[16];
 
 	if (bp->sma[pin].fixed_mode && bp->sma[pin].mode != SMA_MODE_OUT)
 		return -EOPNOTSUPP;
@@ -971,8 +974,12 @@ ptp_ocp_verify(struct ptp_clock_info *ptp_info, unsigned pin,
 	if (func != PTP_PF_PEROUT)
 		return -EOPNOTSUPP;
 
-	str = chan ? "OUT: GEN" : "OUT: PHC";
-	return ptp_ocp_sma_store(bp, str, pin + 1);
+	if (chan)
+		sprintf(buf, "OUT: GEN%d", chan);
+	else
+		sprintf(buf, "OUT: PHC");
+
+	return ptp_ocp_sma_store(bp, buf, pin + 1);
 }
 
 static const struct ptp_clock_info ptp_ocp_clock_info = {
@@ -1498,6 +1505,7 @@ ptp_ocp_signal_irq(int irq, void *priv)
 	struct ptp_ocp_ext_src *ext = priv;
 	struct signal_reg __iomem *reg = ext->mem;
 	struct ptp_ocp *bp = ext->bp;
+	int gen = ext->info->index;
 	u32 val;
 
 	val = ioread32(&reg->status);
@@ -1506,13 +1514,13 @@ ptp_ocp_signal_irq(int irq, void *priv)
 	/* disable generator. */
 	iowrite32(0, &reg->intr_mask);
 	iowrite32(0, &reg->enable);
-	bp->signal.running = false;
+	bp->signal[gen].running = false;
 
 	return IRQ_HANDLED;
 }
 
 static int
-ptp_ocp_signal_set(struct ptp_ocp *bp, struct ptp_ocp_signal *s)
+ptp_ocp_signal_set(struct ptp_ocp *bp, int gen, struct ptp_ocp_signal *s)
 {
 	struct ptp_system_timestamp sts;
 	struct timespec64 ts;
@@ -1535,7 +1543,6 @@ ptp_ocp_signal_set(struct ptp_ocp *bp, struct ptp_ocp_signal *s)
 		s->start = ktime_divns(s->start, s->period) * s->period;
 		s->start = ktime_add(s->start, s->phase);
 	}
-	pr_err("SET, now: %llu start %llu\n", now, s->start);
 
 	if (s->duty < 1 || s->duty > 99)
 		return -EINVAL;
@@ -1546,17 +1553,18 @@ ptp_ocp_signal_set(struct ptp_ocp *bp, struct ptp_ocp_signal *s)
 	if (s->start < now)
 		return -EINVAL;
 
-	bp->signal = *s;
+	bp->signal[gen] = *s;
 
 	return 0;
 }
 
 static int
-ptp_ocp_signal_from_perout(struct ptp_ocp *bp, struct ptp_perout_request *req)
+ptp_ocp_signal_from_perout(struct ptp_ocp *bp, int gen,
+			   struct ptp_perout_request *req)
 {
 	struct ptp_ocp_signal s = { };
 
-	s.polarity = bp->signal.polarity;
+	s.polarity = bp->signal[gen].polarity;
 	s.period = ktime_set(req->period.sec, req->period.nsec);
 	if (!s.period)
 		return 0;
@@ -1571,11 +1579,11 @@ ptp_ocp_signal_from_perout(struct ptp_ocp *bp, struct ptp_perout_request *req)
 	else
 		s.start = ktime_set(req->start.sec, req->start.nsec);
 
-	return ptp_ocp_signal_set(bp, &s);
+	return ptp_ocp_signal_set(bp, gen, &s);
 }
 
 static int
-ptp_ocp_signal_enable(void *priv, u32 req, bool enable)
+ptp_ocp_signal_enable(void *priv, u32 gen, bool enable)
 {
 	struct ptp_ocp_ext_src *ext = priv;
 	struct signal_reg __iomem *reg = ext->mem;
@@ -1584,29 +1592,29 @@ ptp_ocp_signal_enable(void *priv, u32 req, bool enable)
 
 	iowrite32(0, &reg->intr_mask);
 	iowrite32(0, &reg->enable);
-	bp->signal.running = false;
+	bp->signal[gen].running = false;
 	if (!enable)
 		return 0;
 
-	ts = ktime_to_timespec64(bp->signal.start);
+	ts = ktime_to_timespec64(bp->signal[gen].start);
 	iowrite32(ts.tv_sec, &reg->start_sec);
 	iowrite32(ts.tv_nsec, &reg->start_ns);
 
-	ts = ktime_to_timespec64(bp->signal.period);
+	ts = ktime_to_timespec64(bp->signal[gen].period);
 	iowrite32(ts.tv_sec, &reg->period_sec);
 	iowrite32(ts.tv_nsec, &reg->period_ns);
 
-	ts = ktime_to_timespec64(bp->signal.pulse);
+	ts = ktime_to_timespec64(bp->signal[gen].pulse);
 	iowrite32(ts.tv_sec, &reg->pulse_sec);
 	iowrite32(ts.tv_nsec, &reg->pulse_ns);
 
-	iowrite32(bp->signal.polarity, &reg->polarity);
+	iowrite32(bp->signal[gen].polarity, &reg->polarity);
 	iowrite32(0, &reg->repeat_count);
 
 	iowrite32(3, &reg->enable);		/* valid & enable */
 	iowrite32(1, &reg->intr_mask);
 
-	bp->signal.running = true;
+	bp->signal[gen].running = true;
 
 	return 0;
 }
@@ -1809,19 +1817,25 @@ ptp_ocp_nmea_out_init(struct ptp_ocp *bp)
 }
 
 static void
-ptp_ocp_signal_init(struct ptp_ocp *bp)
+_ptp_ocp_signal_init(struct ptp_ocp_signal *s, struct signal_reg __iomem *reg)
 {
-	struct signal_reg __iomem *reg = bp->signal_out->mem;
 	u32 val;
-
-	if (!bp->signal_out)
-		return;
 
 	iowrite32(0, &reg->enable);		/* disable */
 
 	val = ioread32(&reg->polarity);
-	bp->signal.polarity = val ? true : false;
-	bp->signal.duty = 50;
+	s->polarity = val ? true : false;
+	s->duty = 50;
+}
+
+static void
+ptp_ocp_signal_init(struct ptp_ocp *bp)
+{
+	if (bp->signal1_out)
+		_ptp_ocp_signal_init(&bp->signal[0], bp->signal1_out->mem);
+
+	if (bp->signal2_out)
+		_ptp_ocp_signal_init(&bp->signal[1], bp->signal2_out->mem);
 }
 
 static void
@@ -2457,14 +2471,23 @@ available_sma_outputs_show(struct device *dev,
 }
 static DEVICE_ATTR_RO(available_sma_outputs);
 
+#define SIGNAL_ATTR_RO(_name, _val)					\
+	struct dev_ext_attribute dev_attr_signal##_val##_##_name = 	\
+		{ __ATTR_RO(_name), (void *)_val }
+#define SIGNAL_ATTR_RW(_name, _val)					\
+	struct dev_ext_attribute dev_attr_signal##_val##_##_name = 	\
+		{ __ATTR_RW(_name), (void *)_val }
+#define to_ext_attr(x) container_of(x, struct dev_ext_attribute, attr)
+
 /* period [duty [phase [polarity]]] */
 static ssize_t
 signal_store(struct device *dev, struct device_attribute *attr,
 	     const char *buf, size_t count)
 {
+	struct dev_ext_attribute *ea = to_ext_attr(attr);
 	struct ptp_ocp *bp = dev_get_drvdata(dev);
 	struct ptp_ocp_signal s = { };
-	struct timespec64 ts;
+	int gen = (uintptr_t)ea->var;
 	int err, ret, argc;
 	char **argv;
 
@@ -2473,10 +2496,10 @@ signal_store(struct device *dev, struct device_attribute *attr,
 		return -ENOMEM;
 
 	err = -EINVAL;
-	s.duty = bp->signal.duty;
-	s.phase = bp->signal.phase;
-	s.period = bp->signal.period;
-	s.polarity = bp->signal.polarity;
+	s.duty = bp->signal[gen].duty;
+	s.phase = bp->signal[gen].phase;
+	s.period = bp->signal[gen].period;
+	s.polarity = bp->signal[gen].polarity;
 
 	switch (argc) {
 	case 4:
@@ -2488,11 +2511,9 @@ signal_store(struct device *dev, struct device_attribute *attr,
 	case 3:
 		argc--;
 		err = -EINVAL;
-		ts.tv_nsec = 0;
-		ret = sscanf(argv[argc], "%llu.%lu", &ts.tv_sec, &ts.tv_nsec);
+		ret = sscanf(argv[argc], "%llu", &s.phase);
 		if (!ret)
 			goto out;
-		s.phase = ktime_set(ts.tv_sec, ts.tv_nsec);
 		fallthrough;
 	case 2:
 		argc--;
@@ -2503,21 +2524,20 @@ signal_store(struct device *dev, struct device_attribute *attr,
 	case 1:
 		argc--;
 		err = -EINVAL;
-		ts.tv_nsec = 0;
-		ret = sscanf(argv[argc], "%llu.%lu", &ts.tv_sec, &ts.tv_nsec);
+		ret = sscanf(argv[argc], "%llu", &s.period);
 		if (!ret)
 			goto out;
-		s.period = ktime_set(ts.tv_sec, ts.tv_nsec);
 		break;
 	default:
 		goto out;
 	}
 
-	err = ptp_ocp_signal_set(bp, &s);
+	err = ptp_ocp_signal_set(bp, gen, &s);
 	if (err)
 		goto out;
 
-	err = ptp_ocp_signal_enable(bp->signal_out, 0, s.period != 0);
+	err = ptp_ocp_signal_enable(gen ? bp->signal2_out : bp->signal1_out,
+				    gen, s.period != 0);
 
 out:
 	argv_free(argv);
@@ -2527,90 +2547,108 @@ out:
 static ssize_t
 signal_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
+	struct dev_ext_attribute *ea = to_ext_attr(attr);
 	struct ptp_ocp *bp = dev_get_drvdata(dev);
+	int i = (uintptr_t)ea->var;
 	struct timespec64 ts;
 	ssize_t count;
 
-	ts = ktime_to_timespec64(bp->signal.period);
+	ts = ktime_to_timespec64(bp->signal[i].period);
 	count = sysfs_emit(buf, "%llu.%lu", ts.tv_sec, ts.tv_nsec);
 
-	count += sysfs_emit_at(buf, count, " %d", bp->signal.duty);
+	count += sysfs_emit_at(buf, count, " %d", bp->signal[i].duty);
 
-	ts = ktime_to_timespec64(bp->signal.phase);
+	ts = ktime_to_timespec64(bp->signal[i].phase);
 	count += sysfs_emit_at(buf, count, " %llu.%lu", ts.tv_sec, ts.tv_nsec);
 
-	count += sysfs_emit_at(buf, count, " %d", bp->signal.polarity);
+	count += sysfs_emit_at(buf, count, " %d", bp->signal[i].polarity);
 
-	ts = ktime_to_timespec64(bp->signal.start);
+	ts = ktime_to_timespec64(bp->signal[i].start);
 	count += sysfs_emit_at(buf, count, " %ptT\n", &ts);
 
 	return count;
 }
-static DEVICE_ATTR_RW(signal);
+static SIGNAL_ATTR_RW(signal, 0);
+static SIGNAL_ATTR_RW(signal, 1);
 
 static ssize_t
-signal_duty_show(struct device *dev, struct device_attribute *attr, char *buf)
+duty_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
+	struct dev_ext_attribute *ea = to_ext_attr(attr);
 	struct ptp_ocp *bp = dev_get_drvdata(dev);
+	int i = (uintptr_t)ea->var;
 
-	return sysfs_emit(buf, "%d\n", bp->signal.duty);
+	return sysfs_emit(buf, "%d\n", bp->signal[i].duty);
 }
-static DEVICE_ATTR_RO(signal_duty);
+static SIGNAL_ATTR_RO(duty, 0);
+static SIGNAL_ATTR_RO(duty, 1);
 
 static ssize_t
-signal_period_show(struct device *dev, struct device_attribute *attr,
-		   char *buf)
+period_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
-	struct ptp_ocp *bp = dev_get_drvdata(dev);
-	struct timespec64 ts;
-
-	ts = ktime_to_timespec64(bp->signal.period);
-	return sysfs_emit(buf, "%llu.%lu\n", ts.tv_sec, ts.tv_nsec);
-}
-static DEVICE_ATTR_RO(signal_period);
-
-static ssize_t
-signal_phase_show(struct device *dev, struct device_attribute *attr,
-		  char *buf)
-{
+	struct dev_ext_attribute *ea = to_ext_attr(attr);
 	struct ptp_ocp *bp = dev_get_drvdata(dev);
 	struct timespec64 ts;
+	int i = (uintptr_t)ea->var;
 
-	ts = ktime_to_timespec64(bp->signal.phase);
+	ts = ktime_to_timespec64(bp->signal[i].period);
 	return sysfs_emit(buf, "%llu.%lu\n", ts.tv_sec, ts.tv_nsec);
 }
-static DEVICE_ATTR_RO(signal_phase);
+static SIGNAL_ATTR_RO(period, 0);
+static SIGNAL_ATTR_RO(period, 1);
 
 static ssize_t
-signal_polarity_show(struct device *dev, struct device_attribute *attr,
+phase_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct dev_ext_attribute *ea = to_ext_attr(attr);
+	struct ptp_ocp *bp = dev_get_drvdata(dev);
+	struct timespec64 ts;
+	int i = (uintptr_t)ea->var;
+
+	ts = ktime_to_timespec64(bp->signal[i].phase);
+	return sysfs_emit(buf, "%llu.%lu\n", ts.tv_sec, ts.tv_nsec);
+}
+static SIGNAL_ATTR_RO(phase, 0);
+static SIGNAL_ATTR_RO(phase, 1);
+
+static ssize_t
+polarity_show(struct device *dev, struct device_attribute *attr,
 		     char *buf)
 {
+	struct dev_ext_attribute *ea = to_ext_attr(attr);
 	struct ptp_ocp *bp = dev_get_drvdata(dev);
+	int i = (uintptr_t)ea->var;
 
-	return sysfs_emit(buf, "%d\n", bp->signal.polarity);
+	return sysfs_emit(buf, "%d\n", bp->signal[i].polarity);
 }
-static DEVICE_ATTR_RO(signal_polarity);
+static SIGNAL_ATTR_RO(polarity, 0);
+static SIGNAL_ATTR_RO(polarity, 1);
 
 static ssize_t
-signal_running_show(struct device *dev, struct device_attribute *attr,
-		    char *buf)
+running_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
+	struct dev_ext_attribute *ea = to_ext_attr(attr);
 	struct ptp_ocp *bp = dev_get_drvdata(dev);
+	int i = (uintptr_t)ea->var;
 
-	return sysfs_emit(buf, "%d\n", bp->signal.running);
+	return sysfs_emit(buf, "%d\n", bp->signal[i].running);
 }
-static DEVICE_ATTR_RO(signal_running);
+static SIGNAL_ATTR_RO(running, 0);
+static SIGNAL_ATTR_RO(running, 1);
 
 static ssize_t
-signal_start_show(struct device *dev, struct device_attribute *attr, char *buf)
+start_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
+	struct dev_ext_attribute *ea = to_ext_attr(attr);
 	struct ptp_ocp *bp = dev_get_drvdata(dev);
+	int i = (uintptr_t)ea->var;
 	struct timespec64 ts;
 
-	ts = ktime_to_timespec64(bp->signal.start);
+	ts = ktime_to_timespec64(bp->signal[i].start);
 	return sysfs_emit(buf, "%ptT\n", &ts);
 }
-static DEVICE_ATTR_RO(signal_start);
+static SIGNAL_ATTR_RO(start, 0);
+static SIGNAL_ATTR_RO(start, 1);
 
 static ssize_t
 serialnum_show(struct device *dev, struct device_attribute *attr, char *buf)
@@ -2842,6 +2880,35 @@ available_clock_sources_show(struct device *dev,
 }
 static DEVICE_ATTR_RO(available_clock_sources);
 
+static struct attribute *fb_timecard_signal1_attrs[] = {
+	&dev_attr_signal0_signal.attr.attr,
+	&dev_attr_signal0_duty.attr.attr,
+	&dev_attr_signal0_phase.attr.attr,
+	&dev_attr_signal0_period.attr.attr,
+	&dev_attr_signal0_polarity.attr.attr,
+	&dev_attr_signal0_running.attr.attr,
+	&dev_attr_signal0_start.attr.attr,
+};
+static const struct attribute_group fb_timecard_signal1_group = {
+	.name = "gen1",
+	.attrs = fb_timecard_signal1_attrs,
+};
+
+static struct attribute *fb_timecard_signal2_attrs[] = {
+	&dev_attr_signal1_signal.attr.attr,
+	&dev_attr_signal1_duty.attr.attr,
+	&dev_attr_signal1_phase.attr.attr,
+	&dev_attr_signal1_period.attr.attr,
+	&dev_attr_signal1_polarity.attr.attr,
+	&dev_attr_signal1_running.attr.attr,
+	&dev_attr_signal1_start.attr.attr,
+	NULL,
+};
+static const struct attribute_group fb_timecard_signal2_group = {
+	.name = "gen2",
+	.attrs = fb_timecard_signal2_attrs,
+};
+
 static struct attribute *fb_timecard_attrs[] = {
 	&dev_attr_serialnum.attr,
 	&dev_attr_gnss_sync.attr,
@@ -2858,16 +2925,17 @@ static struct attribute *fb_timecard_attrs[] = {
 	&dev_attr_irig_b_mode.attr,
 	&dev_attr_utc_tai_offset.attr,
 	&dev_attr_ts_window_adjust.attr,
-	&dev_attr_signal.attr,
-	&dev_attr_signal_duty.attr,
-	&dev_attr_signal_phase.attr,
-	&dev_attr_signal_period.attr,
-	&dev_attr_signal_polarity.attr,
-	&dev_attr_signal_running.attr,
-	&dev_attr_signal_start.attr,
 	NULL,
 };
-ATTRIBUTE_GROUPS(fb_timecard);
+static const struct attribute_group fb_timecard_group = {
+	.attrs = fb_timecard_attrs,
+};
+static const struct attribute_group *fb_timecard_groups[] = {
+	&fb_timecard_group,
+	&fb_timecard_signal1_group,
+	&fb_timecard_signal2_group,
+	NULL,
+};
 
 static struct attribute *art_timecard_attrs[] = {
 	&dev_attr_serialnum.attr,
@@ -2911,6 +2979,28 @@ gpio_output_map(char *buf, struct ptp_ocp *bp, u16 map[][2], u16 bit)
 		if (map[i][1] & (1 << bit))
 			ans += sprintf(ans, "sma%d ", i + 1);
 	}
+}
+
+static void
+_signal_summary_show(struct seq_file *s, const char *label,
+		     struct ptp_ocp_signal *signal)
+{
+	struct timespec64 ts;
+	bool on;
+
+	on = signal->running;
+	ts = ktime_to_timespec64(signal->period);
+	seq_printf(s, "%7s: %s, period:%llu.%lu duty:%d%%",
+		   label,
+		   on ? " ON" : "OFF",
+		   ts.tv_sec, ts.tv_nsec,
+		   signal->duty);
+
+	ts = ktime_to_timespec64(signal->phase);
+	seq_printf(s, " phase:%llu.%lu", ts.tv_sec, ts.tv_nsec);
+
+	ts = ktime_to_timespec64(signal->start);
+	seq_printf(s, " pol:%d start:%ptT\n", signal->polarity, &ts);
 }
 
 static int
@@ -3014,22 +3104,11 @@ ptp_ocp_summary_show(struct seq_file *s, void *data)
 			   on & map ? " ON" : "OFF", src);
 	}
 
-	if (bp->signal_out) {
-		on = bp->signal.running;
-		ts = ktime_to_timespec64(bp->signal.period);
-		seq_printf(s, "%7s: %s, period:%llu.%lu duty:%d%%",
-			   "signal",
-			   on ? " ON" : "OFF",
-			   ts.tv_sec, ts.tv_nsec,
-			   bp->signal.duty);
+	if (bp->signal1_out)
+		_signal_summary_show(s, "GEN1", &bp->signal[0]);
 
-		ts = ktime_to_timespec64(bp->signal.phase);
-		seq_printf(s, " phase:%llu.%lu", ts.tv_sec, ts.tv_nsec);
-
-		ts = ktime_to_timespec64(bp->signal.start);
-		seq_printf(s, " pol:%d start:%ptT\n",
-			   bp->signal.polarity, &ts);
-	}
+	if (bp->signal2_out)
+		_signal_summary_show(s, "GEN2", &bp->signal[1]);
 
 	if (bp->irig_out) {
 		ctrl = ioread32(&bp->irig_out->ctrl);
@@ -3385,8 +3464,10 @@ ptp_ocp_detach(struct ptp_ocp *bp)
 		ptp_ocp_unregister_ext(bp->ts2);
 	if (bp->pps)
 		ptp_ocp_unregister_ext(bp->pps);
-	if (bp->signal_out)
-		ptp_ocp_unregister_ext(bp->signal_out);
+	if (bp->signal1_out)
+		ptp_ocp_unregister_ext(bp->signal1_out);
+	if (bp->signal2_out)
+		ptp_ocp_unregister_ext(bp->signal2_out);
 	if (bp->gnss_port != -1)
 		serial8250_unregister_port(bp->gnss_port);
 	if (bp->gnss2_port != -1)
