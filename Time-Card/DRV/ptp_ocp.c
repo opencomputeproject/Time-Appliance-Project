@@ -402,7 +402,7 @@ static const struct attribute_group *art_timecard_groups[];
  * 0: PPS (TS5)
  * 1: TS0
  * 2: TS1
- * 3: GNSS
+ * 3: GNSS1
  * 4: GNSS2
  * 5: MAC
  * 6: TS2
@@ -806,7 +806,7 @@ static struct ocp_selector ptp_ocp_sma_out[] = {
 	{ .name = "10Mhz",	.value = 0x0000 },
 	{ .name = "PHC",	.value = 0x0001 },
 	{ .name = "MAC",	.value = 0x0002 },
-	{ .name = "GNSS",	.value = 0x0004 },
+	{ .name = "GNSS1",	.value = 0x0004 },
 	{ .name = "GNSS2",	.value = 0x0008 },
 	{ .name = "IRIG",	.value = 0x0010 },
 	{ .name = "DCF",	.value = 0x0020 },
