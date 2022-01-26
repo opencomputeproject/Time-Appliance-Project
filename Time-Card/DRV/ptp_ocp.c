@@ -272,6 +272,14 @@ struct ptp_ocp_sma_connector {
 	bool	disabled;
 };
 
+struct ocp_attr_group {
+	u64 cap;
+	const struct attribute_group *group;
+};
+#define OCP_CAP_BASIC	BIT(0)
+#define OCP_CAP_SIGNAL	BIT(1)
+#define OCP_CAP_FREQ	BIT(2)
+
 struct ptp_ocp_signal {
 	ktime_t		period;
 	ktime_t		pulse;
@@ -319,7 +327,7 @@ struct ptp_ocp {
 	struct platform_device	*spi_flash;
 	struct clk_hw		*i2c_clk;
 	struct timer_list	watchdog;
-	const struct attribute_group **attr_groups;
+	const struct ocp_attr_group *attr_tbl;
 	struct dentry		*debug_root;
 	struct miscdevice	mro50;
 	time64_t		gnss_lost;
@@ -337,6 +345,7 @@ struct ptp_ocp {
 	int			flash_start;
 	u32			utc_tai_offset;
 	u32			ts_window_adjust;
+	u64			fw_cap;
 	struct ptp_ocp_signal	signal[4];
 	struct ptp_ocp_sma_connector sma[4];
 };
@@ -372,8 +381,8 @@ static int ptp_ocp_art_board_init(struct ptp_ocp *bp, struct ocp_resource *r);
 static irqreturn_t ptp_ocp_art_pps_irq(int irq, void *priv);
 static int ptp_ocp_art_pps_enable(void *priv, u32 req, bool enable);
 
-static const struct attribute_group *fb_timecard_groups[];
-static const struct attribute_group *art_timecard_groups[];
+static const struct ocp_attr_group fb_timecard_groups[];
+static const struct ocp_attr_group art_timecard_groups[];
 
 #define bp_assign_entry(bp, res, val) ({				\
 	uintptr_t addr = (uintptr_t)(bp) + (res)->bp_offset;		\
@@ -729,7 +738,7 @@ static struct ocp_resource ocp_art_resource[] = {
 #endif
 		},
 	},
-	/* Timestamp associated with GNSS receiver PPS */
+	/* Timestamp associated with GNSS1 receiver PPS */
 	{
 		OCP_EXT_RESOURCE(ts1),
 		.offset = 0x360000, .size = 0x20, .irq_vec = 12,
@@ -2059,7 +2068,16 @@ ptp_ocp_fb_board_init(struct ptp_ocp *bp, struct ocp_resource *r)
 	int err;
 
 	bp->flash_start = 1024 * 4096;
-	bp->attr_groups = fb_timecard_groups;
+	bp->attr_tbl = fb_timecard_groups;
+	bp->fw_cap = OCP_CAP_BASIC;
+	if (bp->image) {
+		u32 ver = ioread32(&bp->image->version) & 0xffff;
+
+		if (ver >= 19)
+			bp->fw_cap |= OCP_CAP_SIGNAL;
+		if (ver >= 20)
+			bp->fw_cap |= OCP_CAP_FREQ;
+	}
 
 	ptp_ocp_tod_init(bp);
 	ptp_ocp_nmea_out_init(bp);
@@ -2237,7 +2255,8 @@ ptp_ocp_art_board_init(struct ptp_ocp *bp, struct ocp_resource *r)
 	int err;
 
 	bp->flash_start = 0x1000000;
-	bp->attr_groups = art_timecard_groups;
+	bp->attr_tbl = art_timecard_groups;
+	bp->fw_cap = OCP_CAP_BASIC;
 
 	err = ptp_ocp_register_mro50(bp);
 	if (!err)
@@ -3261,17 +3280,17 @@ static struct attribute *fb_timecard_attrs[] = {
 static const struct attribute_group fb_timecard_group = {
 	.attrs = fb_timecard_attrs,
 };
-static const struct attribute_group *fb_timecard_groups[] = {
-	&fb_timecard_group,
-	&fb_timecard_signal0_group,
-	&fb_timecard_signal1_group,
-	&fb_timecard_signal2_group,
-	&fb_timecard_signal3_group,
-	&fb_timecard_freq0_group,
-	&fb_timecard_freq1_group,
-	&fb_timecard_freq2_group,
-	&fb_timecard_freq3_group,
-	NULL,
+static const struct ocp_attr_group fb_timecard_groups[] = {
+	{ .cap = OCP_CAP_BASIC,	    .group = &fb_timecard_group },
+	{ .cap = OCP_CAP_SIGNAL,    .group = &fb_timecard_signal0_group },
+	{ .cap = OCP_CAP_SIGNAL,    .group = &fb_timecard_signal1_group },
+	{ .cap = OCP_CAP_SIGNAL,    .group = &fb_timecard_signal2_group },
+	{ .cap = OCP_CAP_SIGNAL,    .group = &fb_timecard_signal3_group },
+	{ .cap = OCP_CAP_FREQ,	    .group = &fb_timecard_freq0_group },
+	{ .cap = OCP_CAP_FREQ,	    .group = &fb_timecard_freq1_group },
+	{ .cap = OCP_CAP_FREQ,	    .group = &fb_timecard_freq2_group },
+	{ .cap = OCP_CAP_FREQ,	    .group = &fb_timecard_freq3_group },
+	{ },
 };
 
 static struct attribute *art_timecard_attrs[] = {
@@ -3282,7 +3301,13 @@ static struct attribute *art_timecard_attrs[] = {
 	&dev_attr_ts_window_adjust.attr,
 	NULL,
 };
-ATTRIBUTE_GROUPS(art_timecard);
+static const struct attribute_group art_timecard_group = {
+	.attrs = art_timecard_attrs,
+};
+static const struct ocp_attr_group art_timecard_groups[] = {
+	{ .cap = OCP_CAP_BASIC,	    .group = &art_timecard_group },
+	{ },
+};
 
 static void
 gpio_input_map(char *buf, struct ptp_ocp *bp, u16 map[][2], u16 bit,
@@ -3394,7 +3419,7 @@ ptp_ocp_summary_show(struct seq_file *s, void *data)
 
 	seq_printf(s, "%7s: /dev/ptp%d\n", "PTP", ptp_clock_index(bp->ptp));
 	if (bp->gnss_port != -1)
-		seq_printf(s, "%7s: /dev/ttyS%d\n", "GNSS", bp->gnss_port);
+		seq_printf(s, "%7s: /dev/ttyS%d\n", "GNSS1", bp->gnss_port);
 	if (bp->gnss2_port != -1)
 		seq_printf(s, "%7s: /dev/ttyS%d\n", "GNSS2", bp->gnss2_port);
 	if (bp->mac_port != -1)
@@ -3441,7 +3466,7 @@ ptp_ocp_summary_show(struct seq_file *s, void *data)
 	if (bp->ts0) {
 		ts_reg = bp->ts0->mem;
 		on = ioread32(&ts_reg->enable);
-		src = "GNSS";
+		src = "GNSS1";
 		seq_printf(s, "%7s: %s, src: %s\n", "TS0",
 			   on ? " ON" : "OFF", src);
 	}
@@ -3491,12 +3516,12 @@ ptp_ocp_summary_show(struct seq_file *s, void *data)
 			   on & map ? " ON" : "OFF", src);
 	}
 
-	for (i = 0; i < 4; i++)
-		if (bp->signal_out[i])
+	if (bp->fw_cap & OCP_CAP_SIGNAL)
+		for (i = 0; i < 4; i++)
 			_signal_summary_show(s, i, &bp->signal[i]);
 
-	for (i = 0; i < 4; i++)
-		if (bp->freq_in[i])
+	if (bp->fw_cap & OCP_CAP_FREQ)
+		for (i = 0; i < 4; i++)
 			_frequency_summary_show(s, i, bp->freq_in[i]);
 
 	if (bp->irig_out) {
@@ -3548,7 +3573,7 @@ ptp_ocp_summary_show(struct seq_file *s, void *data)
 		else if (val & 0x02)
 			src = "MAC";
 		else if (val & 0x04)
-			src = "GNSS";
+			src = "GNSS1";
 		else
 			src = "----";
 	} else {
@@ -3727,6 +3752,7 @@ ptp_ocp_complete(struct ptp_ocp *bp)
 {
 	struct pps_device *pps;
 	char buf[32];
+	int i, err;
 
 	if (bp->gnss_port != -1) {
 		sprintf(buf, "ttyS%d", bp->gnss_port);
@@ -3751,8 +3777,13 @@ ptp_ocp_complete(struct ptp_ocp *bp)
 	if (pps)
 		ptp_ocp_symlink(bp, pps->dev, "pps");
 
-	if (device_add_groups(&bp->dev, bp->attr_groups))
-		pr_err("device add groups failed\n");
+	for (i = 0; bp->attr_tbl[i].cap; i++) {
+		if (!(bp->attr_tbl[i].cap & bp->fw_cap))
+			continue;
+		err = sysfs_create_group(&bp->dev.kobj, bp->attr_tbl[i].group);
+		if (err)
+			return err;
+	}
 
 	ptp_ocp_debugfs_add_device(bp);
 
@@ -3830,12 +3861,14 @@ static void
 ptp_ocp_detach_sysfs(struct ptp_ocp *bp)
 {
 	struct device *dev = &bp->dev;
+	int i;
 
 	sysfs_remove_link(&dev->kobj, "ttyGNSS");
 	sysfs_remove_link(&dev->kobj, "ttyMAC");
 	sysfs_remove_link(&dev->kobj, "ptp");
 	sysfs_remove_link(&dev->kobj, "pps");
-	device_remove_groups(dev, bp->attr_groups);
+	for (i = 0; bp->attr_tbl[i].cap; i++)
+		sysfs_remove_group(&bp->dev.kobj, bp->attr_tbl[i].group);
 }
 
 static void
