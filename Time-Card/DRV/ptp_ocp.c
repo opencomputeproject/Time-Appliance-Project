@@ -3494,7 +3494,7 @@ ptp_ocp_summary_show(struct seq_file *s, void *data)
 	if (bp->ts3) {
 		ts_reg = bp->ts3->mem;
 		on = ioread32(&ts_reg->enable);
-		gpio_input_map(buf, bp, sma_val, 7, NULL);
+		gpio_input_map(buf, bp, sma_val, 6, NULL);
 		seq_printf(s, "%7s: %s, src: %s\n", "TS3",
 			   on ? " ON" : "OFF", buf);
 	}
@@ -3502,7 +3502,7 @@ ptp_ocp_summary_show(struct seq_file *s, void *data)
 	if (bp->ts4) {
 		ts_reg = bp->ts4->mem;
 		on = ioread32(&ts_reg->enable);
-		gpio_input_map(buf, bp, sma_val, 8, NULL);
+		gpio_input_map(buf, bp, sma_val, 7, NULL);
 		seq_printf(s, "%7s: %s, src: %s\n", "TS4",
 			   on ? " ON" : "OFF", buf);
 	}
@@ -3871,8 +3871,9 @@ ptp_ocp_detach_sysfs(struct ptp_ocp *bp)
 	sysfs_remove_link(&dev->kobj, "ttyMAC");
 	sysfs_remove_link(&dev->kobj, "ptp");
 	sysfs_remove_link(&dev->kobj, "pps");
-	for (i = 0; bp->attr_tbl[i].cap; i++)
-		sysfs_remove_group(&dev->kobj, bp->attr_tbl[i].group);
+	if (bp->attr_tbl)
+		for (i = 0; bp->attr_tbl[i].cap; i++)
+			sysfs_remove_group(&dev->kobj, bp->attr_tbl[i].group);
 }
 
 static void
