@@ -1903,10 +1903,11 @@ ptp_ocp_register_ext(struct ptp_ocp *bp, struct ocp_resource *r)
 	if (!ext)
 		return -ENOMEM;
 
-	err = -EINVAL;
 	ext->mem = ptp_ocp_get_mem(bp, r);
-	if (!ext->mem)
+	if (IS_ERR(ext->mem)) {
+		err = PTR_ERR(ext->mem);
 		goto out;
+	}
 
 	ext->bp = bp;
 	ext->info = r->extra;
@@ -1970,8 +1971,8 @@ ptp_ocp_register_mem(struct ptp_ocp *bp, struct ocp_resource *r)
 	void __iomem *mem;
 
 	mem = ptp_ocp_get_mem(bp, r);
-	if (!mem)
-		return -EINVAL;
+	if (IS_ERR(mem))
+		return PTR_ERR(mem);
 
 	bp_assign_entry(bp, r, mem);
 
@@ -3351,6 +3352,9 @@ _signal_summary_show(struct seq_file *s, int nr,
 	char label[8];
 	bool on;
 
+	if (!signal)
+		return;
+
 	on = signal->running;
 	ts = ktime_to_timespec64(signal->period);
 	sprintf(label, "GEN%d", nr);
@@ -3868,7 +3872,7 @@ ptp_ocp_detach_sysfs(struct ptp_ocp *bp)
 	sysfs_remove_link(&dev->kobj, "ptp");
 	sysfs_remove_link(&dev->kobj, "pps");
 	for (i = 0; bp->attr_tbl[i].cap; i++)
-		sysfs_remove_group(&bp->dev.kobj, bp->attr_tbl[i].group);
+		sysfs_remove_group(&dev->kobj, bp->attr_tbl[i].group);
 }
 
 static void
