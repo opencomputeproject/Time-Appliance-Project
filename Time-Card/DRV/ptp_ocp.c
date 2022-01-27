@@ -631,19 +631,19 @@ static struct ocp_resource ocp_fb_resource[] = {
 	},
 	{
 		OCP_MEM_RESOURCE(freq_in[0]),
-		.offset = 0x02000000, .size = 0x10000,
+		.offset = 0x01200000, .size = 0x10000,
 	},
 	{
 		OCP_MEM_RESOURCE(freq_in[1]),
-		.offset = 0x02010000, .size = 0x10000,
+		.offset = 0x01210000, .size = 0x10000,
 	},
 	{
 		OCP_MEM_RESOURCE(freq_in[2]),
-		.offset = 0x02020000, .size = 0x10000,
+		.offset = 0x01220000, .size = 0x10000,
 	},
 	{
 		OCP_MEM_RESOURCE(freq_in[3]),
-		.offset = 0x02030000, .size = 0x10000,
+		.offset = 0x01230000, .size = 0x10000,
 	},
 	{
 		.setup = ptp_ocp_fb_board_init,
@@ -2883,7 +2883,7 @@ seconds_show(struct device *dev, struct device_attribute *attr, char *buf)
 	val = ioread32(&bp->freq_in[idx]->ctrl);
 	val = (val >> 8) & 0xff;
 
-	return sysfs_emit(buf, "%u", val);
+	return sysfs_emit(buf, "%u\n", val);
 }
 static EXT_ATTR_RW(freq, seconds, 0);
 static EXT_ATTR_RW(freq, seconds, 1);
@@ -2900,11 +2900,11 @@ frequency_show(struct device *dev, struct device_attribute *attr, char *buf)
 
 	val = ioread32(&bp->freq_in[idx]->status);
 	if (val & FREQ_STATUS_ERROR)
-		return sysfs_emit(buf, "error");
+		return sysfs_emit(buf, "error\n");
 	if (val & FREQ_STATUS_OVERRUN)
-		return sysfs_emit(buf, "overrun");
+		return sysfs_emit(buf, "overrun\n");
 	if (val & FREQ_STATUS_VALID)
-		return sysfs_emit(buf, "%lu", val & FREQ_STATUS_MASK);
+		return sysfs_emit(buf, "%lu\n", val & FREQ_STATUS_MASK);
 	return 0;
 }
 static EXT_ATTR_RO(freq, frequency, 0);
@@ -3356,16 +3356,14 @@ _signal_summary_show(struct seq_file *s, int nr,
 		return;
 
 	on = signal->running;
-	ts = ktime_to_timespec64(signal->period);
 	sprintf(label, "GEN%d", nr);
-	seq_printf(s, "%7s: %s, period:%llu.%lu duty:%d%%",
+	seq_printf(s, "%7s: %s, period:%llu duty:%d%%",
 		   label,
 		   on ? " ON" : "OFF",
-		   ts.tv_sec, ts.tv_nsec,
+		   signal->period,
 		   signal->duty);
 
-	ts = ktime_to_timespec64(signal->phase);
-	seq_printf(s, " phase:%llu.%lu", ts.tv_sec, ts.tv_nsec);
+	seq_printf(s, " phase:%llu", signal->phase);
 
 	ts = ktime_to_timespec64(signal->start);
 	seq_printf(s, " pol:%d start:%ptT\n", signal->polarity, &ts);
@@ -3397,7 +3395,7 @@ _frequency_summary_show(struct seq_file *s, int nr,
 	if (val & FREQ_STATUS_OVERRUN)
 		seq_printf(s, ", overrun");
 	if (val & FREQ_STATUS_VALID)
-		return seq_printf(s, ", freq %lu", val & FREQ_STATUS_MASK);
+		seq_printf(s, ", freq %lu Hz", val & FREQ_STATUS_MASK);
 	seq_printf(s, "\n");
 }
 
