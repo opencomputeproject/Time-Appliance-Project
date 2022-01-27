@@ -2881,7 +2881,10 @@ seconds_show(struct device *dev, struct device_attribute *attr, char *buf)
 	u32 val;
 
 	val = ioread32(&bp->freq_in[idx]->ctrl);
-	val = (val >> 8) & 0xff;
+	if (val & 1)
+		val = (val >> 8) & 0xff;
+	else
+		val = 0;
 
 	return sysfs_emit(buf, "%u\n", val);
 }
