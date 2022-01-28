@@ -1675,16 +1675,22 @@ ptp_ocp_signal_irq(int irq, void *priv)
 	struct ptp_ocp_ext_src *ext = priv;
 	struct signal_reg __iomem *reg = ext->mem;
 	struct ptp_ocp *bp = ext->bp;
-	int gen = ext->info->index;
-	u32 val;
+	u32 enable, status;
+	int gen;
 
-	val = ioread32(&reg->status);
-	pr_err_ratelimited("signal irq fired, status %x\n", val);
+	gen = ext->info->index - 1;
 
-	/* disable generator. */
-	iowrite32(0, &reg->intr_mask);
-	iowrite32(0, &reg->enable);
-	bp->signal[gen].running = false;
+	enable = ioread32(&reg->enable);
+	status = ioread32(&reg->status);
+
+	/* disable generator on error */
+	if (status || !enable) {
+		iowrite32(0, &reg->intr_mask);
+		iowrite32(0, &reg->enable);
+		bp->signal[gen].running = false;
+	}
+
+	iowrite32(0, &reg->intr); 	/* ack interrupt */
 
 	return IRQ_HANDLED;
 }
@@ -1694,7 +1700,7 @@ ptp_ocp_signal_set(struct ptp_ocp *bp, int gen, struct ptp_ocp_signal *s)
 {
 	struct ptp_system_timestamp sts;
 	struct timespec64 ts;
-	ktime_t now;
+	ktime_t start_ns;
 	int err;
 
 	if (!s->period)
@@ -1707,20 +1713,19 @@ ptp_ocp_signal_set(struct ptp_ocp *bp, int gen, struct ptp_ocp_signal *s)
 	if (err)
 		return err;
 
-	now = ktime_set(ts.tv_sec, ts.tv_nsec);
+	start_ns = ktime_set(ts.tv_sec, ts.tv_nsec) + NSEC_PER_MSEC;
 	if (!s->start) {
-		s->start = now + 2 * s->period;
-		s->start = ktime_divns(s->start, s->period) * s->period;
+		s->start = roundup(start_ns, s->period);
 		s->start = ktime_add(s->start, s->phase);
 	}
 
 	if (s->duty < 1 || s->duty > 99)
 		return -EINVAL;
 
-	if (s->pulse > s->period)
+	if (s->pulse < 1 || s->pulse > s->period)
 		return -EINVAL;
 
-	if (s->start < now)
+	if (s->start < start_ns)
 		return -EINVAL;
 
 	bp->signal[gen] = *s;
@@ -1784,8 +1789,9 @@ ptp_ocp_signal_enable(void *priv, u32 req, bool enable)
 	iowrite32(bp->signal[gen].polarity, &reg->polarity);
 	iowrite32(0, &reg->repeat_count);
 
+	iowrite32(0, &reg->intr);		/* clear interrupt state */
+	iowrite32(1, &reg->intr_mask);		/* enable interrupt */
 	iowrite32(3, &reg->enable);		/* valid & enable */
-	iowrite32(1, &reg->intr_mask);
 
 	bp->signal[gen].running = true;
 
@@ -2673,7 +2679,7 @@ signal_store(struct device *dev, struct device_attribute *attr,
 	struct ptp_ocp *bp = dev_get_drvdata(dev);
 	struct ptp_ocp_signal s = { };
 	int gen = (uintptr_t)ea->var;
-	int err, ret, argc;
+	int argc, err;
 	char **argv;
 
 	argv = argv_split(GFP_KERNEL, buf, &argc);
@@ -2695,9 +2701,8 @@ signal_store(struct device *dev, struct device_attribute *attr,
 		fallthrough;
 	case 3:
 		argc--;
-		err = -EINVAL;
-		ret = sscanf(argv[argc], "%llu", &s.phase);
-		if (!ret)
+		err = kstrtou64(argv[argc], 0, &s.phase);
+		if (err)
 			goto out;
 		fallthrough;
 	case 2:
@@ -2708,9 +2713,8 @@ signal_store(struct device *dev, struct device_attribute *attr,
 		fallthrough;
 	case 1:
 		argc--;
-		err = -EINVAL;
-		ret = sscanf(argv[argc], "%llu", &s.period);
-		if (!ret)
+		err = kstrtou64(argv[argc], 0, &s.period);
+		if (err)
 			goto out;
 		break;
 	default:
@@ -3348,28 +3352,30 @@ gpio_output_map(char *buf, struct ptp_ocp *bp, u16 map[][2], u16 bit)
 }
 
 static void
-_signal_summary_show(struct seq_file *s, int nr,
-		     struct ptp_ocp_signal *signal)
+_signal_summary_show(struct seq_file *s, struct ptp_ocp *bp, int nr)
 {
-	struct timespec64 ts;
+	struct signal_reg __iomem *reg = bp->signal_out[nr]->mem;
+	struct ptp_ocp_signal *signal = &bp->signal[nr];
 	char label[8];
 	bool on;
+	u32 val;
 
 	if (!signal)
 		return;
 
 	on = signal->running;
 	sprintf(label, "GEN%d", nr);
-	seq_printf(s, "%7s: %s, period:%llu duty:%d%%",
-		   label,
-		   on ? " ON" : "OFF",
-		   signal->period,
-		   signal->duty);
+	seq_printf(s, "%7s: %s, period:%llu duty:%d%% phase:%llu pol:%d",
+		   label, on ? " ON" : "OFF",
+		   signal->period, signal->duty, signal->phase,
+		   signal->polarity);
 
-	seq_printf(s, " phase:%llu", signal->phase);
+	val = ioread32(&reg->enable);
+	seq_printf(s, " [%x", val);
+	val = ioread32(&reg->status);
+	seq_printf(s, " %x]", val);
 
-	ts = ktime_to_timespec64(signal->start);
-	seq_printf(s, " pol:%d start:%ptT\n", signal->polarity, &ts);
+	seq_printf(s, " start:%llu\n", signal->start);
 }
 
 static void
@@ -3399,7 +3405,7 @@ _frequency_summary_show(struct seq_file *s, int nr,
 		seq_printf(s, ", overrun");
 	if (val & FREQ_STATUS_VALID)
 		seq_printf(s, ", freq %lu Hz", val & FREQ_STATUS_MASK);
-	seq_printf(s, "\n");
+	seq_printf(s, "  reg:%x\n", val);
 }
 
 
@@ -3523,7 +3529,7 @@ ptp_ocp_summary_show(struct seq_file *s, void *data)
 
 	if (bp->fw_cap & OCP_CAP_SIGNAL)
 		for (i = 0; i < 4; i++)
-			_signal_summary_show(s, i, &bp->signal[i]);
+			_signal_summary_show(s, bp, i);
 
 	if (bp->fw_cap & OCP_CAP_FREQ)
 		for (i = 0; i < 4; i++)
