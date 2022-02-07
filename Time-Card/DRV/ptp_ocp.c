@@ -22,6 +22,7 @@
 #include <linux/mtd/mtd.h>
 #include <linux/miscdevice.h>
 #include <linux/version.h>
+#include <linux/jiffies.h>
 
 /*---------------------------------------------------------------------------*/
 #ifndef MRO50_IOCTL_H
@@ -35,6 +36,49 @@
 #define MRO50_READ_CTRL		_IOR('M', 6, u32 *)
 #define MRO50_SAVE_COARSE	_IO('M', 7)
 
+/**
+ * Maximum number of points that can be stored in the memory of the card
+ */
+#define CALIBRATION_POINTS_MAX 10
+struct disciplining_parameters {
+	/**
+	 * Array containing the control node, in percentage
+	 * value of the control range.
+	 * Array contains ctrl_nodes_length valid values.
+	 */
+	float ctrl_load_nodes[CALIBRATION_POINTS_MAX];
+	/**
+	 * Array of drift coefficients for each control node.
+	 * Array contains ctrl_nodes_length valid values.
+	 */
+	float ctrl_drift_coeffs[CALIBRATION_POINTS_MAX];
+	/** Equilibrium Coarse value define during calibration */
+	/**
+	 * Array containing the control node, in percentage
+	 * value of the control range.
+	 * Array contains ctrl_nodes_length_factory valid values.
+	 */
+	float ctrl_load_nodes_factory[3];
+	/**
+	 * Array of drift coefficients for each control node.
+	 * Array contains ctrl_nodes_length_factory valid values.
+	 */
+	float ctrl_drift_coeffs_factory[3];
+	/** Equilibrium Coarse value for factory_settings */
+	int32_t coarse_equilibrium_factory;
+	int32_t coarse_equilibrium;
+	/** Factory Settings that can be used with any mRO50 */
+	/** Number of control nodes in ctrl_load_nodes_factory */
+	uint8_t ctrl_nodes_length_factory;
+	/** Number of control nodes in ctrl_load_nodes */
+	uint8_t ctrl_nodes_length;
+	/** Indicate wether calibration parameters are valid */
+	bool calibration_valid;
+	int8_t pad_0[4];
+};
+
+#define ART_CALIBRATION_READ_PARAMETERS _IOR('M', 8, struct disciplining_parameters *)
+#define ART_CALIBRATION_WRITE_PARAMETERS _IOW('M', 9, struct disciplining_parameters *)
 #endif /* MRO50_IOCTL_H */
 /*---------------------------------------------------------------------------*/
 
@@ -725,17 +769,18 @@ static struct ocp_resource ocp_art_resource[] = {
 		.extra = &(struct ptp_ocp_i2c_info) {
 			.name = "ocores-i2c",
 			.fixed_rate = 400000,
-#if 1
 			.data_size = sizeof(struct ocores_i2c_platform_data),
 			.data = &(struct ocores_i2c_platform_data) {
 				.clock_khz = 125000,
 				.bus_khz = 400,
+/* Expose eeprom as a file on userland */
+#if 1
 				.num_devices = 1,
 				.devices = &(struct i2c_board_info) {
 					I2C_BOARD_INFO("24c08", 0x50),
 				},
-			},
 #endif
+			},
 		},
 	},
 	/* Timestamp associated with GNSS1 receiver PPS */
@@ -1359,6 +1404,68 @@ ptp_ocp_read_i2c(struct i2c_adapter *adap, u8 addr, u8 reg, u8 sz, u8 *data)
 		msgs[1].buf += len;
 		reg += len;
 		sz -= len;
+	}
+	return 0;
+}
+
+/*
+ * Write timeout as specified in at24 eeprom driver
+ * Specs often allow 5 msec for a page write, sometimes 20 msec;
+ * it's important to recover from write timeouts.
+ */
+static unsigned int ptp_ocp_i2c_write_timeout = 25;
+
+/*
+ * ptp_ocp_write_i2c_byte reproduces the same retry/timeout mechanism as at24_regmap_write
+ */
+static int ptp_ocp_write_i2c_byte(struct i2c_adapter *adap, u8 addr, u8 reg, u8 *data)
+{
+	unsigned long timeout, write_time;
+	struct i2c_msg msgs[1] = {
+		{
+			.addr = addr,
+			.len = 2,
+			.buf = buffer
+		}
+	};
+	unsigned char buffer[2];
+	int ret;
+
+	buffer[0] = reg;
+	buffer[1] = *data;
+	timeout = jiffies + msecs_to_jiffies(ptp_ocp_i2c_write_timeout);
+
+	do {
+		/*
+		 * The timestamp shall be taken before the actual operation
+		 * to avoid a premature timeout in case of high CPU load.
+		 */
+		write_time = jiffies;
+
+		ret = i2c_transfer(adap, msgs, 1);
+		if (ret == 1)
+			return 0;
+
+		usleep_range(1000, 1500);
+	} while (time_before(write_time, timeout));
+
+	return -ETIMEDOUT;
+}
+
+
+static int
+ptp_ocp_write_i2c(struct i2c_adapter *adap, u8 addr, u8 reg, u8 sz, u8 *data)
+{
+	int ret;
+	while (sz) {
+		ret = ptp_ocp_write_i2c_byte(adap, addr, reg, data);
+		if (ret < 0) {
+			return ret;
+		}
+
+		data += 1;
+		reg += 1;
+		sz -= 1;
 	}
 	return 0;
 }
@@ -2165,10 +2272,13 @@ ptp_ocp_mro50_write(struct ptp_ocp *bp, u32 ctrl, u32 val)
 static long
 ptp_ocp_mro50_ioctl(struct file *file, unsigned cmd, unsigned long arg)
 {
-	struct miscdevice *mro50 = file->private_data;
 	struct ptp_ocp *bp = container_of(mro50, struct ptp_ocp, mro50);
-	u32 val;
+	struct disciplining_parameters disciplining_parameters;
+	struct miscdevice *mro50 = file->private_data;
+	struct i2c_adapter *adap;
+	struct device *dev;
 	int err;
+	u32 val;
 
 	switch (cmd) {
 	case MRO50_READ_FINE:
@@ -2197,6 +2307,60 @@ ptp_ocp_mro50_ioctl(struct file *file, unsigned cmd, unsigned long arg)
 		mutex_lock(&bp->mutex);
 		iowrite32(MRO50_OP_SAVE_COARSE, &bp->osc->ctrl);
 		mutex_unlock(&bp->mutex);
+		return 0;
+	case ART_CALIBRATION_READ_PARAMETERS:
+		if (!bp->i2c_ctrl)
+			return -EFAULT;
+		/* Fetch calibration parameters from EEPROM 4th bloc of 256 bytes*/
+		dev = device_find_child(&bp->i2c_ctrl->dev, NULL, ptp_ocp_firstchild);
+		if (!dev) {
+			dev_err(&bp->pdev->dev, "Can't find I2C adapter\n");
+			return -EFAULT;
+		}
+
+		adap = i2c_verify_adapter(dev);
+		if (!adap) {
+			dev_err(&bp->pdev->dev, "device '%s' isn't an I2C adapter\n",
+				dev_name(dev));
+			return -EFAULT;
+		}
+		err = ptp_ocp_read_i2c(adap, 0x53, 0x0, sizeof(struct disciplining_parameters), (u8 *) &disciplining_parameters);
+		put_device(dev);
+		if (err) {
+			printk("Could not read data from i2c, err %d\n", err);
+			return -EFAULT;
+		}
+		if (!err && copy_to_user((void __user*) arg, &disciplining_parameters, sizeof(struct disciplining_parameters)))
+			err = -EFAULT;
+		return 0;
+	case ART_CALIBRATION_WRITE_PARAMETERS:
+		if (!bp->i2c_ctrl)
+			return -EFAULT;
+		/* Fetch calibration parameters from EEPROM 4th bloc of 256 bytes*/
+		dev = device_find_child(&bp->i2c_ctrl->dev, NULL, ptp_ocp_firstchild);
+		if (!dev) {
+			dev_err(&bp->pdev->dev, "Can't find I2C adapter\n");
+			return -EFAULT;
+		}
+		adap = i2c_verify_adapter(dev);
+		if (!adap) {
+			dev_err(&bp->pdev->dev, "device '%s' isn't an I2C adapter\n",
+				dev_name(dev));
+			return -EFAULT;
+		}
+
+		err = copy_from_user(&disciplining_parameters, (void __user *) arg, sizeof(struct disciplining_parameters));
+		if (err) {
+			put_device(dev);
+			return -EFAULT;
+		}
+		err = ptp_ocp_write_i2c(adap, 0x53, 0x00, sizeof(struct disciplining_parameters), (u8 *) &disciplining_parameters);
+		if (err) {
+			printk("Error writing data to I2C: %d\n", err);
+			put_device(dev);
+			return -EFAULT;
+		}
+		put_device(dev);
 		return 0;
 	default:
 		return -ENOTTY;
