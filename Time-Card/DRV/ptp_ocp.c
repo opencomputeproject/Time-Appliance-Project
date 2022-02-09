@@ -291,7 +291,7 @@ struct ptp_ocp_signal {
 };
 
 #define OCP_BOARD_MFR_LEN		8
-#define OCP_BOARD_ID_LEN		12
+#define OCP_BOARD_ID_LEN		13
 #define OCP_SERIAL_LEN			6
 
 struct ptp_ocp {
@@ -1353,7 +1353,8 @@ ptp_ocp_read_i2c(struct i2c_adapter *adap, u8 addr, u8 reg, u8 sz, u8 *data)
 		len = min_t(u8, sz, 2);
 		msgs[1].len = len;
 		err = i2c_transfer(adap, msgs, 2);
-		if (err != msgs[1].len)
+		/* xiic-i2c reads 2 bytes even if only1 is requested. don't treat it as error */
+		if (err < len)
 			return err;
 		msgs[1].buf += len;
 		reg += len;
@@ -1385,12 +1386,12 @@ ptp_ocp_read_eeprom(struct ptp_ocp *bp)
 		goto out;
 	}
 
-	err = ptp_ocp_read_i2c(adap, 0x50, 0x7A,
+	err = ptp_ocp_read_i2c(adap, 0x50, 0x79,
 			       sizeof(bp->board_mfr), bp->board_mfr);
 	if (err)
 		goto read_fail;
 
-	err = ptp_ocp_read_i2c(adap, 0x50, 0x44,
+	err = ptp_ocp_read_i2c(adap, 0x50, 0x43,
 			       sizeof(bp->board_id), bp->board_id);
 	if (err)
 		goto read_fail;
