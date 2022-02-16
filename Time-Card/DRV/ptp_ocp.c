@@ -1475,10 +1475,16 @@ ptp_ocp_read_eeprom(struct ptp_ocp *bp)
 {
 	struct i2c_adapter *adap;
 	struct device *dev;
+	struct pci_dev *pdev =  bp->pdev;
 	int err;
+	int id;
+	int serial_addr;
+	int serial_reg;
 
 	if (!bp->i2c_ctrl)
 		return;
+
+	id = pci_dev_id(pdev) << 1;
 
 	dev = device_find_child(&bp->i2c_ctrl->dev, NULL, ptp_ocp_firstchild);
 	if (!dev) {
@@ -1503,7 +1509,14 @@ ptp_ocp_read_eeprom(struct ptp_ocp *bp)
 	if (err)
 		goto read_fail;
 
-	err = ptp_ocp_read_i2c(adap, 0x58, 0x9A,
+	if (pdev->vendor == PCI_VENDOR_ID_OROLIA && pdev->device == PCI_DEVICE_ID_OROLIA_ARTCARD) {
+		serial_addr = 0x50;
+		serial_reg = 0x66;
+	} else {
+		serial_addr = 0x58;
+		serial_reg = 0x9A;
+	}
+	err = ptp_ocp_read_i2c(adap, serial_addr, serial_reg,
 			       sizeof(bp->serial), bp->serial);
 	if (err)
 		goto read_fail;
