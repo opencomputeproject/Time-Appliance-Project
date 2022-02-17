@@ -1473,13 +1473,17 @@ ptp_ocp_write_i2c(struct i2c_adapter *adap, u8 addr, u8 reg, u8 sz, u8 *data)
 static void
 ptp_ocp_read_eeprom(struct ptp_ocp *bp)
 {
+	struct pci_dev *pdev =  bp->pdev;
 	struct i2c_adapter *adap;
 	struct device *dev;
-	struct pci_dev *pdev =  bp->pdev;
+	u8 board_mfr_addr;
+	u8 board_mfr_reg;
+	u8 board_id_addr;
+	u8 board_id_reg;
+	u8 serial_addr;
+	u8 serial_reg;
 	int err;
 	int id;
-	int serial_addr;
-	int serial_reg;
 
 	if (!bp->i2c_ctrl)
 		return;
@@ -1499,23 +1503,36 @@ ptp_ocp_read_eeprom(struct ptp_ocp *bp)
 		goto out;
 	}
 
-	err = ptp_ocp_read_i2c(adap, 0x50, 0x79,
+	/* Set different EEPROM addresses between Facebook and ART card
+	 * Orolia's EEPROM is write protected on addresses 0x52 and 0x53,
+	 * hence this is where manufacturing data is stored
+	 */
+	if (pdev->vendor == PCI_VENDOR_ID_OROLIA && pdev->device == PCI_DEVICE_ID_OROLIA_ARTCARD) {
+		board_mfr_addr = 0x52;
+		board_mfr_reg = 0x79;
+		board_id_addr = 0x52;
+		board_id_reg = 0x43;
+		serial_addr = 0x52;
+		serial_reg = 0x66;
+	} else {
+		board_mfr_addr = 0x50;
+		board_mfr_reg = 0x79;
+		board_id_addr = 0x50;
+		board_id_reg = 0x43;
+		serial_addr = 0x58;
+		serial_reg = 0x9A;
+	}
+
+	err = ptp_ocp_read_i2c(adap, board_mfr_addr, board_mfr_reg,
 			       sizeof(bp->board_mfr), bp->board_mfr);
 	if (err)
 		goto read_fail;
 
-	err = ptp_ocp_read_i2c(adap, 0x50, 0x43,
+	err = ptp_ocp_read_i2c(adap, board_id_addr, board_id_reg,
 			       sizeof(bp->board_id), bp->board_id);
 	if (err)
 		goto read_fail;
 
-	if (pdev->vendor == PCI_VENDOR_ID_OROLIA && pdev->device == PCI_DEVICE_ID_OROLIA_ARTCARD) {
-		serial_addr = 0x50;
-		serial_reg = 0x66;
-	} else {
-		serial_addr = 0x58;
-		serial_reg = 0x9A;
-	}
 	err = ptp_ocp_read_i2c(adap, serial_addr, serial_reg,
 			       sizeof(bp->serial), bp->serial);
 	if (err)
@@ -2337,7 +2354,7 @@ ptp_ocp_mro50_ioctl(struct file *file, unsigned cmd, unsigned long arg)
 				dev_name(dev));
 			return -EFAULT;
 		}
-		err = ptp_ocp_read_i2c(adap, 0x53, 0x0, sizeof(struct disciplining_parameters), (u8 *) &disciplining_parameters);
+		err = ptp_ocp_read_i2c(adap, 0x50, 0x0, sizeof(struct disciplining_parameters), (u8 *) &disciplining_parameters);
 		put_device(dev);
 		if (err) {
 			printk("Could not read data from i2c, err %d\n", err);
@@ -2367,7 +2384,7 @@ ptp_ocp_mro50_ioctl(struct file *file, unsigned cmd, unsigned long arg)
 			put_device(dev);
 			return -EFAULT;
 		}
-		err = ptp_ocp_write_i2c(adap, 0x53, 0x00, sizeof(struct disciplining_parameters), (u8 *) &disciplining_parameters);
+		err = ptp_ocp_write_i2c(adap, 0x50, 0x00, sizeof(struct disciplining_parameters), (u8 *) &disciplining_parameters);
 		if (err) {
 			printk("Error writing data to I2C: %d\n", err);
 			put_device(dev);
