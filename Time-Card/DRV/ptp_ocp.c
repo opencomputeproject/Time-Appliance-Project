@@ -1375,6 +1375,24 @@ ptp_ocp_firstchild(struct device *dev, void *data)
 }
 
 static int
+ptp_ocp_get_i2c_adapter(struct ptp_ocp *bp, struct device **dev, struct i2c_adapter **adap)
+{
+	*dev = device_find_child(&bp->i2c_ctrl->dev, NULL, ptp_ocp_firstchild);
+	if (!*dev) {
+		dev_err(&bp->pdev->dev, "Can't find I2C adapter\n");
+		return -EFAULT;
+	}
+
+	*adap = i2c_verify_adapter(*dev);
+	if (!*adap) {
+		dev_err(&bp->pdev->dev, "device '%s' isn't an I2C adapter\n",
+			dev_name(*dev));
+		return -EFAULT;
+	}
+	return 0;
+}
+
+static int
 ptp_ocp_read_i2c(struct i2c_adapter *adap, u8 addr, u8 reg, u8 sz, u8 *data)
 {
 	struct i2c_msg msgs[2] = {
@@ -1490,16 +1508,8 @@ ptp_ocp_read_eeprom(struct ptp_ocp *bp)
 
 	id = pci_dev_id(pdev) << 1;
 
-	dev = device_find_child(&bp->i2c_ctrl->dev, NULL, ptp_ocp_firstchild);
-	if (!dev) {
-		dev_err(&bp->pdev->dev, "Can't find I2C adapter\n");
-		return;
-	}
-
-	adap = i2c_verify_adapter(dev);
-	if (!adap) {
-		dev_err(&bp->pdev->dev, "device '%s' isn't an I2C adapter\n",
-			dev_name(dev));
+	err = ptp_ocp_get_i2c_adapter(bp, &dev, &adap);
+	if (err) {
 		goto out;
 	}
 
@@ -2341,41 +2351,29 @@ ptp_ocp_mro50_ioctl(struct file *file, unsigned cmd, unsigned long arg)
 	case ART_CALIBRATION_READ_PARAMETERS:
 		if (!bp->i2c_ctrl)
 			return -EFAULT;
-		/* Fetch calibration parameters from EEPROM 4th bloc of 256 bytes*/
-		dev = device_find_child(&bp->i2c_ctrl->dev, NULL, ptp_ocp_firstchild);
-		if (!dev) {
-			dev_err(&bp->pdev->dev, "Can't find I2C adapter\n");
+		err = ptp_ocp_get_i2c_adapter(bp, &dev, &adap);
+		if (err) {
+			put_device(dev);
 			return -EFAULT;
 		}
 
-		adap = i2c_verify_adapter(dev);
-		if (!adap) {
-			dev_err(&bp->pdev->dev, "device '%s' isn't an I2C adapter\n",
-				dev_name(dev));
-			return -EFAULT;
-		}
+		/* Fetch calibration parameters from EEPROM's 1st bloc of 256 bytes*/
 		err = ptp_ocp_read_i2c(adap, 0x50, 0x0, sizeof(struct disciplining_parameters), (u8 *) &disciplining_parameters);
 		put_device(dev);
 		if (err) {
 			printk("Could not read data from i2c, err %d\n", err);
 			return -EFAULT;
 		}
+
 		if (!err && copy_to_user((void __user*) arg, &disciplining_parameters, sizeof(struct disciplining_parameters)))
 			err = -EFAULT;
 		return 0;
 	case ART_CALIBRATION_WRITE_PARAMETERS:
 		if (!bp->i2c_ctrl)
 			return -EFAULT;
-		/* Fetch calibration parameters from EEPROM 4th bloc of 256 bytes*/
-		dev = device_find_child(&bp->i2c_ctrl->dev, NULL, ptp_ocp_firstchild);
-		if (!dev) {
-			dev_err(&bp->pdev->dev, "Can't find I2C adapter\n");
-			return -EFAULT;
-		}
-		adap = i2c_verify_adapter(dev);
-		if (!adap) {
-			dev_err(&bp->pdev->dev, "device '%s' isn't an I2C adapter\n",
-				dev_name(dev));
+		err = ptp_ocp_get_i2c_adapter(bp, &dev, &adap);
+		if (err) {
+			put_device(dev);
 			return -EFAULT;
 		}
 
@@ -2384,13 +2382,13 @@ ptp_ocp_mro50_ioctl(struct file *file, unsigned cmd, unsigned long arg)
 			put_device(dev);
 			return -EFAULT;
 		}
+		/* Write calibration parameters to EEPROM's 1st bloc of 256 bytes*/
 		err = ptp_ocp_write_i2c(adap, 0x50, 0x00, sizeof(struct disciplining_parameters), (u8 *) &disciplining_parameters);
+		put_device(dev);
 		if (err) {
 			printk("Error writing data to I2C: %d\n", err);
-			put_device(dev);
 			return -EFAULT;
 		}
-		put_device(dev);
 		return 0;
 	default:
 		return -ENOTTY;
