@@ -2352,43 +2352,37 @@ ptp_ocp_mro50_ioctl(struct file *file, unsigned cmd, unsigned long arg)
 		if (!bp->i2c_ctrl)
 			return -EFAULT;
 		err = ptp_ocp_get_i2c_adapter(bp, &dev, &adap);
-		if (err) {
-			put_device(dev);
-			return -EFAULT;
-		}
+		if (err)
+			goto out;
 
 		/* Fetch calibration parameters from EEPROM's 1st bloc of 256 bytes*/
 		err = ptp_ocp_read_i2c(adap, 0x50, 0x0, sizeof(struct disciplining_parameters), (u8 *) &disciplining_parameters);
+		if (err)
+			goto rw_fail;
+
 		put_device(dev);
-		if (err) {
-			printk("Could not read data from i2c, err %d\n", err);
-			return -EFAULT;
-		}
 
 		if (!err && copy_to_user((void __user*) arg, &disciplining_parameters, sizeof(struct disciplining_parameters)))
 			err = -EFAULT;
-		return 0;
+		return err;
 	case ART_CALIBRATION_WRITE_PARAMETERS:
 		if (!bp->i2c_ctrl)
 			return -EFAULT;
-		err = ptp_ocp_get_i2c_adapter(bp, &dev, &adap);
-		if (err) {
-			put_device(dev);
-			return -EFAULT;
-		}
 
 		err = copy_from_user(&disciplining_parameters, (void __user *) arg, sizeof(struct disciplining_parameters));
-		if (err) {
-			put_device(dev);
+		if (err)
 			return -EFAULT;
-		}
+
+		err = ptp_ocp_get_i2c_adapter(bp, &dev, &adap);
+		if (err)
+			goto out;
+
 		/* Write calibration parameters to EEPROM's 1st bloc of 256 bytes*/
 		err = ptp_ocp_write_i2c(adap, 0x50, 0x00, sizeof(struct disciplining_parameters), (u8 *) &disciplining_parameters);
+		if (err)
+			goto rw_fail;
+
 		put_device(dev);
-		if (err) {
-			printk("Error writing data to I2C: %d\n", err);
-			return -EFAULT;
-		}
 		return 0;
 	default:
 		return -ENOTTY;
@@ -2398,6 +2392,14 @@ ptp_ocp_mro50_ioctl(struct file *file, unsigned cmd, unsigned long arg)
 		err = -EFAULT;
 
 	return err;
+
+	out:
+		put_device(dev);
+		return err;
+
+	rw_fail:
+		dev_err(&bp->pdev->dev, "could not read/write eeprom: %d\n", err);
+		goto out;
 }
 
 static const struct file_operations ptp_ocp_mro50_fops = {
