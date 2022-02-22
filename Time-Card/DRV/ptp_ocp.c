@@ -67,6 +67,8 @@ struct disciplining_parameters {
 	/** Equilibrium Coarse value for factory_settings */
 	int32_t coarse_equilibrium_factory;
 	int32_t coarse_equilibrium;
+	/** Date at which calibration has been made */
+	time_t calibration_date;
 	/** Factory Settings that can be used with any mRO50 */
 	/** Number of control nodes in ctrl_load_nodes_factory */
 	uint8_t ctrl_nodes_length_factory;
@@ -74,7 +76,6 @@ struct disciplining_parameters {
 	uint8_t ctrl_nodes_length;
 	/** Indicate wether calibration parameters are valid */
 	bool calibration_valid;
-	int8_t pad_0[4];
 };
 
 #define ART_CALIBRATION_READ_PARAMETERS _IOR('M', 8, struct disciplining_parameters *)
