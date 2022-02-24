@@ -21,6 +21,7 @@
 #include <linux/i2c.h>
 #include <linux/mtd/mtd.h>
 #include <linux/miscdevice.h>
+#include <linux/nvmem-consumer.h>
 #include <linux/version.h>
 
 /*---------------------------------------------------------------------------*/
@@ -328,6 +329,7 @@ struct ptp_ocp {
 	struct clk_hw		*i2c_clk;
 	struct timer_list	watchdog;
 	const struct ocp_attr_group *attr_tbl;
+	const struct ptp_ocp_eeprom_map *eeprom_map;
 	struct dentry		*debug_root;
 	struct miscdevice	mro50;
 	time64_t		gnss_lost;
@@ -383,6 +385,35 @@ static int ptp_ocp_art_pps_enable(void *priv, u32 req, bool enable);
 
 static const struct ocp_attr_group fb_timecard_groups[];
 static const struct ocp_attr_group art_timecard_groups[];
+
+struct ptp_ocp_eeprom_map {
+	u16	off;
+	u16	len;
+	u32	bp_offset;
+	const void * const tag;
+};
+
+#define EEPROM_ENTRY(addr, member) 				\
+	.off = addr, 						\
+	.len = sizeof_field(struct ptp_ocp, member),		\
+	.bp_offset = offsetof(struct ptp_ocp, member)
+
+#define BP_MAP_ENTRY_ADDR(bp, map) \
+	(void *)((uintptr_t)(bp) + (map)->bp_offset)
+
+static struct ptp_ocp_eeprom_map fb_eeprom_map[] = {
+	{ EEPROM_ENTRY(0x43, board_id) },
+	{ EEPROM_ENTRY(0x79, board_mfr) },
+	{ EEPROM_ENTRY(0x00, serial), .tag = "mac" },
+	{ }
+};
+
+static struct ptp_ocp_eeprom_map art_eeprom_map[] = {
+	{ EEPROM_ENTRY(0x200 + 0x43, board_id) },
+	{ EEPROM_ENTRY(0x200 + 0x66, serial) },
+	{ EEPROM_ENTRY(0x200 + 0x79, board_mfr) },
+	{ }
+};
 
 #define bp_assign_entry(bp, res, val) ({				\
 	uintptr_t addr = (uintptr_t)(bp) + (res)->bp_offset;		\
@@ -583,17 +614,12 @@ static struct ocp_resource ocp_fb_resource[] = {
 			.fixed_rate = 50000000,
 			.data_size = sizeof(struct xiic_i2c_platform_data),
 			.data = &(struct xiic_i2c_platform_data) {
-				.num_devices = 1,
-				.devices = &(struct i2c_board_info) {
-					I2C_BOARD_INFO("24mac402", 0x58),
-				},
-#if 0
 				.num_devices = 2,
 				.devices = (struct i2c_board_info[]) {
-					{ I2C_BOARD_INFO("24c08", 0x50) },
-					{ I2C_BOARD_INFO("24mac402", 0x58) },
+					{ I2C_BOARD_INFO("24c02", 0x50) },
+					{ I2C_BOARD_INFO("24mac402", 0x58),
+					  .platform_data = "mac" },
 				},
-#endif
 			},
 		},
 	},
@@ -725,7 +751,6 @@ static struct ocp_resource ocp_art_resource[] = {
 		.extra = &(struct ptp_ocp_i2c_info) {
 			.name = "ocores-i2c",
 			.fixed_rate = 400000,
-#if 1
 			.data_size = sizeof(struct ocores_i2c_platform_data),
 			.data = &(struct ocores_i2c_platform_data) {
 				.clock_khz = 125000,
@@ -735,7 +760,6 @@ static struct ocp_resource ocp_art_resource[] = {
 					I2C_BOARD_INFO("24c08", 0x50),
 				},
 			},
-#endif
 		},
 	},
 	/* Timestamp associated with GNSS1 receiver PPS */
@@ -1323,93 +1347,88 @@ ptp_ocp_tod_info(struct ptp_ocp *bp)
 		 reg & TOD_STATUS_LEAP_VALID ? 1 : 0);
 }
 
+struct ptp_ocp_nvmem_match_info {
+	struct ptp_ocp *bp;
+	const void * const tag;
+};
+
 static int
-ptp_ocp_firstchild(struct device *dev, void *data)
+ptp_ocp_nvmem_match(struct device *dev, const void *data)
 {
-	return 1;
+	const struct ptp_ocp_nvmem_match_info *info = data;
+
+	dev = dev->parent;
+	if (!i2c_verify_client(dev) || info->tag != dev->platform_data)
+		return 0;
+
+	while ((dev = dev->parent))
+		if (dev->driver && !strcmp(dev->driver->name, KBUILD_MODNAME))
+			return info->bp == dev_get_drvdata(dev);
+	return 0;
 }
 
-static int
-ptp_ocp_read_i2c(struct i2c_adapter *adap, u8 addr, u8 reg, u8 sz, u8 *data)
+static inline struct nvmem_device *
+ptp_ocp_nvmem_device_get(struct ptp_ocp *bp, const void * const tag)
 {
-	struct i2c_msg msgs[2] = {
-		{
-			.addr = addr,
-			.len = 1,
-			.buf = &reg,
-		},
-		{
-			.addr = addr,
-			.flags = I2C_M_RD,
-			.len = 2,
-			.buf = data,
-		},
-	};
-	int err;
-	u8 len;
+	struct ptp_ocp_nvmem_match_info info = { .bp = bp, .tag = tag };
 
-	/* xiic-i2c for some stupid reason only does 2 byte reads. */
-	while (sz) {
-		len = min_t(u8, sz, 2);
-		msgs[1].len = len;
-		err = i2c_transfer(adap, msgs, 2);
-		/* xiic-i2c reads 2 bytes even if only1 is requested. don't treat it as error */
-		if (err < len)
-			return err;
-		msgs[1].buf += len;
-		reg += len;
-		sz -= len;
+	return nvmem_device_find(&info, ptp_ocp_nvmem_match);
+}
+
+static inline void
+ptp_ocp_nvmem_device_put(struct nvmem_device **nvmemp)
+{
+	if (*nvmemp != NULL) {
+		nvmem_device_put(*nvmemp);
+		*nvmemp = NULL;
 	}
-	return 0;
 }
 
 static void
 ptp_ocp_read_eeprom(struct ptp_ocp *bp)
 {
-	struct i2c_adapter *adap;
-	struct device *dev;
-	int err;
+	const struct ptp_ocp_eeprom_map *map;
+	struct nvmem_device *nvmem;
+	const void *tag;
+	int ret;
 
 	if (!bp->i2c_ctrl)
 		return;
 
-	dev = device_find_child(&bp->i2c_ctrl->dev, NULL, ptp_ocp_firstchild);
-	if (!dev) {
-		dev_err(&bp->pdev->dev, "Can't find I2C adapter\n");
-		return;
+	tag = NULL;
+	nvmem = NULL;
+
+	for (map = bp->eeprom_map; map->len; map++) {
+		if (map->tag != tag) {
+			tag = map->tag;
+			ptp_ocp_nvmem_device_put(&nvmem);
+		}
+		if (!nvmem) {
+			nvmem = ptp_ocp_nvmem_device_get(bp, tag);
+			if (!nvmem)
+				goto out;
+		}
+		ret = nvmem_device_read(nvmem, map->off, map->len,
+					BP_MAP_ENTRY_ADDR(bp, map));
+		if (ret != map->len)
+			goto read_fail;
 	}
-
-	adap = i2c_verify_adapter(dev);
-	if (!adap) {
-		dev_err(&bp->pdev->dev, "device '%s' isn't an I2C adapter\n",
-			dev_name(dev));
-		goto out;
-	}
-
-	err = ptp_ocp_read_i2c(adap, 0x50, 0x79,
-			       sizeof(bp->board_mfr), bp->board_mfr);
-	if (err)
-		goto read_fail;
-
-	err = ptp_ocp_read_i2c(adap, 0x50, 0x43,
-			       sizeof(bp->board_id), bp->board_id);
-	if (err)
-		goto read_fail;
-
-	err = ptp_ocp_read_i2c(adap, 0x58, 0x9A,
-			       sizeof(bp->serial), bp->serial);
-	if (err)
-		goto read_fail;
 
 	bp->has_eeprom_data = true;
 
 out:
-	put_device(dev);
+	ptp_ocp_nvmem_device_put(&nvmem);
 	return;
 
 read_fail:
-	dev_err(&bp->pdev->dev, "could not read eeprom: %d\n", err);
+	dev_err(&bp->pdev->dev, "could not read eeprom: %d\n", ret);
 	goto out;
+}
+
+static int
+ptp_ocp_firstchild(struct device *dev, void *data)
+{
+	return 1;
 }
 
 static struct device *
@@ -2078,6 +2097,7 @@ ptp_ocp_fb_board_init(struct ptp_ocp *bp, struct ocp_resource *r)
 	bp->flash_start = 1024 * 4096;
 	bp->attr_tbl = fb_timecard_groups;
 	bp->fw_cap = OCP_CAP_BASIC;
+	bp->eeprom_map = fb_eeprom_map;
 	if (bp->image) {
 		u32 ver = ioread32(&bp->image->version) & 0xffff;
 
@@ -2265,6 +2285,7 @@ ptp_ocp_art_board_init(struct ptp_ocp *bp, struct ocp_resource *r)
 	bp->flash_start = 0x1000000;
 	bp->attr_tbl = art_timecard_groups;
 	bp->fw_cap = OCP_CAP_BASIC;
+	bp->eeprom_map = art_eeprom_map;
 
 	err = ptp_ocp_register_mro50(bp);
 	if (!err)
