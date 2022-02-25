@@ -3415,6 +3415,7 @@ ptp_ocp_summary_show(struct seq_file *s, void *data)
 	struct ptp_ocp *bp;
 	char *src, *buf;
 	bool on, map;
+	u32 reg;
 	int i;
 
 	buf = (char *)__get_free_page(GFP_KERNEL);
@@ -3433,25 +3434,21 @@ ptp_ocp_summary_show(struct seq_file *s, void *data)
 	if (bp->nmea_port != -1)
 		seq_printf(s, "%7s: /dev/ttyS%d\n", "NMEA", bp->nmea_port);
 
-	{
-		u32 reg;
+	reg = ioread32(&bp->sma_map1->gpio1);
+	sma_val[0][0] = reg & 0xffff;
+	sma_val[1][0] = reg >> 16;
 
-		reg = ioread32(&bp->sma_map1->gpio1);
-		sma_val[0][0] = reg & 0xffff;
-		sma_val[1][0] = reg >> 16;
+	reg = ioread32(&bp->sma_map1->gpio2);
+	sma_val[2][1] = reg & 0xffff;
+	sma_val[3][1] = reg >> 16;
 
-		reg = ioread32(&bp->sma_map1->gpio2);
-		sma_val[2][1] = reg & 0xffff;
-		sma_val[3][1] = reg >> 16;
+	reg = ioread32(&bp->sma_map2->gpio1);
+	sma_val[2][0] = reg & 0xffff;
+	sma_val[3][0] = reg >> 16;
 
-		reg = ioread32(&bp->sma_map2->gpio1);
-		sma_val[2][0] = reg & 0xffff;
-		sma_val[3][0] = reg >> 16;
-
-		reg = ioread32(&bp->sma_map2->gpio2);
-		sma_val[0][1] = reg & 0xffff;
-		sma_val[1][1] = reg >> 16;
-	}
+	reg = ioread32(&bp->sma_map2->gpio2);
+	sma_val[0][1] = reg & 0xffff;
+	sma_val[1][1] = reg >> 16;
 
 	sma1_show(dev, NULL, buf);
 	seq_printf(s, "   sma1: %04x,%04x %s",
