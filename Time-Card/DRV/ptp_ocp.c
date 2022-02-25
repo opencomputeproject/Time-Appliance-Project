@@ -34,7 +34,6 @@
 #define MRO50_ADJUST_COARSE	_IOW('M', 4, u32)
 #define MRO50_READ_TEMP		_IOR('M', 5, u32 *)
 #define MRO50_READ_CTRL		_IOR('M', 6, u32 *)
-#define MRO50_SAVE_COARSE	_IO('M', 7)
 #define MRO50_READ_EEPROM_BLOB	_IOR('M', 8, u8 *)
 #define MRO50_WRITE_EEPROM_BLOB	_IOW('M', 8, u8 *)
 
@@ -2263,11 +2262,6 @@ ptp_ocp_mro50_ioctl(struct file *file, unsigned cmd, unsigned long arg)
 		if (get_user(val, (u32 __user *)arg))
 			return -EFAULT;
 		return ptp_ocp_mro50_write(bp, MRO50_OP_ADJUST_COARSE, val);
-	case MRO50_SAVE_COARSE:
-		mutex_lock(&bp->mutex);
-		iowrite32(MRO50_OP_SAVE_COARSE, &bp->osc->ctrl);
-		mutex_unlock(&bp->mutex);
-		return 0;
 	case MRO50_READ_EEPROM_BLOB:
 		nvmem = ptp_ocp_nvmem_device_get(bp, NULL);
 		if (IS_ERR(nvmem))
