@@ -35,6 +35,8 @@
 #define MRO50_READ_TEMP		_IOR('M', 5, u32 *)
 #define MRO50_READ_CTRL		_IOR('M', 6, u32 *)
 #define MRO50_SAVE_COARSE	_IO('M', 7)
+#define MRO50_READ_EEPROM_BLOB _IOR('M', 8, u8*)
+#define MRO50_WRITE_EEPROM_BLOB _IOW('M', 8, u8*)
 
 #endif /* MRO50_IOCTL_H */
 /*---------------------------------------------------------------------------*/
@@ -2159,10 +2161,15 @@ ptp_ocp_mro50_write(struct ptp_ocp *bp, u32 ctrl, u32 val)
 static long
 ptp_ocp_mro50_ioctl(struct file *file, unsigned cmd, unsigned long arg)
 {
-	struct miscdevice *mro50 = file->private_data;
-	struct ptp_ocp *bp = container_of(mro50, struct ptp_ocp, mro50);
+	struct nvmem_device *nvmem;
+	struct miscdevice *mro50;
+	struct ptp_ocp *bp;
+	u8 buf[256];
 	u32 val;
 	int err;
+
+	mro50 = file->private_data;
+	bp = container_of(mro50, struct ptp_ocp, mro50);
 
 	switch (cmd) {
 	case MRO50_READ_FINE:
@@ -2192,6 +2199,34 @@ ptp_ocp_mro50_ioctl(struct file *file, unsigned cmd, unsigned long arg)
 		iowrite32(MRO50_OP_SAVE_COARSE, &bp->osc->ctrl);
 		mutex_unlock(&bp->mutex);
 		return 0;
+	case MRO50_READ_EEPROM_BLOB:
+		nvmem = ptp_ocp_nvmem_device_get(bp, NULL);
+		if (!nvmem)
+			return -EFAULT;
+		err = nvmem_device_read(nvmem, 0x0, 256, buf);
+		ptp_ocp_nvmem_device_put(&nvmem);
+		if (err != 256)
+			return -EFAULT;
+
+		if (copy_to_user((u8 __user*) arg, buf, 256))
+			return -EFAULT;
+		return 0;
+
+		break;
+	case MRO50_WRITE_EEPROM_BLOB:
+		err = copy_from_user(buf, (void __user *) arg, 256);
+		if (err)
+			return -EFAULT;
+
+		nvmem = ptp_ocp_nvmem_device_get(bp, NULL);
+		if (!nvmem)
+			return -EFAULT;
+		err = nvmem_device_write(nvmem, 0x0, 256, buf);
+		ptp_ocp_nvmem_device_put(&nvmem);
+		if (err != 256)
+			return -EFAULT;
+		return 0;
+		break;
 	default:
 		return -ENOTTY;
 	}
