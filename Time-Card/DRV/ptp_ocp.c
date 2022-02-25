@@ -119,9 +119,10 @@ struct tod_reg {
 #define TOD_CTRL_GNSS_MASK	((1U << 4) - 1)
 #define TOD_CTRL_GNSS_SHIFT	24
 
-#define TOD_STATUS_UTC_MASK	0xff
-#define TOD_STATUS_UTC_VALID	BIT(8)
-#define TOD_STATUS_LEAP_VALID	BIT(16)
+#define TOD_STATUS_UTC_MASK		0xff
+#define TOD_STATUS_UTC_VALID		BIT(8)
+#define TOD_STATUS_LEAP_ANNOUNCE	BIT(12)
+#define TOD_STATUS_LEAP_VALID		BIT(16)
 
 struct ts_reg {
 	u32	enable;
@@ -266,7 +267,6 @@ enum ptp_ocp_sma_mode {
 	SMA_MODE_OUT,
 };
 
-/* XXX add fixed function also? */
 struct ptp_ocp_sma_connector {
 	enum	ptp_ocp_sma_mode mode;
 	bool	fixed_mode;
@@ -814,9 +814,10 @@ static struct ocp_selector ptp_ocp_clock[] = {
 	{ }
 };
 
-#define SMA_DISABLE	0x10000
-#define SMA_ENABLE	BIT(15)
-#define SMA_SELECT_MASK	((1U << 15) - 1)
+#define SMA_ENABLE		BIT(15)
+#define SMA_SELECT_MASK		((1U << 15) - 1)
+#define SMA_DISABLE		0x10000
+
 static struct ocp_selector ptp_ocp_sma_in[] = {
 	{ .name = "10Mhz",	.value = 0x0000 },
 	{ .name = "PPS1",	.value = 0x0001 },
@@ -1151,7 +1152,7 @@ static const struct ptp_clock_info ptp_ocp_clock_info = {
 	.verify		= ptp_ocp_verify,
 	.pps		= true,
 	.n_ext_ts	= 6,
-	.n_per_out	= 4,
+	.n_per_out	= 5,
 };
 
 static void
@@ -2095,9 +2096,9 @@ ptp_ocp_fb_board_init(struct ptp_ocp *bp, struct ocp_resource *r)
 	int err;
 
 	bp->flash_start = 1024 * 4096;
+	bp->eeprom_map = fb_eeprom_map;
 	bp->attr_tbl = fb_timecard_groups;
 	bp->fw_cap = OCP_CAP_BASIC;
-	bp->eeprom_map = fb_eeprom_map;
 	if (bp->image) {
 		u32 ver = ioread32(&bp->image->version) & 0xffff;
 
@@ -2283,9 +2284,9 @@ ptp_ocp_art_board_init(struct ptp_ocp *bp, struct ocp_resource *r)
 	int err;
 
 	bp->flash_start = 0x1000000;
+	bp->eeprom_map = art_eeprom_map;
 	bp->attr_tbl = art_timecard_groups;
 	bp->fw_cap = OCP_CAP_BASIC;
-	bp->eeprom_map = art_eeprom_map;
 
 	err = ptp_ocp_register_mro50(bp);
 	if (!err)
@@ -2685,10 +2686,10 @@ available_sma_outputs_show(struct device *dev,
 static DEVICE_ATTR_RO(available_sma_outputs);
 
 #define EXT_ATTR_RO(_group, _name, _val)				\
-	struct dev_ext_attribute dev_attr_##_group##_val##_##_name = 	\
+	struct dev_ext_attribute dev_attr_##_group##_val##_##_name =	\
 		{ __ATTR_RO(_name), (void *)_val }
 #define EXT_ATTR_RW(_group, _name, _val)				\
-	struct dev_ext_attribute dev_attr_##_group##_val##_##_name = 	\
+	struct dev_ext_attribute dev_attr_##_group##_val##_##_name =	\
 		{ __ATTR_RW(_name), (void *)_val }
 #define to_ext_attr(x) container_of(x, struct dev_ext_attribute, attr)
 
@@ -3241,7 +3242,7 @@ tod_correction_store(struct device *dev, struct device_attribute *attr,
 }
 static DEVICE_ATTR_RW(tod_correction);
 
-#define _DEVICE_SIGNAL_GROUP_ATTRS(_nr) 				\
+#define _DEVICE_SIGNAL_GROUP_ATTRS(_nr)					\
 	static struct attribute *fb_timecard_signal##_nr##_attrs[] = {	\
 		&dev_attr_signal##_nr##_signal.attr.attr,		\
 		&dev_attr_signal##_nr##_duty.attr.attr,			\
@@ -3253,7 +3254,7 @@ static DEVICE_ATTR_RW(tod_correction);
 		NULL,							\
 	};
 
-#define DEVICE_SIGNAL_GROUP(_name, _nr) 				\
+#define DEVICE_SIGNAL_GROUP(_name, _nr)					\
 	_DEVICE_SIGNAL_GROUP_ATTRS(_nr)					\
 	static const struct attribute_group				\
 			fb_timecard_signal##_nr##_group = {		\
@@ -3266,14 +3267,14 @@ DEVICE_SIGNAL_GROUP(gen2, 1)
 DEVICE_SIGNAL_GROUP(gen3, 2)
 DEVICE_SIGNAL_GROUP(gen4, 3)
 
-#define _DEVICE_FREQ_GROUP_ATTRS(_nr) 					\
+#define _DEVICE_FREQ_GROUP_ATTRS(_nr)					\
 	static struct attribute *fb_timecard_freq##_nr##_attrs[] = {	\
 		&dev_attr_freq##_nr##_seconds.attr.attr,		\
 		&dev_attr_freq##_nr##_frequency.attr.attr,		\
 		NULL,							\
 	};
 
-#define DEVICE_FREQ_GROUP(_name, _nr)	 				\
+#define DEVICE_FREQ_GROUP(_name, _nr)					\
 	_DEVICE_FREQ_GROUP_ATTRS(_nr)					\
 	static const struct attribute_group				\
 			fb_timecard_freq##_nr##_group = {		\
@@ -3326,7 +3327,6 @@ static const struct ocp_attr_group fb_timecard_groups[] = {
 static struct attribute *art_timecard_attrs[] = {
 	&dev_attr_serialnum.attr,
 	&dev_attr_clock_source.attr,
-	&dev_attr_available_clock_sources.attr,
 	&dev_attr_utc_tai_offset.attr,
 	&dev_attr_ts_window_adjust.attr,
 	NULL,
@@ -3542,11 +3542,11 @@ ptp_ocp_summary_show(struct seq_file *s, void *data)
 		on = ioread32(&ts_reg->enable);
 		map = !!(bp->pps_req_map & OCP_REQ_TIMESTAMP);
 		seq_printf(s, "%7s: %s, src: %s\n", "TS5",
-			   on & map ? " ON" : "OFF", src);
+			   on && map ? " ON" : "OFF", src);
 
 		map = !!(bp->pps_req_map & OCP_REQ_PPS);
 		seq_printf(s, "%7s: %s, src: %s\n", "PPS",
-			   on & map ? " ON" : "OFF", src);
+			   on && map ? " ON" : "OFF", src);
 	}
 
 	if (bp->fw_cap & OCP_CAP_SIGNAL)
@@ -3969,14 +3969,13 @@ ptp_ocp_devlink_alloc(const struct devlink_ops *ops, size_t priv_size,
 #endif
 }
 
-static inline int
+static inline void
 ptp_ocp_devlink_register(struct devlink *devlink, struct device *dev)
 {
 #ifdef DEVLINK_NEW_API
 	devlink_register(devlink);
-	return 0;
 #else
-	return devlink_register(devlink, dev);
+	devlink_register(devlink, dev);
 #endif
 }
 
@@ -3994,14 +3993,10 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 		return -ENOMEM;
 	}
 
-	err = ptp_ocp_devlink_register(devlink, &pdev->dev);
-	if (err)
-		goto out_free;
-
 	err = pci_enable_device(pdev);
 	if (err) {
 		dev_err(&pdev->dev, "pci_enable_device\n");
-		goto out_unregister;
+		goto out_free;
 	}
 
 	bp = devlink_priv(devlink);
@@ -4039,7 +4034,7 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 		goto out;
 
 	ptp_ocp_info(bp);
-
+	ptp_ocp_devlink_register(devlink, &pdev->dev);
 	return 0;
 
 out:
@@ -4047,11 +4042,8 @@ out:
 	pci_set_drvdata(pdev, NULL);
 out_disable:
 	pci_disable_device(pdev);
-out_unregister:
-	devlink_unregister(devlink);
 out_free:
 	devlink_free(devlink);
-
 	return err;
 }
 
@@ -4061,11 +4053,11 @@ ptp_ocp_remove(struct pci_dev *pdev)
 	struct ptp_ocp *bp = pci_get_drvdata(pdev);
 	struct devlink *devlink = priv_to_devlink(bp);
 
+	devlink_unregister(devlink);
 	ptp_ocp_detach(bp);
 	pci_set_drvdata(pdev, NULL);
 	pci_disable_device(pdev);
 
-	devlink_unregister(devlink);
 	devlink_free(devlink);
 }
 
