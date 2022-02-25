@@ -3869,6 +3869,9 @@ ptp_ocp_complete(struct ptp_ocp *bp)
 	if (pps)
 		ptp_ocp_symlink(bp, pps->dev, "pps");
 
+	if (bp->mro50.name)
+		ptp_ocp_symlink(bp, bp->mro50.this_device, "mro50");
+
 	for (i = 0; bp->attr_tbl[i].cap; i++) {
 		if (!(bp->attr_tbl[i].cap & bp->fw_cap))
 			continue;
@@ -3954,6 +3957,7 @@ ptp_ocp_detach_sysfs(struct ptp_ocp *bp)
 	sysfs_remove_link(&dev->kobj, "ttyMAC");
 	sysfs_remove_link(&dev->kobj, "ptp");
 	sysfs_remove_link(&dev->kobj, "pps");
+	sysfs_remove_link(&dev->kobj, "mro50");
 	if (bp->attr_tbl)
 		for (i = 0; bp->attr_tbl[i].cap; i++)
 			sysfs_remove_group(&dev->kobj, bp->attr_tbl[i].group);
