@@ -35,8 +35,8 @@
 #define MRO50_READ_TEMP		_IOR('M', 5, u32 *)
 #define MRO50_READ_CTRL		_IOR('M', 6, u32 *)
 #define MRO50_SAVE_COARSE	_IO('M', 7)
-#define MRO50_READ_EEPROM_BLOB _IOR('M', 8, u8*)
-#define MRO50_WRITE_EEPROM_BLOB _IOW('M', 8, u8*)
+#define MRO50_READ_EEPROM_BLOB	_IOR('M', 8, u8 *)
+#define MRO50_WRITE_EEPROM_BLOB	_IOW('M', 8, u8 *)
 
 #endif /* MRO50_IOCTL_H */
 /*---------------------------------------------------------------------------*/
@@ -2208,13 +2208,11 @@ ptp_ocp_mro50_ioctl(struct file *file, unsigned cmd, unsigned long arg)
 		if (err != 256)
 			return -EFAULT;
 
-		if (copy_to_user((u8 __user*) arg, buf, 256))
+		if (copy_to_user((u8 __user *)arg, buf, 256))
 			return -EFAULT;
 		return 0;
-
-		break;
 	case MRO50_WRITE_EEPROM_BLOB:
-		err = copy_from_user(buf, (void __user *) arg, 256);
+		err = copy_from_user(buf, (void __user *)arg, 256);
 		if (err)
 			return -EFAULT;
 
@@ -2226,7 +2224,6 @@ ptp_ocp_mro50_ioctl(struct file *file, unsigned cmd, unsigned long arg)
 		if (err != 256)
 			return -EFAULT;
 		return 0;
-		break;
 	default:
 		return -ENOTTY;
 	}
