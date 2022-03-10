@@ -166,6 +166,17 @@ struct gpio_reg {
 	u32	__pad1;
 };
 
+#define SMA_ENABLE_PPS_IN BIT(0)
+#define SMA_ENABLE_PPS_OUT_ATOMIC_CLOCK BIT(1)
+#define SMA_ENABLE_PPS_OUT_GNSS BIT(2)
+#define SMA_ENABLE_10MHZ_IN BIT(3)
+#define SMA_ENABLE_10MHZ_OUT BIT(4)
+#define SMA_CAP_PPS_IN BIT(16)
+#define SMA_CAP_PPS_OUT_ATOMIC_CLOCK BIT(17)
+#define SMA_CAP_PPS_OUT_GNSS BIT(18)
+#define SMA_CAP_10MHZ_IN BIT(19)
+#define SMA_CAP_10MHZ_OUT BIT(20)
+
 struct gpio_reg_art {
 	u32	gpio1;
 	u32	__pad0[3];
@@ -320,7 +331,7 @@ struct ptp_ocp {
 	struct pps_reg __iomem	*pps_to_ext;
 	struct pps_reg __iomem	*pps_to_clk;
 	struct gpio_reg __iomem	*pps_select;
-	struct gpio_reg_art __iomem	*pps_select_art;
+	struct gpio_reg_art __iomem	*sma_map_art;
 	struct gpio_reg __iomem	*sma_map1;
 	struct gpio_reg __iomem	*sma_map2;
 	struct irig_master_reg	__iomem *irig_out;
@@ -734,7 +745,7 @@ static struct ocp_resource ocp_art_resource[] = {
 		.offset = 0x00160000 + 0x1000, .irq_vec = 3,
 	},
 	{
-		OCP_MEM_RESOURCE(pps_select_art),
+		OCP_MEM_RESOURCE(sma_map_art),
 		.offset = 0x003C0000, .size = 0x1000,
 	},
 	/* Timestamp associated with Internal PPS of the card */
@@ -872,6 +883,15 @@ static struct ocp_selector ptp_ocp_sma_out[] = {
 	{ .name = "GND",	.value = 0x2000 },
 	{ .name = "VCC",	.value = 0x4000 },
 	{ }
+};
+
+static struct ocp_selector ptp_ocp_sma_art_io[] = {
+	{ .name = "None",		.value = 0x0000 },
+	{ .name = "PPS-IN",		.value = 0x0001 },
+	{ .name = "PPS-OUT",	.value = 0x0002 },
+	{ .name = "GNSS-OUT",	.value = 0x0004 },
+	{ .name = "10MHZ-IN",	.value = 0x0008 },
+	{ .name = "10MHZ-OUT",	.value = 0x0010 },
 };
 
 static const char *
@@ -2045,6 +2065,14 @@ ptp_ocp_sma_init(struct ptp_ocp *bp)
 	bp->sma[2].mode = SMA_MODE_OUT;
 	bp->sma[3].mode = SMA_MODE_OUT;
 
+	if(bp->sma_map_art) {
+		bp->sma[0].mode = SMA_MODE_IN;
+		bp->sma[1].mode = SMA_MODE_IN;
+		bp->sma[2].mode = SMA_MODE_IN;
+		bp->sma[3].mode = SMA_MODE_IN;
+		return;
+	}
+
 	/* If no SMA1 map, the pin functions and directions are fixed. */
 	if (!bp->sma_map1) {
 		for (i = 0; i < 4; i++) {
@@ -2352,13 +2380,22 @@ ptp_ocp_art_board_init(struct ptp_ocp *bp, struct ocp_resource *r)
 
 	ptp_ocp_sma_init(bp);
 
+	iowrite32(SMA_ENABLE_PPS_IN, &bp->sma_map_art->gpio1);
+	iowrite32(SMA_ENABLE_PPS_IN, &bp->sma_map_art->gpio2);
+	iowrite32(SMA_ENABLE_PPS_IN, &bp->sma_map_art->gpio3);
+	iowrite32(SMA_ENABLE_PPS_IN, &bp->sma_map_art->gpio4);
 
-	printk("Setting all SMA ports as PPS Output\n");
-	iowrite32(0x2, &bp->pps_select_art->gpio1);
-	iowrite32(0x2, &bp->pps_select_art->gpio2);
-	iowrite32(0x2, &bp->pps_select_art->gpio3);
-	iowrite32(0x2, &bp->pps_select_art->gpio4);
+	printk("Capabilities of each SMA:\n");
+	printk("IO 1: 0x%x\n", ioread32(&bp->sma_map_art->gpio1) >> 16);
+	printk("IO 2: 0x%x\n", ioread32(&bp->sma_map_art->gpio2) >> 16);
+	printk("IO 3: 0x%x\n", ioread32(&bp->sma_map_art->gpio3) >> 16);
+	printk("IO 4: 0x%x\n", ioread32(&bp->sma_map_art->gpio4) >> 16);
 
+	printk("Current config of each SMA:\n");
+	printk("IO 1: 0x%x\n", ioread32(&bp->sma_map_art->gpio1) & 0xff);
+	printk("IO 2: 0x%x\n", ioread32(&bp->sma_map_art->gpio2) & 0xff);
+	printk("IO 3: 0x%x\n", ioread32(&bp->sma_map_art->gpio3) & 0xff);
+	printk("IO 4: 0x%x\n", ioread32(&bp->sma_map_art->gpio4) & 0xff);
 	err = ptp_ocp_register_mro50(bp);
 	if (!err)
 		err = ptp_ocp_init_clock(bp);
@@ -2501,6 +2538,19 @@ ptp_ocp_show_inputs(u32 val, char *buf, int def_val)
 	return count;
 }
 
+static ssize_t
+ptp_ocp_art_show_io(u32 val, char *buf) {
+	ssize_t count;
+	int i;
+
+	for (i =0; i < ARRAY_SIZE(ptp_ocp_sma_art_io); i++)
+		if (val & ptp_ocp_sma_art_io[i].value)
+			count = sysfs_emit(buf, ptp_ocp_sma_art_io[i].name);
+	
+	count += sysfs_emit_at(buf, count, "\n");
+	return count;
+}
+
 static int
 sma_parse_inputs(const char *buf, enum ptp_ocp_sma_mode *mode)
 {
@@ -2540,11 +2590,46 @@ out:
 	return ret;
 }
 
+static int
+sma_parse_art_inputs(const char *buf)
+{
+	int count, ret;
+	char **argv;
+	int i;
+
+	i = 0;
+	ret = -EINVAL;
+
+	argv = argv_split(GFP_KERNEL, buf, &count);
+	if (!argv)
+		return -ENOMEM;
+
+	for(i = 0; i < ARRAY_SIZE(ptp_ocp_sma_art_io); i++) {
+		if(!strcmp(ptp_ocp_sma_art_io[i].name, argv[0])) {
+			ret = ptp_ocp_sma_art_io[i].value;
+		}
+	}
+
+	argv_free(argv);
+	return ret;
+}
+
 static u32
 ptp_ocp_sma_get(struct ptp_ocp *bp, int sma_nr, enum ptp_ocp_sma_mode mode)
 {
 	u32 __iomem *gpio;
 	u32 shift;
+
+	if(bp->sma_map_art) {
+		if (sma_nr == 1)
+			return ioread32(&bp->sma_map_art->gpio1);
+		if (sma_nr == 2)
+			return ioread32(&bp->sma_map_art->gpio2);
+		if (sma_nr == 3)
+			return ioread32(&bp->sma_map_art->gpio3);
+		if (sma_nr == 4)
+			return ioread32(&bp->sma_map_art->gpio4);
+	}
 
 	if (bp->sma[sma_nr - 1].fixed_fcn)
 		return (sma_nr - 1) & 1;
@@ -2567,6 +2652,9 @@ ptp_ocp_sma_show(struct ptp_ocp *bp, int sma_nr, char *buf,
 
 	val = ptp_ocp_sma_get(bp, sma_nr, sma->mode) & SMA_SELECT_MASK;
 
+	if (bp->sma_map_art) {
+		return ptp_ocp_art_show_io(val, buf);
+	}
 	if (sma->mode == SMA_MODE_IN) {
 		if (sma->disabled)
 			val = SMA_DISABLE;
@@ -2661,7 +2749,35 @@ ptp_ocp_sma_store(struct ptp_ocp *bp, const char *buf, int sma_nr)
 {
 	struct ptp_ocp_sma_connector *sma = &bp->sma[sma_nr - 1];
 	enum ptp_ocp_sma_mode mode;
+	u32 __iomem *sma_reg;
 	int val;
+	u32 reg;
+
+	if (bp->sma_map_art) {
+		val = sma_parse_art_inputs(buf);
+		if (val < 0)
+			return val;
+
+		if (sma_nr == 1)
+			sma_reg = &bp->sma_map_art->gpio1;
+		else if (sma_nr == 2)
+			sma_reg = &bp->sma_map_art->gpio2;
+		else if (sma_nr == 3) 
+			sma_reg = &bp->sma_map_art->gpio3;
+		else if (sma_nr == 4)
+			sma_reg = &bp->sma_map_art->gpio4;
+		else
+			return -EINVAL;
+		reg = ioread32(sma_reg);
+
+		if ((reg >> 16) & val) {
+			reg = (reg & 0xFF00) | val;
+			iowrite32(reg, sma_reg);
+			return 0;
+		} else {
+			return -EOPNOTSUPP;
+		}
+	}
 
 	mode = sma->mode;
 	val = sma_parse_inputs(buf, &mode);
@@ -3402,6 +3518,12 @@ static struct attribute *art_timecard_attrs[] = {
 	&dev_attr_clock_source.attr,
 	&dev_attr_utc_tai_offset.attr,
 	&dev_attr_ts_window_adjust.attr,
+	&dev_attr_sma1.attr,
+	&dev_attr_sma2.attr,
+	&dev_attr_sma3.attr,
+	&dev_attr_sma4.attr,
+	&dev_attr_available_sma_inputs.attr,
+	&dev_attr_available_sma_outputs.attr,
 	NULL,
 };
 static const struct attribute_group art_timecard_group = {
