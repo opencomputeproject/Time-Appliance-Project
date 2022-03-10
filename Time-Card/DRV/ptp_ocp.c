@@ -166,6 +166,18 @@ struct gpio_reg {
 	u32	__pad1;
 };
 
+struct gpio_reg_art {
+	u32	gpio1;
+	u32	__pad0[3];
+	u32	gpio2;
+	u32	__pad1[3];
+	u32	gpio3;
+	u32	__pad2[3];
+	u32	gpio4;
+	u32	__pad3[3];
+};
+
+
 struct irig_master_reg {
 	u32	ctrl;
 	u32	status;
@@ -308,6 +320,7 @@ struct ptp_ocp {
 	struct pps_reg __iomem	*pps_to_ext;
 	struct pps_reg __iomem	*pps_to_clk;
 	struct gpio_reg __iomem	*pps_select;
+	struct gpio_reg_art __iomem	*pps_select_art;
 	struct gpio_reg __iomem	*sma_map1;
 	struct gpio_reg __iomem	*sma_map2;
 	struct irig_master_reg	__iomem *irig_out;
@@ -719,6 +732,10 @@ static struct ocp_resource ocp_art_resource[] = {
 	{
 		OCP_SERIAL_RESOURCE(gnss_port),
 		.offset = 0x00160000 + 0x1000, .irq_vec = 3,
+	},
+	{
+		OCP_MEM_RESOURCE(pps_select_art),
+		.offset = 0x003C0000, .size = 0x1000,
 	},
 	/* Timestamp associated with Internal PPS of the card */
 	{
@@ -2334,6 +2351,13 @@ ptp_ocp_art_board_init(struct ptp_ocp *bp, struct ocp_resource *r)
 	bp->fw_tag = 2;
 
 	ptp_ocp_sma_init(bp);
+
+
+	printk("Setting all SMA ports as PPS Output\n");
+	iowrite32(0x2, &bp->pps_select_art->gpio1);
+	iowrite32(0x2, &bp->pps_select_art->gpio2);
+	iowrite32(0x2, &bp->pps_select_art->gpio3);
+	iowrite32(0x2, &bp->pps_select_art->gpio4);
 
 	err = ptp_ocp_register_mro50(bp);
 	if (!err)
