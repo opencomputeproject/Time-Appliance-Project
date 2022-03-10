@@ -57,6 +57,14 @@
 #define PCI_DEVICE_ID_OROLIA_ARTCARD 0xa000
 #endif
 
+#ifndef PCI_VENDOR_ID_CELESTICA
+#define PCI_VENDOR_ID_CELESTICA 0x18d4
+#endif
+
+#ifndef PCI_DEVICE_ID_CELESTICA_TIMECARD
+#define PCI_DEVICE_ID_CELESTICA_TIMECARD 0x1008
+#endif
+
 static struct class timecard_class = {
 	.owner		= THIS_MODULE,
 	.name		= "timecard",
@@ -791,6 +799,7 @@ static struct ocp_resource ocp_art_resource[] = {
 
 static const struct pci_device_id ptp_ocp_pcidev_id[] = {
 	{ PCI_DEVICE_DATA(FACEBOOK, TIMECARD, &ocp_fb_resource) },
+	{ PCI_DEVICE_DATA(CELESTICA, TIMECARD, &ocp_fb_resource) },
 	{ PCI_DEVICE_DATA(OROLIA, ARTCARD, &ocp_art_resource) },
 	{ 0 }
 };
