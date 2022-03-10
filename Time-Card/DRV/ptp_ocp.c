@@ -235,7 +235,7 @@ struct frequency_reg {
 #define FREQ_STATUS_VALID	BIT(31)
 #define FREQ_STATUS_ERROR	BIT(30)
 #define FREQ_STATUS_OVERRUN	BIT(29)
-#define FREQ_STATUS_MASK 	(BIT(24) - 1)
+#define FREQ_STATUS_MASK	(BIT(24) - 1)
 
 struct ptp_ocp_flash_info {
 	const char *name;
@@ -271,7 +271,8 @@ enum ptp_ocp_sma_mode {
 
 struct ptp_ocp_sma_connector {
 	enum	ptp_ocp_sma_mode mode;
-	bool	fixed_mode;
+	bool	fixed_fcn;
+	bool	fixed_dir;
 	bool	disabled;
 };
 
@@ -279,6 +280,7 @@ struct ocp_attr_group {
 	u64 cap;
 	const struct attribute_group *group;
 };
+
 #define OCP_CAP_BASIC	BIT(0)
 #define OCP_CAP_SIGNAL	BIT(1)
 #define OCP_CAP_FREQ	BIT(2)
@@ -293,7 +295,6 @@ struct ptp_ocp_signal {
 	bool		running;
 };
 
-#define OCP_BOARD_MFR_LEN		8
 #define OCP_BOARD_ID_LEN		13
 #define OCP_SERIAL_LEN			6
 
@@ -342,7 +343,6 @@ struct ptp_ocp {
 	int			mac_port;	/* miniature atomic clock */
 	int			nmea_port;
 	u32			fw_version;
-	u8			board_mfr[OCP_BOARD_MFR_LEN];
 	u8			board_id[OCP_BOARD_ID_LEN];
 	u8			serial[OCP_SERIAL_LEN];
 	bool			has_eeprom_data;
@@ -396,17 +396,17 @@ struct ptp_ocp_eeprom_map {
 	const void * const tag;
 };
 
-#define EEPROM_ENTRY(addr, member) 				\
-	.off = addr, 						\
+#define EEPROM_ENTRY(addr, member)				\
+	.off = addr,						\
 	.len = sizeof_field(struct ptp_ocp, member),		\
 	.bp_offset = offsetof(struct ptp_ocp, member)
 
-#define BP_MAP_ENTRY_ADDR(bp, map) \
-	(void *)((uintptr_t)(bp) + (map)->bp_offset)
+#define BP_MAP_ENTRY_ADDR(bp, map) ({				\
+	(void *)((uintptr_t)(bp) + (map)->bp_offset);		\
+})
 
 static struct ptp_ocp_eeprom_map fb_eeprom_map[] = {
 	{ EEPROM_ENTRY(0x43, board_id) },
-	{ EEPROM_ENTRY(0x79, board_mfr) },
 	{ EEPROM_ENTRY(0x00, serial), .tag = "mac" },
 	{ }
 };
@@ -414,7 +414,6 @@ static struct ptp_ocp_eeprom_map fb_eeprom_map[] = {
 static struct ptp_ocp_eeprom_map art_eeprom_map[] = {
 	{ EEPROM_ENTRY(0x200 + 0x43, board_id) },
 	{ EEPROM_ENTRY(0x200 + 0x66, serial) },
-	{ EEPROM_ENTRY(0x200 + 0x79, board_mfr) },
 	{ }
 };
 
@@ -1095,7 +1094,7 @@ ptp_ocp_enable(struct ptp_clock_info *ptp_info, struct ptp_clock_request *rq,
 			 * Allow, but assume manual configuration.
 			 */
 			if (on && (rq->perout.period.sec != 1 ||
-			           rq->perout.period.nsec != 0))
+				   rq->perout.period.nsec != 0))
 				return -EINVAL;
 			return 0;
 		case 1:
@@ -1127,9 +1126,6 @@ ptp_ocp_verify(struct ptp_clock_info *ptp_info, unsigned pin,
 {
 	struct ptp_ocp *bp = container_of(ptp_info, struct ptp_ocp, ptp_info);
 	char buf[16];
-
-	if (bp->sma[pin].fixed_mode && bp->sma[pin].mode != SMA_MODE_OUT)
-		return -EOPNOTSUPP;
 
 	if (func != PTP_PF_PEROUT)
 		return -EOPNOTSUPP;
@@ -1327,7 +1323,7 @@ ptp_ocp_tod_gnss_name(int idx)
 		"ALL", "COMBINED", "GPS", "GLONASS", "GALILEO", "BEIDOU",
 		"Unknown"
 	};
-	if (idx > ARRAY_SIZE(gnss_name))
+	if (idx >= ARRAY_SIZE(gnss_name))
 		idx = ARRAY_SIZE(gnss_name) - 1;
 	return gnss_name[idx];
 }
@@ -1536,12 +1532,6 @@ ptp_ocp_devlink_info_get(struct devlink *devlink, struct devlink_info_req *req,
 		return err;
 
 	err = devlink_info_version_fixed_put(req,
-			DEVLINK_INFO_VERSION_GENERIC_BOARD_MANUFACTURE,
-			bp->board_mfr);
-	if (err)
-		return err;
-
-	err = devlink_info_version_fixed_put(req,
 			DEVLINK_INFO_VERSION_GENERIC_BOARD_ID,
 			bp->board_id);
 	if (err)
@@ -1663,9 +1653,7 @@ ptp_ocp_register_i2c(struct ptp_ocp *bp, struct ocp_resource *r)
 	return 0;
 }
 
-/*
- * the expectation is that this is triggerd on error only.
- */
+/* The expectation is that this is triggered only on error. */
 static irqreturn_t
 ptp_ocp_signal_irq(int irq, void *priv)
 {
@@ -1687,7 +1675,7 @@ ptp_ocp_signal_irq(int irq, void *priv)
 		bp->signal[gen].running = false;
 	}
 
-	iowrite32(0, &reg->intr); 	/* ack interrupt */
+	iowrite32(0, &reg->intr);	/* ack interrupt */
 
 	return IRQ_HANDLED;
 }
@@ -1712,7 +1700,8 @@ ptp_ocp_signal_set(struct ptp_ocp *bp, int gen, struct ptp_ocp_signal *s)
 
 	start_ns = ktime_set(ts.tv_sec, ts.tv_nsec) + NSEC_PER_MSEC;
 	if (!s->start) {
-		s->start = roundup(start_ns, s->period);
+		/* roundup() does not work on 32-bit systems */
+		s->start = DIV_ROUND_UP_ULL(start_ns, s->period);
 		s->start = ktime_add(s->start, s->phase);
 	}
 
@@ -2022,17 +2011,28 @@ ptp_ocp_sma_init(struct ptp_ocp *bp)
 	u32 reg;
 	int i;
 
+	/* defaults */
+	bp->sma[0].mode = SMA_MODE_IN;
+	bp->sma[1].mode = SMA_MODE_IN;
+	bp->sma[2].mode = SMA_MODE_OUT;
+	bp->sma[3].mode = SMA_MODE_OUT;
+
+	/* If no SMA1 map, the pin functions and directions are fixed. */
+	if (!bp->sma_map1) {
+		for (i = 0; i < 4; i++) {
+			bp->sma[i].fixed_fcn = true;
+			bp->sma[i].fixed_dir = true;
+		}
+		return;
+	}
+
 	/* If SMA2 GPIO output map is all 1, it is not present.
 	 * This indicates the firmware has fixed direction SMA pins.
 	 */
 	reg = ioread32(&bp->sma_map2->gpio2);
 	if (reg == 0xffffffff) {
-		bp->sma[0].mode = SMA_MODE_IN;
-		bp->sma[1].mode = SMA_MODE_IN;
-		bp->sma[2].mode = SMA_MODE_OUT;
-		bp->sma[3].mode = SMA_MODE_OUT;
 		for (i = 0; i < 4; i++)
-			bp->sma[i].fixed_mode = true;
+			bp->sma[i].fixed_dir = true;
 	} else {
 		reg = ioread32(&bp->sma_map1->gpio1);
 		bp->sma[0].mode = reg & BIT(15) ? SMA_MODE_IN : SMA_MODE_OUT;
@@ -2073,9 +2073,9 @@ ptp_ocp_fb_board_init(struct ptp_ocp *bp, struct ocp_resource *r)
 
 	bp->flash_start = 1024 * 4096;
 	bp->eeprom_map = fb_eeprom_map;
+	bp->fw_version = ioread32(&bp->image->version);
 	bp->attr_tbl = fb_timecard_groups;
 	bp->fw_cap = OCP_CAP_BASIC;
-	bp->fw_version = ioread32(&bp->image->version);
 
 	ver = bp->fw_version & 0xffff;
 	if (ver >= 19)
@@ -2294,6 +2294,8 @@ ptp_ocp_art_board_init(struct ptp_ocp *bp, struct ocp_resource *r)
 	bp->fw_cap = OCP_CAP_BASIC;
 	bp->fw_version = ioread32(&bp->reg->version);
 
+	ptp_ocp_sma_init(bp);
+
 	err = ptp_ocp_register_mro50(bp);
 	if (!err)
 		err = ptp_ocp_init_clock(bp);
@@ -2481,6 +2483,9 @@ ptp_ocp_sma_get(struct ptp_ocp *bp, int sma_nr, enum ptp_ocp_sma_mode mode)
 	u32 __iomem *gpio;
 	u32 shift;
 
+	if (bp->sma[sma_nr - 1].fixed_fcn)
+		return (sma_nr - 1) & 1;
+
 	if (mode == SMA_MODE_IN)
 		gpio = sma_nr > 2 ? &bp->sma_map2->gpio1 : &bp->sma_map1->gpio1;
 	else
@@ -2600,8 +2605,14 @@ ptp_ocp_sma_store(struct ptp_ocp *bp, const char *buf, int sma_nr)
 	if (val < 0)
 		return val;
 
-	if (sma->fixed_mode && (mode != sma->mode || val & SMA_DISABLE))
+	if (sma->fixed_dir && (mode != sma->mode || val & SMA_DISABLE))
 		return -EOPNOTSUPP;
+
+	if (sma->fixed_fcn) {
+		if (val != ((sma_nr - 1) & 1))
+			return -EOPNOTSUPP;
+		return 0;
+	}
 
 	sma->disabled = !!(val & SMA_DISABLE);
 
@@ -2613,7 +2624,7 @@ ptp_ocp_sma_store(struct ptp_ocp *bp, const char *buf, int sma_nr)
 		sma->mode = mode;
 	}
 
-	if (!sma->fixed_mode)
+	if (!sma->fixed_dir)
 		val |= SMA_ENABLE;		/* add enable bit */
 
 	if (sma->disabled)
@@ -2766,21 +2777,18 @@ signal_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct dev_ext_attribute *ea = to_ext_attr(attr);
 	struct ptp_ocp *bp = dev_get_drvdata(dev);
-	int i = (uintptr_t)ea->var;
+	struct ptp_ocp_signal *signal;
 	struct timespec64 ts;
 	ssize_t count;
+	int i;
 
-	ts = ktime_to_timespec64(bp->signal[i].period);
-	count = sysfs_emit(buf, "%llu.%lu", ts.tv_sec, ts.tv_nsec);
+	i = (uintptr_t)ea->var;
+	signal = &bp->signal[i];
 
-	count += sysfs_emit_at(buf, count, " %d", bp->signal[i].duty);
+	count = sysfs_emit(buf, "%llu %d %llu %d", signal->period,
+			   signal->duty, signal->phase, signal->polarity);
 
-	ts = ktime_to_timespec64(bp->signal[i].phase);
-	count += sysfs_emit_at(buf, count, " %llu.%lu", ts.tv_sec, ts.tv_nsec);
-
-	count += sysfs_emit_at(buf, count, " %d", bp->signal[i].polarity);
-
-	ts = ktime_to_timespec64(bp->signal[i].start);
+	ts = ktime_to_timespec64(signal->start);
 	count += sysfs_emit_at(buf, count, " %ptT TAI\n", &ts);
 
 	return count;
@@ -2809,11 +2817,9 @@ period_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct dev_ext_attribute *ea = to_ext_attr(attr);
 	struct ptp_ocp *bp = dev_get_drvdata(dev);
-	struct timespec64 ts;
 	int i = (uintptr_t)ea->var;
 
-	ts = ktime_to_timespec64(bp->signal[i].period);
-	return sysfs_emit(buf, "%llu.%lu\n", ts.tv_sec, ts.tv_nsec);
+	return sysfs_emit(buf, "%llu\n", bp->signal[i].period);
 }
 static EXT_ATTR_RO(signal, period, 0);
 static EXT_ATTR_RO(signal, period, 1);
@@ -2825,11 +2831,9 @@ phase_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct dev_ext_attribute *ea = to_ext_attr(attr);
 	struct ptp_ocp *bp = dev_get_drvdata(dev);
-	struct timespec64 ts;
 	int i = (uintptr_t)ea->var;
 
-	ts = ktime_to_timespec64(bp->signal[i].phase);
-	return sysfs_emit(buf, "%llu.%lu\n", ts.tv_sec, ts.tv_nsec);
+	return sysfs_emit(buf, "%llu\n", bp->signal[i].phase);
 }
 static EXT_ATTR_RO(signal, phase, 0);
 static EXT_ATTR_RO(signal, phase, 1);
@@ -2838,7 +2842,7 @@ static EXT_ATTR_RO(signal, phase, 3);
 
 static ssize_t
 polarity_show(struct device *dev, struct device_attribute *attr,
-		     char *buf)
+	      char *buf)
 {
 	struct dev_ext_attribute *ea = to_ext_attr(attr);
 	struct ptp_ocp *bp = dev_get_drvdata(dev);
@@ -3258,40 +3262,40 @@ static DEVICE_ATTR_RW(tod_correction);
 		&dev_attr_signal##_nr##_running.attr.attr,		\
 		&dev_attr_signal##_nr##_start.attr.attr,		\
 		NULL,							\
-	};
+	}
 
 #define DEVICE_SIGNAL_GROUP(_name, _nr)					\
-	_DEVICE_SIGNAL_GROUP_ATTRS(_nr)					\
+	_DEVICE_SIGNAL_GROUP_ATTRS(_nr);				\
 	static const struct attribute_group				\
 			fb_timecard_signal##_nr##_group = {		\
 		.name = #_name,						\
 		.attrs = fb_timecard_signal##_nr##_attrs,		\
-};
+}
 
-DEVICE_SIGNAL_GROUP(gen1, 0)
-DEVICE_SIGNAL_GROUP(gen2, 1)
-DEVICE_SIGNAL_GROUP(gen3, 2)
-DEVICE_SIGNAL_GROUP(gen4, 3)
+DEVICE_SIGNAL_GROUP(gen1, 0);
+DEVICE_SIGNAL_GROUP(gen2, 1);
+DEVICE_SIGNAL_GROUP(gen3, 2);
+DEVICE_SIGNAL_GROUP(gen4, 3);
 
 #define _DEVICE_FREQ_GROUP_ATTRS(_nr)					\
 	static struct attribute *fb_timecard_freq##_nr##_attrs[] = {	\
 		&dev_attr_freq##_nr##_seconds.attr.attr,		\
 		&dev_attr_freq##_nr##_frequency.attr.attr,		\
 		NULL,							\
-	};
+	}
 
 #define DEVICE_FREQ_GROUP(_name, _nr)					\
-	_DEVICE_FREQ_GROUP_ATTRS(_nr)					\
+	_DEVICE_FREQ_GROUP_ATTRS(_nr);					\
 	static const struct attribute_group				\
 			fb_timecard_freq##_nr##_group = {		\
 		.name = #_name,						\
 		.attrs = fb_timecard_freq##_nr##_attrs,			\
-};
+}
 
-DEVICE_FREQ_GROUP(freq1, 0)
-DEVICE_FREQ_GROUP(freq2, 1)
-DEVICE_FREQ_GROUP(freq3, 2)
-DEVICE_FREQ_GROUP(freq4, 3)
+DEVICE_FREQ_GROUP(freq1, 0);
+DEVICE_FREQ_GROUP(freq2, 1);
+DEVICE_FREQ_GROUP(freq3, 2);
+DEVICE_FREQ_GROUP(freq4, 3);
 
 static struct attribute *fb_timecard_attrs[] = {
 	&dev_attr_serialnum.attr,
@@ -3447,7 +3451,6 @@ ptp_ocp_summary_show(struct seq_file *s, void *data)
 	struct ptp_ocp *bp;
 	char *src, *buf;
 	bool on, map;
-	u32 reg;
 	int i;
 
 	buf = (char *)__get_free_page(GFP_KERNEL);
@@ -3466,21 +3469,26 @@ ptp_ocp_summary_show(struct seq_file *s, void *data)
 	if (bp->nmea_port != -1)
 		seq_printf(s, "%7s: /dev/ttyS%d\n", "NMEA", bp->nmea_port);
 
-	reg = ioread32(&bp->sma_map1->gpio1);
-	sma_val[0][0] = reg & 0xffff;
-	sma_val[1][0] = reg >> 16;
+	memset(sma_val, 0xff, sizeof(sma_val));
+	if (bp->sma_map1) {
+		u32 reg;
 
-	reg = ioread32(&bp->sma_map1->gpio2);
-	sma_val[2][1] = reg & 0xffff;
-	sma_val[3][1] = reg >> 16;
+		reg = ioread32(&bp->sma_map1->gpio1);
+		sma_val[0][0] = reg & 0xffff;
+		sma_val[1][0] = reg >> 16;
 
-	reg = ioread32(&bp->sma_map2->gpio1);
-	sma_val[2][0] = reg & 0xffff;
-	sma_val[3][0] = reg >> 16;
+		reg = ioread32(&bp->sma_map1->gpio2);
+		sma_val[2][1] = reg & 0xffff;
+		sma_val[3][1] = reg >> 16;
 
-	reg = ioread32(&bp->sma_map2->gpio2);
-	sma_val[0][1] = reg & 0xffff;
-	sma_val[1][1] = reg >> 16;
+		reg = ioread32(&bp->sma_map2->gpio1);
+		sma_val[2][0] = reg & 0xffff;
+		sma_val[3][0] = reg >> 16;
+
+		reg = ioread32(&bp->sma_map2->gpio2);
+		sma_val[0][1] = reg & 0xffff;
+		sma_val[1][1] = reg >> 16;
+	}
 
 	sma1_show(dev, NULL, buf);
 	seq_printf(s, "   sma1: %04x,%04x %s",
