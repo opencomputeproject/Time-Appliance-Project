@@ -409,8 +409,6 @@ static int ptp_ocp_signal_enable(void *priv, u32 req, bool enable);
 static int ptp_ocp_sma_store(struct ptp_ocp *bp, const char *buf, int sma_nr);
 
 static int ptp_ocp_art_board_init(struct ptp_ocp *bp, struct ocp_resource *r);
-static irqreturn_t ptp_ocp_art_pps_irq(int irq, void *priv);
-static int ptp_ocp_art_pps_enable(void *priv, u32 req, bool enable);
 
 static const struct ocp_attr_group fb_timecard_groups[];
 static const struct ocp_attr_group art_timecard_groups[];
@@ -1961,32 +1959,6 @@ ptp_ocp_ts_enable(void *priv, u32 req, bool enable)
 		iowrite32(0, &reg->intr_mask);
 		iowrite32(0, &reg->enable);
 	}
-
-	return 0;
-}
-
-static irqreturn_t
-ptp_ocp_art_pps_irq(int irq, void *priv)
-{
-	struct ptp_ocp_ext_src *ext = priv;
-	struct ocp_art_pps_reg __iomem *reg = ext->mem;
-	struct ptp_clock_event ev;
-
-	ev.type = PTP_CLOCK_PPS;
-	ptp_clock_event(ext->bp->ptp, &ev);
-
-	iowrite32(0, &reg->intr);
-
-	return IRQ_HANDLED;
-}
-
-static int
-ptp_ocp_art_pps_enable(void *priv, u32 req, bool enable)
-{
-	struct ptp_ocp_ext_src *ext = priv;
-	struct ocp_art_pps_reg __iomem *reg = ext->mem;
-
-	iowrite32(enable, &reg->enable);
 
 	return 0;
 }
