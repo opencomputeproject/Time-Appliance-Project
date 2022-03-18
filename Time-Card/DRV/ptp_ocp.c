@@ -916,13 +916,17 @@ static struct ocp_selector ptp_ocp_sma_out[] = {
 	{ }
 };
 
-static struct ocp_selector ptp_ocp_sma_art_io[] = {
-	{ .name = "None",		.value = 0x0000 },
+static struct ocp_selector ptp_ocp_sma_art_io_in[] = {
 	{ .name = "PPS-IN",		.value = 0x0001 },
+	{ .name = "10MHZ-IN",	.value = 0x0008 },
+	{ }
+};
+
+static struct ocp_selector ptp_ocp_sma_art_io_out[] = {
 	{ .name = "PPS-OUT",	.value = 0x0002 },
 	{ .name = "GNSS-OUT",	.value = 0x0004 },
-	{ .name = "10MHZ-IN",	.value = 0x0008 },
 	{ .name = "10MHZ-OUT",	.value = 0x0010 },
+	{ }
 };
 
 static const char *
@@ -962,6 +966,38 @@ ptp_ocp_select_table_show(struct ocp_selector *tbl, char *buf)
 	if (count)
 		count--;
 	count += sysfs_emit_at(buf, count, "\n");
+	return count;
+}
+
+static ssize_t
+ptp_ocp_art_display_capabilities_of_io(struct ocp_selector *tbl,
+			u32* io_reg_addr, char *io_name, char *buf, ssize_t count)
+{
+	uint32_t io_reg = 0;
+	int i = 0;
+
+	io_reg = ioread32(io_reg_addr);
+	count += sysfs_emit_at(buf, count, "%s: ", io_name);
+	for (i = 0; tbl[i].name; i++) {
+		if ((io_reg >> 16) & tbl[i].value)
+			count += sysfs_emit_at(buf, count, "%s ", tbl[i].name);
+	}
+	count--;
+	count += sysfs_emit_at(buf, count, "\n");
+	return count;
+}
+
+static ssize_t
+ptp_ocp_art_display_capabilities(struct ocp_selector *tbl,
+			struct gpio_reg_art __iomem	*sma_map_art, char* buf)
+{
+	ssize_t count = 0;
+
+	count += ptp_ocp_art_display_capabilities_of_io(tbl, &sma_map_art->gpio1, "IO_1", buf, count);
+	count += ptp_ocp_art_display_capabilities_of_io(tbl, &sma_map_art->gpio2, "IO_2", buf, count);
+	count += ptp_ocp_art_display_capabilities_of_io(tbl, &sma_map_art->gpio3, "IO_3", buf, count);
+	count += ptp_ocp_art_display_capabilities_of_io(tbl, &sma_map_art->gpio4, "IO_4", buf, count);
+
 	return count;
 }
 
@@ -2096,14 +2132,6 @@ ptp_ocp_sma_init(struct ptp_ocp *bp)
 	bp->sma[2].mode = SMA_MODE_OUT;
 	bp->sma[3].mode = SMA_MODE_OUT;
 
-	if(bp->sma_map_art) {
-		bp->sma[0].mode = SMA_MODE_IN;
-		bp->sma[1].mode = SMA_MODE_IN;
-		bp->sma[2].mode = SMA_MODE_IN;
-		bp->sma[3].mode = SMA_MODE_IN;
-		return;
-	}
-
 	/* If no SMA1 map, the pin functions and directions are fixed. */
 	if (!bp->sma_map1) {
 		for (i = 0; i < 4; i++) {
@@ -2129,6 +2157,15 @@ ptp_ocp_sma_init(struct ptp_ocp *bp)
 		bp->sma[2].mode = reg & BIT(15) ? SMA_MODE_OUT : SMA_MODE_IN;
 		bp->sma[3].mode = reg & BIT(31) ? SMA_MODE_OUT : SMA_MODE_IN;
 	}
+}
+
+static void
+ptp_ocp_art_sma_init(struct ptp_ocp *bp)
+{
+	iowrite32(SMA_ENABLE_PPS_IN, &bp->sma_map_art->gpio1);
+	iowrite32(SMA_ENABLE_PPS_IN, &bp->sma_map_art->gpio2);
+	iowrite32(SMA_ENABLE_PPS_IN, &bp->sma_map_art->gpio3);
+	iowrite32(SMA_ENABLE_PPS_IN, &bp->sma_map_art->gpio4);
 }
 
 static int
@@ -2409,24 +2446,8 @@ ptp_ocp_art_board_init(struct ptp_ocp *bp, struct ocp_resource *r)
 	bp->fw_cap = OCP_CAP_BASIC;
 	bp->fw_tag = 2;
 
-	ptp_ocp_sma_init(bp);
+	ptp_ocp_art_sma_init(bp);
 
-	iowrite32(SMA_ENABLE_PPS_IN, &bp->sma_map_art->gpio1);
-	iowrite32(SMA_ENABLE_PPS_IN, &bp->sma_map_art->gpio2);
-	iowrite32(SMA_ENABLE_PPS_IN, &bp->sma_map_art->gpio3);
-	iowrite32(SMA_ENABLE_PPS_IN, &bp->sma_map_art->gpio4);
-
-	printk("Capabilities of each SMA:\n");
-	printk("IO 1: 0x%x\n", ioread32(&bp->sma_map_art->gpio1) >> 16);
-	printk("IO 2: 0x%x\n", ioread32(&bp->sma_map_art->gpio2) >> 16);
-	printk("IO 3: 0x%x\n", ioread32(&bp->sma_map_art->gpio3) >> 16);
-	printk("IO 4: 0x%x\n", ioread32(&bp->sma_map_art->gpio4) >> 16);
-
-	printk("Current config of each SMA:\n");
-	printk("IO 1: 0x%x\n", ioread32(&bp->sma_map_art->gpio1) & 0xff);
-	printk("IO 2: 0x%x\n", ioread32(&bp->sma_map_art->gpio2) & 0xff);
-	printk("IO 3: 0x%x\n", ioread32(&bp->sma_map_art->gpio3) & 0xff);
-	printk("IO 4: 0x%x\n", ioread32(&bp->sma_map_art->gpio4) & 0xff);
 	err = ptp_ocp_register_mro50(bp);
 	if (!err)
 		err = ptp_ocp_init_clock(bp);
@@ -2574,10 +2595,14 @@ ptp_ocp_art_show_io(u32 val, char *buf) {
 	ssize_t count;
 	int i;
 
-	for (i =0; i < ARRAY_SIZE(ptp_ocp_sma_art_io); i++)
-		if (val & ptp_ocp_sma_art_io[i].value)
-			count = sysfs_emit(buf, ptp_ocp_sma_art_io[i].name);
-	
+	for (i =0; i < ARRAY_SIZE(ptp_ocp_sma_art_io_in); i++)
+		if (ptp_ocp_sma_art_io_in[i].name && val & ptp_ocp_sma_art_io_in[i].value)
+			count = sysfs_emit(buf, ptp_ocp_sma_art_io_in[i].name);
+
+	for (i =0; i < ARRAY_SIZE(ptp_ocp_sma_art_io_out); i++)
+		if (ptp_ocp_sma_art_io_out[i].name && val & ptp_ocp_sma_art_io_out[i].value)
+			count = sysfs_emit(buf, ptp_ocp_sma_art_io_out[i].name);
+
 	count += sysfs_emit_at(buf, count, "\n");
 	return count;
 }
@@ -2635,9 +2660,14 @@ sma_parse_art_inputs(const char *buf)
 	if (!argv)
 		return -ENOMEM;
 
-	for(i = 0; i < ARRAY_SIZE(ptp_ocp_sma_art_io); i++) {
-		if(!strcmp(ptp_ocp_sma_art_io[i].name, argv[0])) {
-			ret = ptp_ocp_sma_art_io[i].value;
+	for(i = 0; i < ARRAY_SIZE(ptp_ocp_sma_art_io_in); i++) {
+		if(ptp_ocp_sma_art_io_in[i].name && !strcmp(ptp_ocp_sma_art_io_in[i].name, argv[0])) {
+			ret = ptp_ocp_sma_art_io_in[i].value;
+		}
+	}
+	for(i = 0; i < ARRAY_SIZE(ptp_ocp_sma_art_io_out); i++) {
+		if(ptp_ocp_sma_art_io_out[i].name && !strcmp(ptp_ocp_sma_art_io_out[i].name, argv[0])) {
+			ret = ptp_ocp_sma_art_io_out[i].value;
 		}
 	}
 
@@ -2900,6 +2930,9 @@ static ssize_t
 available_sma_inputs_show(struct device *dev,
 			  struct device_attribute *attr, char *buf)
 {
+	struct ptp_ocp *bp = dev_get_drvdata(dev);
+	if (bp->sma_map_art)
+		return ptp_ocp_art_display_capabilities(ptp_ocp_sma_art_io_in, bp->sma_map_art, buf);
 	return ptp_ocp_select_table_show(ptp_ocp_sma_in, buf);
 }
 static DEVICE_ATTR_RO(available_sma_inputs);
@@ -2908,6 +2941,9 @@ static ssize_t
 available_sma_outputs_show(struct device *dev,
 			   struct device_attribute *attr, char *buf)
 {
+	struct ptp_ocp *bp = dev_get_drvdata(dev);
+	if (bp->sma_map_art)
+		return ptp_ocp_art_display_capabilities(ptp_ocp_sma_art_io_out, bp->sma_map_art, buf);
 	return ptp_ocp_select_table_show(ptp_ocp_sma_out, buf);
 }
 static DEVICE_ATTR_RO(available_sma_outputs);
