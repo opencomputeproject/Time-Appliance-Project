@@ -485,9 +485,12 @@ static struct ptp_ocp_eeprom_map art_eeprom_map[] = {
  * 15: TS3
  * 16: TS4
  --
- * 11: Orolia TS0
- * 12: Orolia TS1
- * 13: Orolia PPS
+ * 8: Orolia TS1
+ * 10: Orolia TS2
+ * 11: Orolia TS0 (GNSS)
+ * 12: Orolia PPS
+ * 14: Orolia TS3
+ * 15: Orolia TS4
  */
 
 static struct ocp_resource ocp_fb_resource[] = {
@@ -748,12 +751,58 @@ static struct ocp_resource ocp_art_resource[] = {
 		OCP_MEM_RESOURCE(sma_map_art),
 		.offset = 0x003C0000, .size = 0x1000,
 	},
-	/* Timestamp associated with Internal PPS of the card */
+	/* Timestamp associated with GNSS1 receiver PPS */
 	{
 		OCP_EXT_RESOURCE(ts0),
-		.offset = 0x00330000, .size = 0x20, .irq_vec = 11,
+		.offset = 0x360000, .size = 0x20, .irq_vec = 12,
 		.extra = &(struct ptp_ocp_ext_info) {
 			.index = 0,
+			.irq_fcn = ptp_ocp_ts_irq,
+			.enable = ptp_ocp_ts_enable,
+		},
+	},
+	{
+		OCP_EXT_RESOURCE(ts1),
+		.offset = 0x380000, .size = 0x20, .irq_vec = 8,
+		.extra = &(struct ptp_ocp_ext_info) {
+			.index = 1,
+			.irq_fcn = ptp_ocp_ts_irq,
+			.enable = ptp_ocp_ts_enable,
+		},
+	},
+	{
+		OCP_EXT_RESOURCE(ts2),
+		.offset = 0x390000, .size = 0x20, .irq_vec = 10,
+		.extra = &(struct ptp_ocp_ext_info) {
+			.index = 2,
+			.irq_fcn = ptp_ocp_ts_irq,
+			.enable = ptp_ocp_ts_enable,
+		},
+	},
+	{
+		OCP_EXT_RESOURCE(ts3),
+		.offset = 0x3A0000, .size = 0x20, .irq_vec = 14,
+		.extra = &(struct ptp_ocp_ext_info) {
+			.index = 3,
+			.irq_fcn = ptp_ocp_ts_irq,
+			.enable = ptp_ocp_ts_enable,
+		},
+	},
+	{
+		OCP_EXT_RESOURCE(ts4),
+		.offset = 0x3B0000, .size = 0x20, .irq_vec = 15,
+		.extra = &(struct ptp_ocp_ext_info) {
+			.index = 4,
+			.irq_fcn = ptp_ocp_ts_irq,
+			.enable = ptp_ocp_ts_enable,
+		},
+	},
+	/* Timestamp associated with Internal PPS of the card */
+	{
+		OCP_EXT_RESOURCE(pps),
+		.offset = 0x00330000, .size = 0x20, .irq_vec = 11,
+		.extra = &(struct ptp_ocp_ext_info) {
+			.index = 5,
 			.irq_fcn = ptp_ocp_ts_irq,
 			.enable = ptp_ocp_ts_enable,
 		},
@@ -792,24 +841,6 @@ static struct ocp_resource ocp_art_resource[] = {
 					I2C_BOARD_INFO("24c08", 0x50),
 				},
 			},
-		},
-	},
-	/* Timestamp associated with GNSS1 receiver PPS */
-	{
-		OCP_EXT_RESOURCE(ts1),
-		.offset = 0x360000, .size = 0x20, .irq_vec = 12,
-		.extra = &(struct ptp_ocp_ext_info) {
-			.index = 1,
-			.irq_fcn = ptp_ocp_ts_irq,
-			.enable = ptp_ocp_ts_enable,
-		},
-	},
-	{
-		OCP_EXT_RESOURCE(pps),
-		.offset = 0x00370000, .size = 0x20, .irq_vec = 13,
-		.extra = &(struct ptp_ocp_ext_info) {
-			.irq_fcn = ptp_ocp_art_pps_irq,
-			.enable = ptp_ocp_art_pps_enable,
 		},
 	},
 	{
