@@ -2240,8 +2240,8 @@ ptp_ocp_mro50_ioctl(struct file *file, unsigned cmd, unsigned long arg)
 		return 0;
 	case MRO50_READ_EEPROM_BLOB:
 		nvmem = ptp_ocp_nvmem_device_get(bp, NULL);
-		if (!nvmem)
-			return -EFAULT;
+		if (IS_ERR(nvmem))
+			return PTR_ERR(nvmem);
 		err = nvmem_device_read(nvmem, 0x0, 256, buf);
 		ptp_ocp_nvmem_device_put(&nvmem);
 		if (err != 256)
@@ -2254,10 +2254,9 @@ ptp_ocp_mro50_ioctl(struct file *file, unsigned cmd, unsigned long arg)
 		err = copy_from_user(buf, (void __user *)arg, 256);
 		if (err)
 			return -EFAULT;
-
 		nvmem = ptp_ocp_nvmem_device_get(bp, NULL);
-		if (!nvmem)
-			return -EFAULT;
+		if (IS_ERR(nvmem))
+			return PTR_ERR(nvmem);
 		err = nvmem_device_write(nvmem, 0x0, 256, buf);
 		ptp_ocp_nvmem_device_put(&nvmem);
 		if (err != 256)
