@@ -333,6 +333,7 @@ struct ptp_ocp {
 	struct ptp_ocp_ext_src	*ts3;
 	struct ptp_ocp_ext_src	*ts4;
 	struct ocp_art_osc_reg	__iomem *osc;
+	struct ocp_art_gpio_reg __iomem *art_sma;
 	struct img_reg __iomem	*image;
 	struct ptp_clock	*ptp;
 	struct ptp_clock_info	ptp_info;
@@ -401,6 +402,7 @@ static int ptp_ocp_art_pps_enable(void *priv, u32 req, bool enable);
 static const struct ocp_attr_group fb_timecard_groups[];
 static const struct ocp_attr_group art_timecard_groups[];
 static const struct ocp_sma_op ocp_fb_sma_op;
+static const struct ocp_sma_op ocp_art_sma_op;
 
 struct ptp_ocp_eeprom_map {
 	u16	off;
@@ -722,6 +724,13 @@ struct ocp_art_pps_reg {
 	u32	intr;
 };
 
+struct ocp_art_gpio_reg {
+	struct {
+		u32	gpio;
+		u32	__pad[3];
+	} map[4];
+};
+
 static struct ocp_resource ocp_art_resource[] = {
 	{
 		OCP_MEM_RESOURCE(reg),
@@ -730,6 +739,10 @@ static struct ocp_resource ocp_art_resource[] = {
 	{
 		OCP_SERIAL_RESOURCE(gnss_port),
 		.offset = 0x00160000 + 0x1000, .irq_vec = 3,
+	},
+	{
+		OCP_MEM_RESOURCE(art_sma),
+		.offset = 0x003C0000, .size = 0x1000,
 	},
 	/* Timestamp associated with Internal PPS of the card */
 	{
@@ -866,6 +879,19 @@ static const struct ocp_selector ptp_ocp_sma_out[] = {
 	{ .name = "GEN4",	.value = 0x0200 },
 	{ .name = "GND",	.value = 0x2000 },
 	{ .name = "VCC",	.value = 0x4000 },
+	{ }
+};
+
+static const struct ocp_selector ptp_ocp_art_sma_in[] = {
+	{ .name = "PPS1",	.value = 0x0001 },
+	{ .name = "10Mhz",	.value = 0x0008 },
+	{ }
+};
+
+static const struct ocp_selector ptp_ocp_art_sma_out[] = {
+	{ .name = "PHC",	.value = 0x0002 },
+	{ .name = "GNSS",	.value = 0x0004 },
+	{ .name = "10Mhz",	.value = 0x0010 },
 	{ }
 };
 
@@ -2314,6 +2340,7 @@ ptp_ocp_art_board_init(struct ptp_ocp *bp, struct ocp_resource *r)
 	bp->fw_version = ioread32(&bp->reg->version);
 	bp->fw_cap = OCP_CAP_BASIC;
 	bp->fw_tag = 2;
+	bp->sma_op = &ocp_art_sma_op;
 
 	bp->sma_op->init(bp);
 
@@ -2669,6 +2696,42 @@ static const struct ocp_sma_op ocp_fb_sma_op = {
 	.get		= ptp_ocp_sma_get,
 	.set_inputs	= ptp_ocp_sma_store_inputs,
 	.set_output	= ptp_ocp_sma_store_output,
+};
+
+static u32
+ptp_ocp_art_sma_get(struct ptp_ocp *bp, int sma_nr, enum ptp_ocp_sma_mode mode)
+{
+	return ioread32(&bp->art_sma->map[sma_nr - 1].gpio) & 0xff;
+}
+
+/* note: store 0 is considered invalid. */
+static int
+ptp_ocp_art_sma_store(struct ptp_ocp *bp, int sma_nr, u32 val)
+{
+	u32 __iomem *gpio;
+	u32 reg;
+
+	val &= SMA_SELECT_MASK;
+	if (hweight32(val) > 1)
+		return -EINVAL;
+
+	gpio = &bp->art_sma->map[sma_nr - 1].gpio;
+
+	reg = ioread32(gpio);
+	if (((reg >> 16) & val) == 0)
+		return -EOPNOTSUPP;
+
+	reg = (reg & 0xff00) | (val & 0xff);
+	iowrite32(reg, gpio);
+
+	return 0;
+}
+
+static const struct ocp_sma_op ocp_art_sma_op = {
+	.tbl		= { ptp_ocp_art_sma_in, ptp_ocp_art_sma_out },
+	.get		= ptp_ocp_art_sma_get,
+	.set_inputs	= ptp_ocp_art_sma_store,
+	.set_output	= ptp_ocp_art_sma_store,
 };
 
 static int
@@ -3421,6 +3484,12 @@ static struct attribute *art_timecard_attrs[] = {
 	&dev_attr_clock_source.attr,
 	&dev_attr_utc_tai_offset.attr,
 	&dev_attr_ts_window_adjust.attr,
+	&dev_attr_sma1.attr,
+	&dev_attr_sma2.attr,
+	&dev_attr_sma3.attr,
+	&dev_attr_sma4.attr,
+	&dev_attr_available_sma_inputs.attr,
+	&dev_attr_available_sma_outputs.attr,
 	NULL,
 };
 static const struct attribute_group art_timecard_group = {
