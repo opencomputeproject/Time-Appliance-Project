@@ -2698,9 +2698,57 @@ static const struct ocp_sma_op ocp_fb_sma_op = {
 	.set_output	= ptp_ocp_sma_store_output,
 };
 
+static void
+ptp_ocp_art_sma_init(struct ptp_ocp *bp)
+{
+	u32 reg;
+	int i;
+
+	/* defaults */
+	bp->sma[0].mode = SMA_MODE_IN;
+	bp->sma[1].mode = SMA_MODE_IN;
+	bp->sma[2].mode = SMA_MODE_OUT;
+	bp->sma[3].mode = SMA_MODE_OUT;
+
+	bp->sma[0].default_fcn = 0x08;	/* IN: 10Mhz */
+	bp->sma[1].default_fcn = 0x01;	/* IN: PPS1 */
+	bp->sma[2].default_fcn = 0x10;	/* OUT: 10Mhz */
+	bp->sma[3].default_fcn = 0x02;	/* OUT: PHC */
+
+	/* If no SMA map, the pin functions and directions are fixed. */
+	if (!bp->art_sma) {
+		for (i = 0; i < 4; i++) {
+			bp->sma[i].fixed_fcn = true;
+			bp->sma[i].fixed_dir = true;
+		}
+		return;
+	}
+
+	for (i = 0; i < 4; i++) {
+		reg = ioread32(&bp->art_sma->map[i].gpio);
+
+		switch (reg & 0xff) {
+		case 0:
+			bp->sma[i].fixed_fcn = true;
+			bp->sma[i].fixed_dir = true;
+			break;
+		case 1:
+		case 8:
+			bp->sma[i].mode = SMA_MODE_IN;
+			break;
+		default:
+			bp->sma[i].mode = SMA_MODE_OUT;
+			break;
+		}
+	}
+}
+
 static u32
 ptp_ocp_art_sma_get(struct ptp_ocp *bp, int sma_nr, enum ptp_ocp_sma_mode mode)
 {
+	if (bp->sma[sma_nr - 1].fixed_fcn)
+		return bp->sma[sma_nr - 1].default_fcn;
+
 	return ioread32(&bp->art_sma->map[sma_nr - 1].gpio) & 0xff;
 }
 
@@ -2729,6 +2777,7 @@ ptp_ocp_art_sma_store(struct ptp_ocp *bp, int sma_nr, u32 val)
 
 static const struct ocp_sma_op ocp_art_sma_op = {
 	.tbl		= { ptp_ocp_art_sma_in, ptp_ocp_art_sma_out },
+	.init		= ptp_ocp_art_sma_init,
 	.get		= ptp_ocp_art_sma_get,
 	.set_inputs	= ptp_ocp_art_sma_store,
 	.set_output	= ptp_ocp_art_sma_store,
