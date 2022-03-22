@@ -815,7 +815,7 @@ struct ocp_selector {
 	int value;
 };
 
-static struct ocp_selector ptp_ocp_clock[] = {
+static const struct ocp_selector ptp_ocp_clock[] = {
 	{ .name = "NONE",	.value = 0 },
 	{ .name = "TOD",	.value = 1 },
 	{ .name = "IRIG",	.value = 2 },
@@ -832,7 +832,7 @@ static struct ocp_selector ptp_ocp_clock[] = {
 #define SMA_SELECT_MASK		((1U << 15) - 1)
 #define SMA_DISABLE		0x10000
 
-static struct ocp_selector ptp_ocp_sma_in[] = {
+static const struct ocp_selector ptp_ocp_sma_in[] = {
 	{ .name = "10Mhz",	.value = 0x0000 },
 	{ .name = "PPS1",	.value = 0x0001 },
 	{ .name = "PPS2",	.value = 0x0002 },
@@ -850,7 +850,7 @@ static struct ocp_selector ptp_ocp_sma_in[] = {
 	{ }
 };
 
-static struct ocp_selector ptp_ocp_sma_out[] = {
+static const struct ocp_selector ptp_ocp_sma_out[] = {
 	{ .name = "10Mhz",	.value = 0x0000 },
 	{ .name = "PHC",	.value = 0x0001 },
 	{ .name = "MAC",	.value = 0x0002 },
@@ -867,12 +867,12 @@ static struct ocp_selector ptp_ocp_sma_out[] = {
 	{ }
 };
 
-static struct ocp_selector *ocp_sma_tbl[][2] = {
-	{ ptp_ocp_sma_in, ptp_ocp_sma_out },
+static const struct ocp_selector *ocp_sma_tbl[][2] = {
+       { ptp_ocp_sma_in, ptp_ocp_sma_out },
 };
 
 static const char *
-ptp_ocp_select_name_from_val(struct ocp_selector *tbl, int val)
+ptp_ocp_select_name_from_val(const struct ocp_selector *tbl, int val)
 {
 	int i;
 
@@ -883,7 +883,7 @@ ptp_ocp_select_name_from_val(struct ocp_selector *tbl, int val)
 }
 
 static int
-ptp_ocp_select_val_from_name(struct ocp_selector *tbl, const char *name)
+ptp_ocp_select_val_from_name(const struct ocp_selector *tbl, const char *name)
 {
 	const char *select;
 	int i;
@@ -897,7 +897,7 @@ ptp_ocp_select_val_from_name(struct ocp_selector *tbl, const char *name)
 }
 
 static ssize_t
-ptp_ocp_select_table_show(struct ocp_selector *tbl, char *buf)
+ptp_ocp_select_table_show(const struct ocp_selector *tbl, char *buf)
 {
 	ssize_t count;
 	int i;
@@ -2454,7 +2454,8 @@ __handle_signal_inputs(struct ptp_ocp *bp, u32 val)
  */
 
 static ssize_t
-ptp_ocp_show_output(struct ocp_selector *tbl, u32 val, char *buf, int def_val)
+ptp_ocp_show_output(const struct ocp_selector *tbl, u32 val, char *buf,
+		    int def_val)
 {
 	const char *name;
 	ssize_t count;
@@ -2468,7 +2469,8 @@ ptp_ocp_show_output(struct ocp_selector *tbl, u32 val, char *buf, int def_val)
 }
 
 static ssize_t
-ptp_ocp_show_inputs(struct ocp_selector *tbl, u32 val, char *buf, int def_val)
+ptp_ocp_show_inputs(const struct ocp_selector *tbl, u32 val, char *buf,
+		    int def_val)
 {
 	const char *name;
 	ssize_t count;
@@ -2492,7 +2494,7 @@ ptp_ocp_show_inputs(struct ocp_selector *tbl, u32 val, char *buf, int def_val)
 }
 
 static int
-sma_parse_inputs(struct ocp_selector *tbl[], const char *buf,
+sma_parse_inputs(const struct ocp_selector * const tbl[], const char *buf,
 		 enum ptp_ocp_sma_mode *mode)
 {
 	int idx, count, dir;
@@ -2553,7 +2555,7 @@ ptp_ocp_sma_show(struct ptp_ocp *bp, int sma_nr, char *buf,
 		 int default_in_val, int default_out_val)
 {
 	struct ptp_ocp_sma_connector *sma = &bp->sma[sma_nr - 1];
-	struct ocp_selector **tbl;
+	const struct ocp_selector * const *tbl;
 	u32 val;
 
 	tbl = ocp_sma_tbl[bp->sma_tbl];
