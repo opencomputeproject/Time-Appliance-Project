@@ -49,20 +49,20 @@
 #define PCI_DEVICE_ID_FACEBOOK_TIMECARD 0x0400
 #endif
 
-#ifndef PCI_VENDOR_ID_OROLIA
-#define PCI_VENDOR_ID_OROLIA 0x1ad7
-#endif
-
-#ifndef PCI_DEVICE_ID_OROLIA_ARTCARD
-#define PCI_DEVICE_ID_OROLIA_ARTCARD 0xa000
-#endif
-
 #ifndef PCI_VENDOR_ID_CELESTICA
 #define PCI_VENDOR_ID_CELESTICA 0x18d4
 #endif
 
 #ifndef PCI_DEVICE_ID_CELESTICA_TIMECARD
 #define PCI_DEVICE_ID_CELESTICA_TIMECARD 0x1008
+#endif
+
+#ifndef PCI_VENDOR_ID_OROLIA
+#define PCI_VENDOR_ID_OROLIA 0x1ad7
+#endif
+
+#ifndef PCI_DEVICE_ID_OROLIA_ARTCARD
+#define PCI_DEVICE_ID_OROLIA_ARTCARD 0xa000
 #endif
 
 static struct class timecard_class = {
@@ -398,8 +398,9 @@ static int ptp_ocp_sma_store(struct ptp_ocp *bp, const char *buf, int sma_nr);
 static int ptp_ocp_art_board_init(struct ptp_ocp *bp, struct ocp_resource *r);
 
 static const struct ocp_attr_group fb_timecard_groups[];
-static const struct ocp_attr_group art_timecard_groups[];
 static const struct ocp_sma_op ocp_fb_sma_op;
+
+static const struct ocp_attr_group art_timecard_groups[];
 static const struct ocp_sma_op ocp_art_sma_op;
 
 struct ptp_ocp_eeprom_map {
@@ -841,7 +842,7 @@ static const struct pci_device_id ptp_ocp_pcidev_id[] = {
 	{ PCI_DEVICE_DATA(FACEBOOK, TIMECARD, &ocp_fb_resource) },
 	{ PCI_DEVICE_DATA(CELESTICA, TIMECARD, &ocp_fb_resource) },
 	{ PCI_DEVICE_DATA(OROLIA, ARTCARD, &ocp_art_resource) },
-	{ 0 }
+	{ }
 };
 MODULE_DEVICE_TABLE(pci, ptp_ocp_pcidev_id);
 
@@ -921,10 +922,34 @@ static const struct ocp_selector ptp_ocp_art_sma_out[] = {
 struct ocp_sma_op {
 	const struct ocp_selector *tbl[2];
 	void (*init)(struct ptp_ocp *bp);
-	u32 (*get)(struct ptp_ocp *bp, int sma_nr, enum ptp_ocp_sma_mode mode);
+	u32 (*get)(struct ptp_ocp *bp, int sma_nr);
 	int (*set_inputs)(struct ptp_ocp *bp, int sma_nr, u32 val);
 	int (*set_output)(struct ptp_ocp *bp, int sma_nr, u32 val);
 };
+
+static inline void
+ptp_ocp_sma_init(struct ptp_ocp *bp)
+{
+	return bp->sma_op->init(bp);
+}
+
+static inline u32
+ptp_ocp_sma_get(struct ptp_ocp *bp, int sma_nr)
+{
+	return bp->sma_op->get(bp, sma_nr);
+}
+
+static inline int
+ptp_ocp_sma_set_inputs(struct ptp_ocp *bp, int sma_nr, u32 val)
+{
+	return bp->sma_op->set_inputs(bp, sma_nr, val);
+}
+
+static inline int
+ptp_ocp_sma_set_output(struct ptp_ocp *bp, int sma_nr, u32 val)
+{
+	return bp->sma_op->set_output(bp, sma_nr, val);
+}
 
 static const char *
 ptp_ocp_select_name_from_val(const struct ocp_selector *tbl, int val)
@@ -2129,8 +2154,8 @@ ptp_ocp_fb_board_init(struct ptp_ocp *bp, struct ocp_resource *r)
 
 	ptp_ocp_tod_init(bp);
 	ptp_ocp_nmea_out_init(bp);
+	ptp_ocp_sma_init(bp);
 	ptp_ocp_signal_init(bp);
-	bp->sma_op->init(bp);
 
 	err = ptp_ocp_fb_set_pins(bp);
 	if (err)
@@ -2339,7 +2364,7 @@ ptp_ocp_art_board_init(struct ptp_ocp *bp, struct ocp_resource *r)
 	bp->fw_tag = 2;
 	bp->sma_op = &ocp_art_sma_op;
 
-	bp->sma_op->init(bp);
+	ptp_ocp_sma_init(bp);
 
 	err = ptp_ocp_register_mro50(bp);
 	if (!err)
@@ -2437,13 +2462,209 @@ __handle_signal_inputs(struct ptp_ocp *bp, u32 val)
 	ptp_ocp_dcf_in(bp, val & 0x00200020);
 }
 
-/*
- * ANT0 == gps	(in)
- * ANT1 == sma1 (in)
- * ANT2 == sma2 (in)
- * ANT3 == sma3 (out)
- * ANT4 == sma4 (out)
- */
+static void
+ptp_ocp_sma_fb_init(struct ptp_ocp *bp)
+{
+	u32 reg;
+	int i;
+
+	/* defaults */
+	bp->sma[0].mode = SMA_MODE_IN;
+	bp->sma[1].mode = SMA_MODE_IN;
+	bp->sma[2].mode = SMA_MODE_OUT;
+	bp->sma[3].mode = SMA_MODE_OUT;
+	for (i = 0; i < 4; i++)
+		bp->sma[i].default_fcn = i & 1;
+
+	/* If no SMA1 map, the pin functions and directions are fixed. */
+	if (!bp->sma_map1) {
+		for (i = 0; i < 4; i++) {
+			bp->sma[i].fixed_fcn = true;
+			bp->sma[i].fixed_dir = true;
+		}
+		return;
+	}
+
+	/* If SMA2 GPIO output map is all 1, it is not present.
+	 * This indicates the firmware has fixed direction SMA pins.
+	 */
+	reg = ioread32(&bp->sma_map2->gpio2);
+	if (reg == 0xffffffff) {
+		for (i = 0; i < 4; i++)
+			bp->sma[i].fixed_dir = true;
+	} else {
+		reg = ioread32(&bp->sma_map1->gpio1);
+		bp->sma[0].mode = reg & BIT(15) ? SMA_MODE_IN : SMA_MODE_OUT;
+		bp->sma[1].mode = reg & BIT(31) ? SMA_MODE_IN : SMA_MODE_OUT;
+
+		reg = ioread32(&bp->sma_map1->gpio2);
+		bp->sma[2].mode = reg & BIT(15) ? SMA_MODE_OUT : SMA_MODE_IN;
+		bp->sma[3].mode = reg & BIT(31) ? SMA_MODE_OUT : SMA_MODE_IN;
+	}
+}
+
+static u32
+ptp_ocp_sma_fb_get(struct ptp_ocp *bp, int sma_nr)
+{
+	u32 __iomem *gpio;
+	u32 shift;
+
+	if (bp->sma[sma_nr - 1].fixed_fcn)
+		return bp->sma[sma_nr - 1].default_fcn;
+
+	if (bp->sma[sma_nr - 1].mode == SMA_MODE_IN)
+		gpio = sma_nr > 2 ? &bp->sma_map2->gpio1 : &bp->sma_map1->gpio1;
+	else
+		gpio = sma_nr > 2 ? &bp->sma_map1->gpio2 : &bp->sma_map2->gpio2;
+	shift = sma_nr & 1 ? 0 : 16;
+
+	return (ioread32(gpio) >> shift) & 0xffff;
+}
+
+static int
+ptp_ocp_sma_fb_set_output(struct ptp_ocp *bp, int sma_nr, u32 val)
+{
+	u32 reg, mask, shift;
+	unsigned long flags;
+	u32 __iomem *gpio;
+
+	gpio = sma_nr > 2 ? &bp->sma_map1->gpio2 : &bp->sma_map2->gpio2;
+	shift = sma_nr & 1 ? 0 : 16;
+
+	mask = 0xffff << (16 - shift);
+
+	spin_lock_irqsave(&bp->lock, flags);
+
+	reg = ioread32(gpio);
+	reg = (reg & mask) | (val << shift);
+
+	__handle_signal_outputs(bp, reg);
+
+	iowrite32(reg, gpio);
+
+	spin_unlock_irqrestore(&bp->lock, flags);
+
+	return 0;
+}
+
+static int
+ptp_ocp_sma_fb_set_inputs(struct ptp_ocp *bp, int sma_nr, u32 val)
+{
+	u32 reg, mask, shift;
+	unsigned long flags;
+	u32 __iomem *gpio;
+
+	gpio = sma_nr > 2 ? &bp->sma_map2->gpio1 : &bp->sma_map1->gpio1;
+	shift = sma_nr & 1 ? 0 : 16;
+
+	mask = 0xffff << (16 - shift);
+
+	spin_lock_irqsave(&bp->lock, flags);
+
+	reg = ioread32(gpio);
+	reg = (reg & mask) | (val << shift);
+
+	__handle_signal_inputs(bp, reg);
+
+	iowrite32(reg, gpio);
+
+	spin_unlock_irqrestore(&bp->lock, flags);
+
+	return 0;
+}
+
+static const struct ocp_sma_op ocp_fb_sma_op = {
+	.tbl		= { ptp_ocp_sma_in, ptp_ocp_sma_out },
+	.init		= ptp_ocp_sma_fb_init,
+	.get		= ptp_ocp_sma_fb_get,
+	.set_inputs	= ptp_ocp_sma_fb_set_inputs,
+	.set_output	= ptp_ocp_sma_fb_set_output,
+};
+
+static void
+ptp_ocp_art_sma_init(struct ptp_ocp *bp)
+{
+	u32 reg;
+	int i;
+
+	/* defaults */
+	bp->sma[0].mode = SMA_MODE_IN;
+	bp->sma[1].mode = SMA_MODE_IN;
+	bp->sma[2].mode = SMA_MODE_OUT;
+	bp->sma[3].mode = SMA_MODE_OUT;
+
+	bp->sma[0].default_fcn = 0x08;	/* IN: 10Mhz */
+	bp->sma[1].default_fcn = 0x01;	/* IN: PPS1 */
+	bp->sma[2].default_fcn = 0x10;	/* OUT: 10Mhz */
+	bp->sma[3].default_fcn = 0x02;	/* OUT: PHC */
+
+	/* If no SMA map, the pin functions and directions are fixed. */
+	if (!bp->art_sma) {
+		for (i = 0; i < 4; i++) {
+			bp->sma[i].fixed_fcn = true;
+			bp->sma[i].fixed_dir = true;
+		}
+		return;
+	}
+
+	for (i = 0; i < 4; i++) {
+		reg = ioread32(&bp->art_sma->map[i].gpio);
+
+		switch (reg & 0xff) {
+		case 0:
+			bp->sma[i].fixed_fcn = true;
+			bp->sma[i].fixed_dir = true;
+			break;
+		case 1:
+		case 8:
+			bp->sma[i].mode = SMA_MODE_IN;
+			break;
+		default:
+			bp->sma[i].mode = SMA_MODE_OUT;
+			break;
+		}
+	}
+}
+
+static u32
+ptp_ocp_art_sma_get(struct ptp_ocp *bp, int sma_nr)
+{
+	if (bp->sma[sma_nr - 1].fixed_fcn)
+		return bp->sma[sma_nr - 1].default_fcn;
+
+	return ioread32(&bp->art_sma->map[sma_nr - 1].gpio) & 0xff;
+}
+
+/* note: store 0 is considered invalid. */
+static int
+ptp_ocp_art_sma_set(struct ptp_ocp *bp, int sma_nr, u32 val)
+{
+	u32 __iomem *gpio;
+	u32 reg;
+
+	val &= SMA_SELECT_MASK;
+	if (hweight32(val) > 1)
+		return -EINVAL;
+
+	gpio = &bp->art_sma->map[sma_nr - 1].gpio;
+
+	reg = ioread32(gpio);
+	if (((reg >> 16) & val) == 0)
+		return -EOPNOTSUPP;
+
+	reg = (reg & 0xff00) | (val & 0xff);
+	iowrite32(reg, gpio);
+
+	return 0;
+}
+
+static const struct ocp_sma_op ocp_art_sma_op = {
+	.tbl		= { ptp_ocp_art_sma_in, ptp_ocp_art_sma_out },
+	.init		= ptp_ocp_art_sma_init,
+	.get		= ptp_ocp_art_sma_get,
+	.set_inputs	= ptp_ocp_art_sma_set,
+	.set_output	= ptp_ocp_art_sma_set,
+};
 
 static ssize_t
 ptp_ocp_show_output(const struct ocp_selector *tbl, u32 val, char *buf,
@@ -2533,7 +2754,7 @@ ptp_ocp_sma_show(struct ptp_ocp *bp, int sma_nr, char *buf,
 	u32 val;
 
 	tbl = bp->sma_op->tbl;
-	val = bp->sma_op->get(bp, sma_nr, sma->mode) & SMA_SELECT_MASK;
+	val = ptp_ocp_sma_get(bp, sma_nr) & SMA_SELECT_MASK;
 
 	if (sma->mode == SMA_MODE_IN) {
 		if (sma->disabled)
@@ -2576,210 +2797,6 @@ sma4_show(struct device *dev, struct device_attribute *attr, char *buf)
 	return ptp_ocp_sma_show(bp, 4, buf, -1, 1);
 }
 
-static void
-ptp_ocp_sma_init(struct ptp_ocp *bp)
-{
-	u32 reg;
-	int i;
-
-	/* defaults */
-	bp->sma[0].mode = SMA_MODE_IN;
-	bp->sma[1].mode = SMA_MODE_IN;
-	bp->sma[2].mode = SMA_MODE_OUT;
-	bp->sma[3].mode = SMA_MODE_OUT;
-	for (i = 0; i < 4; i++)
-		bp->sma[i].default_fcn = i & 1;
-
-	/* If no SMA1 map, the pin functions and directions are fixed. */
-	if (!bp->sma_map1) {
-		for (i = 0; i < 4; i++) {
-			bp->sma[i].fixed_fcn = true;
-			bp->sma[i].fixed_dir = true;
-		}
-		return;
-	}
-
-	/* If SMA2 GPIO output map is all 1, it is not present.
-	 * This indicates the firmware has fixed direction SMA pins.
-	 */
-	reg = ioread32(&bp->sma_map2->gpio2);
-	if (reg == 0xffffffff) {
-		for (i = 0; i < 4; i++)
-			bp->sma[i].fixed_dir = true;
-	} else {
-		reg = ioread32(&bp->sma_map1->gpio1);
-		bp->sma[0].mode = reg & BIT(15) ? SMA_MODE_IN : SMA_MODE_OUT;
-		bp->sma[1].mode = reg & BIT(31) ? SMA_MODE_IN : SMA_MODE_OUT;
-
-		reg = ioread32(&bp->sma_map1->gpio2);
-		bp->sma[2].mode = reg & BIT(15) ? SMA_MODE_OUT : SMA_MODE_IN;
-		bp->sma[3].mode = reg & BIT(31) ? SMA_MODE_OUT : SMA_MODE_IN;
-	}
-}
-
-static u32
-ptp_ocp_sma_get(struct ptp_ocp *bp, int sma_nr, enum ptp_ocp_sma_mode mode)
-{
-	u32 __iomem *gpio;
-	u32 shift;
-
-	if (bp->sma[sma_nr - 1].fixed_fcn)
-		return bp->sma[sma_nr - 1].default_fcn;
-
-	if (mode == SMA_MODE_IN)
-		gpio = sma_nr > 2 ? &bp->sma_map2->gpio1 : &bp->sma_map1->gpio1;
-	else
-		gpio = sma_nr > 2 ? &bp->sma_map1->gpio2 : &bp->sma_map2->gpio2;
-	shift = sma_nr & 1 ? 0 : 16;
-
-	return (ioread32(gpio) >> shift) & 0xffff;
-}
-
-static int
-ptp_ocp_sma_store_output(struct ptp_ocp *bp, int sma_nr, u32 val)
-{
-	u32 reg, mask, shift;
-	unsigned long flags;
-	u32 __iomem *gpio;
-
-	gpio = sma_nr > 2 ? &bp->sma_map1->gpio2 : &bp->sma_map2->gpio2;
-	shift = sma_nr & 1 ? 0 : 16;
-
-	mask = 0xffff << (16 - shift);
-
-	spin_lock_irqsave(&bp->lock, flags);
-
-	reg = ioread32(gpio);
-	reg = (reg & mask) | (val << shift);
-
-	__handle_signal_outputs(bp, reg);
-
-	iowrite32(reg, gpio);
-
-	spin_unlock_irqrestore(&bp->lock, flags);
-
-	return 0;
-}
-
-static int
-ptp_ocp_sma_store_inputs(struct ptp_ocp *bp, int sma_nr, u32 val)
-{
-	u32 reg, mask, shift;
-	unsigned long flags;
-	u32 __iomem *gpio;
-
-	gpio = sma_nr > 2 ? &bp->sma_map2->gpio1 : &bp->sma_map1->gpio1;
-	shift = sma_nr & 1 ? 0 : 16;
-
-	mask = 0xffff << (16 - shift);
-
-	spin_lock_irqsave(&bp->lock, flags);
-
-	reg = ioread32(gpio);
-	reg = (reg & mask) | (val << shift);
-
-	__handle_signal_inputs(bp, reg);
-
-	iowrite32(reg, gpio);
-
-	spin_unlock_irqrestore(&bp->lock, flags);
-
-	return 0;
-}
-
-static const struct ocp_sma_op ocp_fb_sma_op = {
-	.tbl		= { ptp_ocp_sma_in, ptp_ocp_sma_out },
-	.init		= ptp_ocp_sma_init,
-	.get		= ptp_ocp_sma_get,
-	.set_inputs	= ptp_ocp_sma_store_inputs,
-	.set_output	= ptp_ocp_sma_store_output,
-};
-
-static void
-ptp_ocp_art_sma_init(struct ptp_ocp *bp)
-{
-	u32 reg;
-	int i;
-
-	/* defaults */
-	bp->sma[0].mode = SMA_MODE_IN;
-	bp->sma[1].mode = SMA_MODE_IN;
-	bp->sma[2].mode = SMA_MODE_OUT;
-	bp->sma[3].mode = SMA_MODE_OUT;
-
-	bp->sma[0].default_fcn = 0x08;	/* IN: 10Mhz */
-	bp->sma[1].default_fcn = 0x01;	/* IN: PPS1 */
-	bp->sma[2].default_fcn = 0x10;	/* OUT: 10Mhz */
-	bp->sma[3].default_fcn = 0x02;	/* OUT: PHC */
-
-	/* If no SMA map, the pin functions and directions are fixed. */
-	if (!bp->art_sma) {
-		for (i = 0; i < 4; i++) {
-			bp->sma[i].fixed_fcn = true;
-			bp->sma[i].fixed_dir = true;
-		}
-		return;
-	}
-
-	for (i = 0; i < 4; i++) {
-		reg = ioread32(&bp->art_sma->map[i].gpio);
-
-		switch (reg & 0xff) {
-		case 0:
-			bp->sma[i].fixed_fcn = true;
-			bp->sma[i].fixed_dir = true;
-			break;
-		case 1:
-		case 8:
-			bp->sma[i].mode = SMA_MODE_IN;
-			break;
-		default:
-			bp->sma[i].mode = SMA_MODE_OUT;
-			break;
-		}
-	}
-}
-
-static u32
-ptp_ocp_art_sma_get(struct ptp_ocp *bp, int sma_nr, enum ptp_ocp_sma_mode mode)
-{
-	if (bp->sma[sma_nr - 1].fixed_fcn)
-		return bp->sma[sma_nr - 1].default_fcn;
-
-	return ioread32(&bp->art_sma->map[sma_nr - 1].gpio) & 0xff;
-}
-
-/* note: store 0 is considered invalid. */
-static int
-ptp_ocp_art_sma_store(struct ptp_ocp *bp, int sma_nr, u32 val)
-{
-	u32 __iomem *gpio;
-	u32 reg;
-
-	val &= SMA_SELECT_MASK;
-	if (hweight32(val) > 1)
-		return -EINVAL;
-
-	gpio = &bp->art_sma->map[sma_nr - 1].gpio;
-
-	reg = ioread32(gpio);
-	if (((reg >> 16) & val) == 0)
-		return -EOPNOTSUPP;
-
-	reg = (reg & 0xff00) | (val & 0xff);
-	iowrite32(reg, gpio);
-
-	return 0;
-}
-
-static const struct ocp_sma_op ocp_art_sma_op = {
-	.tbl		= { ptp_ocp_art_sma_in, ptp_ocp_art_sma_out },
-	.init		= ptp_ocp_art_sma_init,
-	.get		= ptp_ocp_art_sma_get,
-	.set_inputs	= ptp_ocp_art_sma_store,
-	.set_output	= ptp_ocp_art_sma_store,
-};
-
 static int
 ptp_ocp_sma_store(struct ptp_ocp *bp, const char *buf, int sma_nr)
 {
@@ -2805,9 +2822,9 @@ ptp_ocp_sma_store(struct ptp_ocp *bp, const char *buf, int sma_nr)
 
 	if (mode != sma->mode) {
 		if (mode == SMA_MODE_IN)
-			bp->sma_op->set_output(bp, sma_nr, 0);
+			ptp_ocp_sma_set_output(bp, sma_nr, 0);
 		else
-			bp->sma_op->set_inputs(bp, sma_nr, 0);
+			ptp_ocp_sma_set_inputs(bp, sma_nr, 0);
 		sma->mode = mode;
 	}
 
@@ -2818,9 +2835,9 @@ ptp_ocp_sma_store(struct ptp_ocp *bp, const char *buf, int sma_nr)
 		val = 0;
 
 	if (mode == SMA_MODE_IN)
-		val = bp->sma_op->set_inputs(bp, sma_nr, val);
+		val = ptp_ocp_sma_set_inputs(bp, sma_nr, val);
 	else
-		val = bp->sma_op->set_output(bp, sma_nr, val);
+		val = ptp_ocp_sma_set_output(bp, sma_nr, val);
 
 	return val;
 }
