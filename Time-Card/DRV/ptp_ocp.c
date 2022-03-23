@@ -3282,6 +3282,47 @@ internal_pps_cable_delay_store(struct device *dev,
 static DEVICE_ATTR_RW(internal_pps_cable_delay);
 
 static ssize_t
+holdover_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct ptp_ocp *bp = dev_get_drvdata(dev);
+	u32 val = 0;
+
+	if (bp->pps_select)
+		val = ioread32(&bp->pps_select->gpio2) & 0x3;
+
+	return sysfs_emit(buf, "%d\n", val);
+}
+
+static ssize_t
+holdover_store(struct device *dev, struct device_attribute *attr,
+	       const char *buf, size_t count)
+{
+	struct ptp_ocp *bp = dev_get_drvdata(dev);
+	unsigned long flags;
+	u32 val, reg;
+	int err;
+
+	if (!bp->pps_select)
+		return -EOPNOTSUPP;
+
+	err = kstrtou32(buf, 0, &val);
+	if (err)
+		return err;
+
+	if (val > 3)
+		return -EINVAL;
+
+	spin_lock_irqsave(&bp->lock, flags);
+	reg = ioread32(&bp->pps_select->gpio2);
+	reg = (reg & ~0x3) | val;
+	iowrite32(val, &bp->pps_select->gpio2);
+	spin_unlock_irqrestore(&bp->lock, flags);
+
+	return count;
+}
+static DEVICE_ATTR_RW(holdover);
+
+static ssize_t
 ts_window_adjust_show(struct device *dev,
 		      struct device_attribute *attr, char *buf)
 {
@@ -3512,6 +3553,7 @@ static struct attribute *fb_timecard_attrs[] = {
 	&dev_attr_available_clock_sources.attr,
 	&dev_attr_external_pps_cable_delay.attr,
 	&dev_attr_internal_pps_cable_delay.attr,
+	&dev_attr_holdover.attr,
 	&dev_attr_sma1.attr,
 	&dev_attr_sma2.attr,
 	&dev_attr_sma3.attr,
@@ -3824,9 +3866,15 @@ ptp_ocp_summary_show(struct seq_file *s, void *data)
 
 	/* compute src for PPS1, used below. */
 	if (bp->pps_select) {
-		val = ioread32(&bp->pps_select->gpio1);
 		src = &buf[80];
 		mac_src = "GNSS1";
+
+		val = ioread32(&bp->pps_select->gpio2) & 0x3;
+		if (val == 0)
+			val = ioread32(&bp->pps_select->gpio1) & 0x7;
+		else if (val == 0x3)
+			val = 0x4;
+
 		if (val & 0x01) {
 			gpio_input_map(src, bp, sma_val, 0, NULL);
 			mac_src = src;
