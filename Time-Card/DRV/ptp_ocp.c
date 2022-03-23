@@ -396,8 +396,6 @@ static int ptp_ocp_signal_enable(void *priv, u32 req, bool enable);
 static int ptp_ocp_sma_store(struct ptp_ocp *bp, const char *buf, int sma_nr);
 
 static int ptp_ocp_art_board_init(struct ptp_ocp *bp, struct ocp_resource *r);
-static irqreturn_t ptp_ocp_art_pps_irq(int irq, void *priv);
-static int ptp_ocp_art_pps_enable(void *priv, u32 req, bool enable);
 
 static const struct ocp_attr_group fb_timecard_groups[];
 static const struct ocp_attr_group art_timecard_groups[];
@@ -474,9 +472,12 @@ static struct ptp_ocp_eeprom_map art_eeprom_map[] = {
  * 15: TS3
  * 16: TS4
  --
- * 11: Orolia TS0
- * 12: Orolia TS1
- * 13: Orolia PPS
+ * 8: Orolia TS1
+ * 10: Orolia TS2
+ * 11: Orolia TS0 (GNSS)
+ * 12: Orolia PPS
+ * 14: Orolia TS3
+ * 15: Orolia TS4
  */
 
 static struct ocp_resource ocp_fb_resource[] = {
@@ -718,12 +719,6 @@ struct ocp_art_osc_reg {
 #define MRO50_OP_ADJUST_COARSE	(MRO50_CMD_ADJUST | MRO50_CTRL_ADJUST_COARSE)
 #define MRO50_OP_SAVE_COARSE	(MRO50_CTRL_ENABLE | MRO50_CTRL_SAVE_COARSE)
 
-struct ocp_art_pps_reg {
-	u32	enable;
-	u32	__pad0[11];
-	u32	intr;
-};
-
 struct ocp_art_gpio_reg {
 	struct {
 		u32	gpio;
@@ -744,12 +739,58 @@ static struct ocp_resource ocp_art_resource[] = {
 		OCP_MEM_RESOURCE(art_sma),
 		.offset = 0x003C0000, .size = 0x1000,
 	},
-	/* Timestamp associated with Internal PPS of the card */
+	/* Timestamp associated with GNSS1 receiver PPS */
 	{
 		OCP_EXT_RESOURCE(ts0),
-		.offset = 0x00330000, .size = 0x20, .irq_vec = 11,
+		.offset = 0x360000, .size = 0x20, .irq_vec = 12,
 		.extra = &(struct ptp_ocp_ext_info) {
 			.index = 0,
+			.irq_fcn = ptp_ocp_ts_irq,
+			.enable = ptp_ocp_ts_enable,
+		},
+	},
+	{
+		OCP_EXT_RESOURCE(ts1),
+		.offset = 0x380000, .size = 0x20, .irq_vec = 8,
+		.extra = &(struct ptp_ocp_ext_info) {
+			.index = 1,
+			.irq_fcn = ptp_ocp_ts_irq,
+			.enable = ptp_ocp_ts_enable,
+		},
+	},
+	{
+		OCP_EXT_RESOURCE(ts2),
+		.offset = 0x390000, .size = 0x20, .irq_vec = 10,
+		.extra = &(struct ptp_ocp_ext_info) {
+			.index = 2,
+			.irq_fcn = ptp_ocp_ts_irq,
+			.enable = ptp_ocp_ts_enable,
+		},
+	},
+	{
+		OCP_EXT_RESOURCE(ts3),
+		.offset = 0x3A0000, .size = 0x20, .irq_vec = 14,
+		.extra = &(struct ptp_ocp_ext_info) {
+			.index = 3,
+			.irq_fcn = ptp_ocp_ts_irq,
+			.enable = ptp_ocp_ts_enable,
+		},
+	},
+	{
+		OCP_EXT_RESOURCE(ts4),
+		.offset = 0x3B0000, .size = 0x20, .irq_vec = 15,
+		.extra = &(struct ptp_ocp_ext_info) {
+			.index = 4,
+			.irq_fcn = ptp_ocp_ts_irq,
+			.enable = ptp_ocp_ts_enable,
+		},
+	},
+	/* Timestamp associated with Internal PPS of the card */
+	{
+		OCP_EXT_RESOURCE(pps),
+		.offset = 0x00330000, .size = 0x20, .irq_vec = 11,
+		.extra = &(struct ptp_ocp_ext_info) {
+			.index = 5,
 			.irq_fcn = ptp_ocp_ts_irq,
 			.enable = ptp_ocp_ts_enable,
 		},
@@ -788,24 +829,6 @@ static struct ocp_resource ocp_art_resource[] = {
 					I2C_BOARD_INFO("24c08", 0x50),
 				},
 			},
-		},
-	},
-	/* Timestamp associated with GNSS1 receiver PPS */
-	{
-		OCP_EXT_RESOURCE(ts1),
-		.offset = 0x360000, .size = 0x20, .irq_vec = 12,
-		.extra = &(struct ptp_ocp_ext_info) {
-			.index = 1,
-			.irq_fcn = ptp_ocp_ts_irq,
-			.enable = ptp_ocp_ts_enable,
-		},
-	},
-	{
-		OCP_EXT_RESOURCE(pps),
-		.offset = 0x00370000, .size = 0x20, .irq_vec = 13,
-		.extra = &(struct ptp_ocp_ext_info) {
-			.irq_fcn = ptp_ocp_art_pps_irq,
-			.enable = ptp_ocp_art_pps_enable,
 		},
 	},
 	{
@@ -1904,32 +1927,6 @@ ptp_ocp_ts_enable(void *priv, u32 req, bool enable)
 		iowrite32(0, &reg->intr_mask);
 		iowrite32(0, &reg->enable);
 	}
-
-	return 0;
-}
-
-static irqreturn_t
-ptp_ocp_art_pps_irq(int irq, void *priv)
-{
-	struct ptp_ocp_ext_src *ext = priv;
-	struct ocp_art_pps_reg __iomem *reg = ext->mem;
-	struct ptp_clock_event ev;
-
-	ev.type = PTP_CLOCK_PPS;
-	ptp_clock_event(ext->bp->ptp, &ev);
-
-	iowrite32(0, &reg->intr);
-
-	return IRQ_HANDLED;
-}
-
-static int
-ptp_ocp_art_pps_enable(void *priv, u32 req, bool enable)
-{
-	struct ptp_ocp_ext_src *ext = priv;
-	struct ocp_art_pps_reg __iomem *reg = ext->mem;
-
-	iowrite32(enable, &reg->enable);
 
 	return 0;
 }
