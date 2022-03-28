@@ -913,7 +913,7 @@ static const struct ocp_selector ptp_ocp_art_sma_in[] = {
 };
 
 static const struct ocp_selector ptp_ocp_art_sma_out[] = {
-	{ .name = "PHC",	.value = 0x0002 },
+	{ .name = "MAC",	.value = 0x0002 },
 	{ .name = "GNSS",	.value = 0x0004 },
 	{ .name = "10Mhz",	.value = 0x0010 },
 	{ }
