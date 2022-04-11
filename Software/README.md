@@ -62,6 +62,7 @@ The example shown is for unicast server only.
 ### Server
 #### ptp4u
 https://github.com/facebookarchive/ptp
+```
 $ /usr/local/bin/ptp4u -iface eth1
 ```
 
