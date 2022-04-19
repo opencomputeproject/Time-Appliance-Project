@@ -23,6 +23,7 @@
 #include <linux/miscdevice.h>
 #include <linux/nvmem-consumer.h>
 #include <linux/version.h>
+#include <linux/crc16.h>
 
 /*---------------------------------------------------------------------------*/
 #ifndef MRO50_IOCTL_H
@@ -250,6 +251,16 @@ struct ptp_ocp_flash_info {
 	int pci_offset;
 	int data_size;
 	void *data;
+};
+
+#define OCP_FIRMWARE_MAGIC_HEADER "OCPC"
+struct ptp_ocp_firmware_header {
+	char magic[4];
+	__be16 pci_vendor_id;
+	__be16 pci_device_id;
+	__be32 image_size;
+	__be16 hw_revision;
+	__be16 crc;
 };
 
 struct ptp_ocp_i2c_info {
@@ -1541,6 +1552,54 @@ ptp_ocp_find_flash(struct ptp_ocp *bp)
 }
 
 static int
+ptp_ocp_devlink_flash_check(struct devlink *devlink, const struct firmware *fw,
+						size_t *image_size)
+{
+	struct ptp_ocp *bp = devlink_priv(devlink);
+	const struct ptp_ocp_firmware_header *hdr;
+	struct pci_dev *pdev = bp->pdev;
+	u16 crc;
+
+	devlink_flash_update_status_notify(devlink, "Checking flash image",
+					   NULL, 0, 0);
+
+	hdr = (const struct ptp_ocp_firmware_header *)fw->data;
+	if (!memcmp(hdr->magic, OCP_FIRMWARE_MAGIC_HEADER, 4)) {
+		dev_err(&pdev->dev, "No image header found, fallback to raw data flashing\n");
+		*image_size = fw->size;
+		return 0;
+	}
+
+	// here we have header, have to check everything to confirm that image is correct
+	if (be16_to_cpu(hdr->pci_vendor_id) != pdev->vendor ||
+		be16_to_cpu(hdr->pci_device_id) != pdev->device) {
+		dev_err(&pdev->dev, "The image is for different hardware\n");
+		return -EINVAL;
+	}
+
+	/* Disable it while we don't have resources to read revision from */
+#if 0
+	if (__be16_to_cpu(hdr->hw_revision) != bp->vendor)
+		dev_err(&pdev->dev, "The image is for different hardware revision\n");
+		return -EINVAL;
+	}
+#endif
+	*image_size = be32_to_cpu(hdr->image_size);
+	if (*image_size != (fw->size - sizeof(*hdr))) {
+		dev_err(&pdev->dev, "The image size is not correct\n");
+		return -EINVAL;
+	}
+
+	crc = crc16(0xFFFF, &fw->data[sizeof(*hdr)], *image_size);
+	if (be16_to_cpu(hdr->crc) != crc) {
+		dev_err(&pdev->dev, "The image CRC is not correct\n");
+		return -EINVAL;
+	}
+
+	return sizeof(*hdr);
+}
+
+static int
 ptp_ocp_devlink_flash(struct devlink *devlink, struct device *dev,
 		      const struct firmware *fw)
 {
@@ -1549,12 +1608,17 @@ ptp_ocp_devlink_flash(struct devlink *devlink, struct device *dev,
 	size_t off, len, resid, wrote;
 	struct erase_info erase;
 	size_t base, blksz;
-	int err = 0;
+	int err = 0, image_off;
+
+	image_off = ptp_ocp_devlink_flash_check(devlink, fw, &resid);
+	if (image_off < 0) {
+		err = image_off;
+		goto out;
+	}
 
 	off = 0;
 	base = bp->flash_start;
 	blksz = 4096;
-	resid = fw->size;
 
 	while (resid) {
 		devlink_flash_update_status_notify(devlink, "Flashing",
@@ -1568,7 +1632,7 @@ ptp_ocp_devlink_flash(struct devlink *devlink, struct device *dev,
 		if (err)
 			goto out;
 
-		err = mtd_write(mtd, base + off, len, &wrote, &fw->data[off]);
+		err = mtd_write(mtd, base + off, len, &wrote, &fw->data[image_off + off]);
 		if (err)
 			goto out;
 
