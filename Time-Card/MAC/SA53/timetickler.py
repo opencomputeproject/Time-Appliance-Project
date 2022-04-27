@@ -22,9 +22,11 @@ MAC_COMMANDS_GET = [
     "LastCorrection",
     "DigitalTuning",
     "Phase",
+    "Temperature",
+    "serial",
     "Locked",
 ]
-MAC_COMMANDS_SET = ["PpsWidth", "TauPps0", "PpsOffset", "Disciplining"]
+MAC_COMMANDS_SET = ["PpsWidth", "TauPps0", "PpsSource", "PpsOffset", "Disciplining", "DisciplineThresholdPps0"]
  
 log = logging.getLogger(__name__)
 
