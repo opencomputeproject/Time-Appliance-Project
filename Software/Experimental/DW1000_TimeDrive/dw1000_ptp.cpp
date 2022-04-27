@@ -5,7 +5,7 @@
 #include "dw1000_regs.h"
 #include <require_cpp11.h>
 #include <Arduino.h>
-
+#include <SPI.h>
 
 
 
@@ -31,7 +31,7 @@ volatile boolean sentPkt = false;
 volatile boolean received = false;
 volatile boolean error = false;
 
-uint8_t fsm_state = IDLE;
+uint8_t fsm_state = TD_IDLE;
 
 
 
@@ -89,9 +89,9 @@ DW1000Time * last_store_txTS;
 void print_pkt(byte data[], int len) {
 
   for ( int i = 0; i < len; i++ ) {
-    Serial.print("0x"); Serial.print( data[i] , HEX); Serial.print(" ");
+    SerialUSB.print("0x"); SerialUSB.print( data[i] , HEX); SerialUSB.print(" ");
   }
-  Serial.println("");
+  SerialUSB.println("");
 }
 
 
@@ -127,16 +127,20 @@ void initTransmit() {
 
 void decawave_ptp_init() {
   if ( is_gug ) 
-    Serial.println(F("### DW1000-arduino-ranging-anchor ###"));
+    SerialUSB.println(F("### DW1000-arduino-ranging-anchor ###"));
   else
-    Serial.println(F("### DW1000-arduino-ranging-tag ###"));
+    SerialUSB.println(F("### DW1000-arduino-ranging-tag ###"));
 
   char msg[128];
+
+
+
+  // EDIT DW1000 LIBRARY TO ALLOW FOR DIFFERENT SPI 
   while ( 1 ) {
     // initialize the driver
-    DW1000.begin(PIN_IRQ, PIN_RST);
-    DW1000.select(PIN_SS);
-    Serial.println(F("DW1000 initialized ..."));
+    DW1000.begin_newspi(PIN_DW_IRQ, PIN_DW_RST, &mySPI);
+    DW1000.select(PIN_DW_SS);
+    SerialUSB.println(F("DW1000 initialized ..."));
     // general configuration
     DW1000.newConfiguration();
     DW1000.setDefaults();
@@ -147,14 +151,14 @@ void decawave_ptp_init() {
     DW1000.setNetworkId(10);
     DW1000.enableMode(DW1000.MODE_LONGDATA_RANGE_ACCURACY);
     DW1000.commitConfiguration();
-    Serial.println(F("Committed configuration ..."));
+    SerialUSB.println(F("Committed configuration ..."));
     // DEBUG chip info and registers pretty printed
     
     DW1000.getPrintableDeviceIdentifier(msg);
-    Serial.print("Device ID: "); Serial.println(msg);
+    SerialUSB.print("Device ID: "); SerialUSB.println(msg);
     if ( msg[0] != 'D' && msg[1] != 'E' &&
       msg[2] != 'C' && msg[3] != 'A' ) {
-      Serial.println("Didn't get DECA, waiting for DECA!");
+      SerialUSB.println("Didn't get DECA, waiting for DECA!");
       delay(1000);
       DW1000.reset();
     } else {
@@ -162,11 +166,11 @@ void decawave_ptp_init() {
     }
   }
   DW1000.getPrintableExtendedUniqueIdentifier(msg);
-  Serial.print("Unique ID: "); Serial.println(msg);
+  SerialUSB.print("Unique ID: "); SerialUSB.println(msg);
   DW1000.getPrintableNetworkIdAndShortAddress(msg);
-  Serial.print("Network ID & Device Address: "); Serial.println(msg);
+  SerialUSB.print("Network ID & Device Address: "); SerialUSB.println(msg);
   DW1000.getPrintableDeviceMode(msg);
-  Serial.print("Device mode: "); Serial.println(msg);
+  SerialUSB.print("Device mode: "); SerialUSB.println(msg);
   // attach callback for (successfully) sent and received messages
   DW1000.attachSentHandler(handleSent);
   DW1000.attachReceivedHandler(handleReceived);
@@ -180,10 +184,10 @@ void decawave_ptp_init() {
 void deca_tx(byte data[], uint16_t n, DW1000Time * txTS) {
 
   if ( is_gug ) 
-    Serial.print("GUG ");
+    SerialUSB.print("GUG ");
   else
-    Serial.print("TimeStick ");
-  Serial.print(" deca_tx "); Serial.print(n); Serial.println(" bytes");
+    SerialUSB.print("TimeStick ");
+  SerialUSB.print(" deca_tx "); SerialUSB.print(n); SerialUSB.println(" bytes");
   initTransmit();
   DW1000.setData( data, n );
   if ( txTS != NULL ) {
@@ -212,14 +216,14 @@ void deca_loop() {
 
     /*
     if ( is_gug )
-      Serial.print("GUG ");
+      SerialUSB.print("GUG ");
     else
-      Serial.print("TimeStick ");
-    Serial.print("Received Data is ... "); print_pkt(rx_data, data_len);
+      SerialUSB.print("TimeStick ");
+    SerialUSB.print("Received Data is ... "); print_pkt(rx_data, data_len);
     */
-    //Serial.print("FP power is [dBm] ... "); Serial.println(DW1000.getFirstPathPower());
-    //Serial.print("RX power is [dBm] ... "); Serial.println(DW1000.getReceivePower());
-    //Serial.print("Signal quality is ... "); Serial.println(DW1000.getReceiveQuality());
+    //SerialUSB.print("FP power is [dBm] ... "); SerialUSB.println(DW1000.getFirstPathPower());
+    //SerialUSB.print("RX power is [dBm] ... "); SerialUSB.println(DW1000.getReceivePower());
+    //SerialUSB.print("Signal quality is ... "); SerialUSB.println(DW1000.getReceiveQuality());
   } else {
     data_len = 0; 
   }  
@@ -234,17 +238,17 @@ void deca_loop() {
     receiver(); // enable receiving 
   
     if ( is_gug ) 
-      Serial.print("GUG ");
+      SerialUSB.print("GUG ");
     else
-      Serial.print("TimeStick ");
+      SerialUSB.print("TimeStick ");
 
-    Serial.print("Got TX timestamp "); Serial.println(txTimeStamp.getAsMicroSeconds());
+    SerialUSB.print("Got TX timestamp "); SerialUSB.println(txTimeStamp.getAsMicroSeconds());
   }
   if (error) {
-    Serial.println("Error receiving a message");
+    SerialUSB.println("Error receiving a message");
     error = false;
     //DW1000.getData(0);
-    //Serial.println("Error data is ... "); 
+    //SerialUSB.println("Error data is ... "); 
   }  
 }
 
@@ -278,7 +282,7 @@ void pseudo_socket_send(uint16_t n, DW1000Time * txTS) {
   last_pkt_size = n;
   last_store_txTS = txTS;
   retrans_count = 0;
-  Serial.print("Pseudo socket send "); Serial.println(last_pkt_size);
+  SerialUSB.print("Pseudo socket send "); SerialUSB.println(last_pkt_size);
 }
 
 void psuedo_socket_resend() {
@@ -286,7 +290,7 @@ void psuedo_socket_resend() {
   deca_tx( tx_data, last_pkt_size, last_store_txTS );  
   time_sent_req = millis();
   retrans_count++;
-  Serial.print("Pseudo socket resend "); Serial.println(last_pkt_size);
+  SerialUSB.print("Pseudo socket resend "); SerialUSB.println(last_pkt_size);
 }
 
 bool pseudo_socket_need_retx() {
@@ -312,7 +316,7 @@ bool is_rx_packet_for_socket() {
 
 /*
 GUG state machine
-Idle -> go to listen 
+TD_IDLE -> go to listen 
 Broadcast -> broadcast sync+followup messages without listening inbetween
 Listen -> Listen for range finding , jump to Broadcast after a while
   GUGs will NOT retransmit range finding messages 
@@ -345,8 +349,8 @@ void Send_Sync_Followup() {
     txTimeStamp.getTimestamp(syncpkt->followups[sync_num-1]);
 
   deca_tx( tx_data, SYNCFOLLOWUP_PKTSIZE, 0 );
-  Serial.print("Sending sync followup #"); Serial.print(sync_num); 
-  Serial.print(" Followup val: "); Serial.println(txTimeStamp.getAsMicroSeconds());
+  SerialUSB.print("Sending sync followup #"); SerialUSB.print(sync_num); 
+  SerialUSB.print(" Followup val: "); SerialUSB.println(txTimeStamp.getAsMicroSeconds());
   
   sync_num++;
   seq_num = ( seq_num + 1 ) % 256;
@@ -365,7 +369,7 @@ void Send_Poll() {
   pollpkt->hdr.function_code = POLL_MESSAGE;
   deca_tx( tx_data, POLL_PKTSIZE, &PollTXTime );
   seq_num = ( seq_num + 1 ) % 256;
-  Serial.println("GUG Send Poll");
+  SerialUSB.println("GUG Send Poll");
   print_pkt(tx_data, POLL_PKTSIZE);
 }
 
@@ -389,7 +393,7 @@ void Send_Final() {
   finalpkt->finalTxTimeSubRespRX = storeTS[4];
   deca_tx( tx_data, FINALMSG_PKTSIZE, 0 );
   seq_num = ( seq_num + 1 ) % 256;
-  Serial.println("GUG Send Final");
+  SerialUSB.println("GUG Send Final");
   print_pkt(tx_data, FINALMSG_PKTSIZE );
 }
 
@@ -405,38 +409,38 @@ void gug_respond() {
       Send_Final();
     }
   } else {
-    Serial.print("GUG respond not proper request: frame_control:0x");
-    Serial.print(hdr->frame_control, HEX);
-    Serial.print(", dest_addr:0x");
-    Serial.println(hdr->dest_addr, HEX);
+    SerialUSB.print("GUG respond not proper request: frame_control:0x");
+    SerialUSB.print(hdr->frame_control, HEX);
+    SerialUSB.print(", dest_addr:0x");
+    SerialUSB.println(hdr->dest_addr, HEX);
   }
 }
 
 void GUGFSM() {
   // state machine
-  //Serial.print("GUG FSM "); Serial.println(fsm_state);
-  if ( fsm_state == IDLE ) {
+  //SerialUSB.print("GUG FSM "); SerialUSB.println(fsm_state);
+  if ( fsm_state == TD_IDLE ) {
     receiver();
     fsm_state = LISTEN;
     time_since_last_sync = 0;
-    Serial.println("GUG IDLE -> LISTEN");
+    SerialUSB.println("GUG TD_IDLE -> LISTEN");
   } else if ( fsm_state == LISTEN ) {
     if ( deca_rx_has_data() ) {
-      Serial.print("GUG in listen state got packet len "); Serial.println(data_len);  
+      SerialUSB.print("GUG in listen state got packet len "); SerialUSB.println(data_len);  
       gug_respond();    
     }
     if (( millis() - time_since_last_sync ) > TIME_BETWEEN_BURSTS ) {
       fsm_state = BROADCAST;
       sync_num = 0;
-      Serial.println("#####################GUG LISTEN -> BROADCAST#################################");
+      SerialUSB.println("#####################GUG LISTEN -> BROADCAST#################################");
     }
   } else if ( fsm_state == BROADCAST ) {
-    //Serial.print( millis() - time_since_last_sync ); Serial.print(" "); 
-    //Serial.print((unsigned int) store_tx); Serial.print(" "); Serial.println(deca_tx_done());
+    //SerialUSB.print( millis() - time_since_last_sync ); SerialUSB.print(" "); 
+    //SerialUSB.print((unsigned int) store_tx); SerialUSB.print(" "); SerialUSB.println(deca_tx_done());
     if  ( (( millis() - time_since_last_sync ) > TIME_BETWEEN_SYNCS_MSEC) 
         && deca_tx_done() && sync_num <= NUM_SYNC_RETRANSMITS ) {
-      //Serial.print("Send sync followup debug:");
-      //Serial.print("Store_Tx="); Serial.println( (unsigned int) store_tx);
+      //SerialUSB.print("Send sync followup debug:");
+      //SerialUSB.print("Store_Tx="); SerialUSB.println( (unsigned int) store_tx);
       // send out sync+followup
       Send_Sync_Followup();
       time_since_last_sync = millis();
@@ -445,16 +449,16 @@ void GUGFSM() {
     if ( sync_num > NUM_SYNC_RETRANSMITS && deca_tx_done() ) {
       receiver(); // enable RX mode 
       fsm_state = LISTEN;  
-      Serial.println("######################GUG BROADCAST -> LISTEN################################");
+      SerialUSB.println("######################GUG BROADCAST -> LISTEN################################");
     }   
   } else { 
-    Serial.println("GUG UNKNOWN -> IDLE");
-    fsm_state = IDLE;
+    SerialUSB.println("GUG UNKNOWN -> TD_IDLE");
+    fsm_state = TD_IDLE;
   }  
 }
 
 /* Time stick FSM
-Idle -> go to listen
+TD_IDLE -> go to listen
 Listen -> Listen for GUGs and sync+followups, store GUG data internally
 Range-find -> Try to range find with any GUGs found during listening 
     Doesn't need to be done often, maybe every 10 seconds or something
@@ -474,7 +478,7 @@ void Send_Ranging_Init() {
   pseudo_socket_send( RANGE_INIT_PKTSIZE, &txTimeStamp );
   
   seq_num = ( seq_num + 1 ) % 256;
-  Serial.println("Time stick send ranging init");
+  SerialUSB.println("Time stick send ranging init");
   print_pkt(tx_data, RANGE_INIT_PKTSIZE );
   
 }
@@ -490,13 +494,13 @@ void Send_Response() {
   pseudo_socket_send( RESPONSE_PKTSIZE, &ResponseTXTime );
   
   seq_num = ( seq_num + 1 ) % 256;  
-  Serial.println("Time stick send response"); 
+  SerialUSB.println("Time stick send response"); 
   print_pkt(tx_data, RESPONSE_PKTSIZE);
 }
 
 void calculate_delay() {
-  Serial.println("Time stick calculate delay:");
-  Serial.print("ResponseTXTime:"); Serial.println(ResponseTXTime.getAsMicroSeconds());
+  SerialUSB.println("Time stick calculate delay:");
+  SerialUSB.print("ResponseTXTime:"); SerialUSB.println(ResponseTXTime.getAsMicroSeconds());
 
   // look at received packet contents , final message
   
@@ -510,24 +514,24 @@ void calculate_delay() {
   finaltime[4] = finalpkt->finalTxTimeSubRespRX & 0xff;
   CalculatedTOFDelay.setTimestamp(finaltime);
 
-  Serial.print("GUG GotResponseTime:"); Serial.println(CalculatedTOFDelay.getAsMicroSeconds());
+  SerialUSB.print("GUG GotResponseTime:"); SerialUSB.println(CalculatedTOFDelay.getAsMicroSeconds());
   for ( int i = 0; i < 5; i++ ) {
-    Serial.print(" 0x"); Serial.print(finaltime[i], HEX);
+    SerialUSB.print(" 0x"); SerialUSB.print(finaltime[i], HEX);
   }
-  Serial.println("");
+  SerialUSB.println("");
   CalculatedTOFDelay = CalculatedTOFDelay - ResponseTXTime;
-  Serial.print("Calculated delay:"); Serial.println(CalculatedTOFDelay.getAsMicroSeconds());
+  SerialUSB.print("Calculated delay:"); SerialUSB.println(CalculatedTOFDelay.getAsMicroSeconds());
 }
 
 void TimeStickStoreFirstSync() {
-  Serial.print("TimeStickStoreFirstSync "); Serial.println(rxTimeStamp.getAsMicroSeconds());
+  SerialUSB.print("TimeStickStoreFirstSync "); SerialUSB.println(rxTimeStamp.getAsMicroSeconds());
   memcpy( timestick_seen_follow_ups, rx_data, SYNCFOLLOWUP_PKTSIZE );
   time_last_sync_seen = millis();
   sync_followup_rx_time[0] = rxTimeStamp; 
 }
 
 void TimeStickStoreSecondSync() {
-  Serial.print("TimeStickStoreSecondSync "); Serial.println(rxTimeStamp.getAsMicroSeconds());
+  SerialUSB.print("TimeStickStoreSecondSync "); SerialUSB.println(rxTimeStamp.getAsMicroSeconds());
   memcpy( &(timestick_seen_follow_ups[1]), rx_data, SYNCFOLLOWUP_PKTSIZE );
   time_last_sync_seen = millis();
   sync_followup_rx_time[1] = rxTimeStamp; 
@@ -536,7 +540,7 @@ void TimeStickStoreSecondSync() {
 bool isRxInSameBurst() {
   struct uwb_ptp_sync_followup_pkt * rx_sync_followup = (struct uwb_ptp_sync_followup_pkt*) &rx_data;
   
-  // sanity, is idle 
+  // sanity, is TD_IDLE 
   if ( timestick_sync_state == TIMESTICK_SYNC_STATE_IDLE ) {
     return true; 
   }
@@ -582,39 +586,39 @@ void ComputeThreePointCorrection() {
   // figure out which follow-up to look at in the follow-up list
   // just look at current RX_data for the follow-ups 
 
-  Serial.println("////////////ComputeThreePointCorrection");
-  Serial.print("NEED TO ADD IN CalculatedTOF:"); Serial.println(CalculatedTOFDelay.getAsMicroSeconds());
+  SerialUSB.println("////////////ComputeThreePointCorrection");
+  SerialUSB.print("NEED TO ADD IN CalculatedTOF:"); SerialUSB.println(CalculatedTOFDelay.getAsMicroSeconds());
   
   // compute offset first, easier. Just need info from one packet 
   time1.setTimestamp( rx_sync_followup->followups[ timestick_seen_follow_ups[0].sync_num ] );
-  Serial.print("First followup value:"); Serial.println(time1.getAsMicroSeconds());  
+  SerialUSB.print("First followup value:"); SerialUSB.println(time1.getAsMicroSeconds());  
   time1 = time1 - sync_followup_rx_time[0]; 
-  Serial.print("RX time:"); Serial.println(sync_followup_rx_time[0].getAsMicroSeconds());
-  Serial.print("Calculated offset in decawave units:"); Serial.println(time1.getAsMicroSeconds());
+  SerialUSB.print("RX time:"); SerialUSB.println(sync_followup_rx_time[0].getAsMicroSeconds());
+  SerialUSB.print("Calculated offset in decawave units:"); SerialUSB.println(time1.getAsMicroSeconds());
   
   picosecond_offset = (int64_t)(((double)time1.getTimestamp()) * 15.65);  // approx 15.65 ps per tick in decawave
   // rounding to nearest picosecond is fine, won't ever get that precise anyways
 
-  Serial.print("picosecond_offset "); Serial.println(picosecond_offset);
+  SerialUSB.print("picosecond_offset "); //SerialUSB.println(picosecond_offset);
 
   // compute frequency ratio of local clock versus remote clock
   time1.setTimestamp(rx_sync_followup->followups[ timestick_seen_follow_ups[0].sync_num ]);
   time2.setTimestamp(rx_sync_followup->followups[ timestick_seen_follow_ups[1].sync_num ]);
-  Serial.print("Remote time1:"); Serial.println(time1.getAsMicroSeconds());
-  Serial.print("Remote time2:"); Serial.println(time2.getAsMicroSeconds());
+  SerialUSB.print("Remote time1:"); SerialUSB.println(time1.getAsMicroSeconds());
+  SerialUSB.print("Remote time2:"); SerialUSB.println(time2.getAsMicroSeconds());
   time1 = time2 - time1; // remote time difference
-  Serial.print("Remote time difference:"); Serial.println(time1.getAsMicroSeconds(), 9);
+  SerialUSB.print("Remote time difference:"); SerialUSB.println(time1.getAsMicroSeconds(), 9);
 
   
   time3 = sync_followup_rx_time[1] - sync_followup_rx_time[0]; // local time difference 
-  Serial.print("Local time0:"); Serial.println(sync_followup_rx_time[0].getAsMicroSeconds());
-  Serial.print("Local time1:"); Serial.println(sync_followup_rx_time[1].getAsMicroSeconds());
-  Serial.print("Local time difference:"); Serial.println(time3.getAsMicroSeconds(), 9);
+  SerialUSB.print("Local time0:"); SerialUSB.println(sync_followup_rx_time[0].getAsMicroSeconds());
+  SerialUSB.print("Local time1:"); SerialUSB.println(sync_followup_rx_time[1].getAsMicroSeconds());
+  SerialUSB.print("Local time difference:"); SerialUSB.println(time3.getAsMicroSeconds(), 9);
 
   // these are in absolute time , compute the ratio in frequency
   frequency_ratio = ( (double) time1.getTimestamp() ) / ( (double) time3.getTimestamp() );
   
-  Serial.print("////////////ComputeThreePointCorrection frequency_ratio:"); Serial.println(frequency_ratio, 15);
+  SerialUSB.print("////////////ComputeThreePointCorrection frequency_ratio:"); SerialUSB.println(frequency_ratio, 15);
 }
 
 void TimeStickHandleSyncFollowup() {
@@ -675,20 +679,20 @@ void TimeStickListenGotPkt() {
       // GUG address, hard code for now
       // listen for anybody broadcasting sync_followup
       if ( num_gugs_found == 0 ) {
-        Serial.println("Time stick got GUG packet!");
+        SerialUSB.println("Time stick got GUG packet!");
         num_gugs_found = 1;
         // SHOULD BE SMARTER THAN THIS, just hacky for now  
       }   
       
       if ( data_len != SYNCFOLLOWUP_PKTSIZE ) {
-        Serial.print("Packet size not sync / followup size:");
-        Serial.print(data_len); Serial.print(" ");
-        Serial.println(SYNCFOLLOWUP_PKTSIZE);
+        SerialUSB.print("Packet size not sync / followup size:");
+        SerialUSB.print(data_len); SerialUSB.print(" ");
+        SerialUSB.println(SYNCFOLLOWUP_PKTSIZE);
         return; // don't care
       }
       TimeStickHandleSyncFollowup();      
   } else {
-    Serial.println("Time stick Got packet but not from GUG");
+    SerialUSB.println("Time stick Got packet but not from GUG");
   }    
 }
 
@@ -696,19 +700,19 @@ void TimeStickListenGotPkt() {
 
 void TimeStickFSM() {
   // state machine
-  if ( fsm_state == IDLE ) {
+  if ( fsm_state == TD_IDLE ) {
     receiver();
     fsm_state = LISTEN;
-    Serial.println("###################Time stick IDLE -> LISTEN############################");
+    SerialUSB.println("###################Time stick TD_IDLE -> LISTEN############################");
   } else if ( fsm_state == LISTEN ) {
     if ( deca_rx_has_data() ) {
-      //Serial.println("Time stick LISTEN got packet");
+      //SerialUSB.println("Time stick LISTEN got packet");
       TimeStickListenGotPkt();
     }
     if ( ( (millis() - last_time_rangefound) > TIME_BETWEEN_RANGEFIND_MSEC ) &&
       num_gugs_found > 0 ) {
       fsm_state = RANGEFIND;
-      Serial.println("##############Time stick LISTEN -> RANGEFIND###################");
+      SerialUSB.println("##############Time stick LISTEN -> RANGEFIND###################");
     }
   } else if ( fsm_state == RANGEFIND ) {    
     if ( !pseudo_socket_is_open() ) {
@@ -725,19 +729,19 @@ void TimeStickFSM() {
         if ( hdr->function_code == POLL_MESSAGE &&
             senthdr->function_code == RANGING_INIT_MESSAGE ) {
           // got a poll message, need to send response message 
-          Serial.println("Time stick range find got poll");
+          SerialUSB.println("Time stick range find got poll");
           PollRXTime = rxTimeStamp; 
           Send_Response();
         } else if ( hdr->function_code == FINAL_MESSAGE &&
             senthdr->function_code == RESPONSE_MESSAGE ) {
           // got final message, done
-          Serial.println("Time stick range find got final");
+          SerialUSB.println("Time stick range find got final");
           FinalRXTime = rxTimeStamp;
           close_pseudo_socket(); 
           calculate_delay();
           fsm_state = LISTEN;
           last_time_rangefound = millis();
-          Serial.println("###############Time stick Rangefind -> LISTEN after final message####################");
+          SerialUSB.println("###############Time stick Rangefind -> LISTEN after final message####################");
         }
       }      
     }    
@@ -752,11 +756,11 @@ void TimeStickFSM() {
       close_pseudo_socket();
       fsm_state = LISTEN;
       last_time_rangefound = millis();
-      Serial.println("################Time stick Rangefind -> LISTEN due to retransmit timeout##################");
+      SerialUSB.println("################Time stick Rangefind -> LISTEN due to retransmit timeout##################");
     } 
   } else {
-    Serial.println("################Time stick UNKNOWN -> IDLE####################");
-    fsm_state = IDLE;
+    SerialUSB.println("################Time stick UNKNOWN -> TD_IDLE####################");
+    fsm_state = TD_IDLE;
   }
 }
 

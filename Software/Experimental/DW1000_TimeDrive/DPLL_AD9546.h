@@ -120,6 +120,7 @@
 #define PLL0_LOCKED (1<<0)
 
 
+void pinStr( uint32_t ulPin, unsigned strength);
 void dpll_init(const PROGMEM uint16_t regcount, const PROGMEM uint16_t regs[],const PROGMEM uint8_t vals[] );
 
 byte dpll_read_register(int addr);

@@ -53,7 +53,7 @@
 
 
 // Finite state machine states for GUG and Time Stick
-#define IDLE 0
+#define TD_IDLE 0
 #define LISTEN 1
 #define BROADCAST 2
 #define RANGEFIND 3
@@ -81,10 +81,18 @@
 #include <DW1000Constants.h>
 
 
+
 // Decawave pins 
-extern const uint8_t PIN_RST;
-extern const uint8_t PIN_IRQ;
-extern const uint8_t PIN_SS; 
+extern const uint8_t PIN_DW_IRQ; // PA12
+extern const uint8_t PIN_DW_FORCEON; // PA13
+extern const uint8_t PIN_DW_WAKEUP; //PA14
+extern const uint8_t PIN_DW_RST; // PA15
+extern const uint8_t PIN_DW_MOSI; // PA16
+extern const uint8_t PIN_DW_SCK; // PA17
+extern const uint8_t PIN_DW_SS;  // PA18
+extern const uint8_t PIN_DW_MISO; // PA19
+extern SPIClass mySPI;
+
 
 extern bool is_gug;
 

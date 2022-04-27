@@ -8,6 +8,10 @@ extern const uint8_t PIN_DPLL_SS;
 extern const uint8_t PIN_DPLL_SCK;
 extern const uint8_t PIN_DPLL_DAT;
 extern const uint8_t PIN_DPLL_RESETB;
+extern const uint8_t PIN_DPLL_M5;
+
+extern const uint8_t PIN_LED_1;
+extern const uint8_t PIN_LED_2;
 
 extern const PROGMEM uint16_t dpll_regs[];
 extern const PROGMEM uint8_t dpll_vals[];
@@ -24,7 +28,7 @@ bool debug_dpll_print = true;
 
 
 void dpll_stop() { digitalWrite(PIN_DPLL_SS,1); }
-void dpll_start() { digitalWrite(PIN_DPLL_SS,0); }
+void dpll_start() { digitalWrite(PIN_DPLL_SS,0);  }
 
 
 
@@ -55,25 +59,25 @@ void dpll_write_register(int addr, byte data) {
 
   for ( int i = 15; i >= 0; i-- ) {
     digitalWrite(PIN_DPLL_DAT, (bool)((addr & (1 << i)) >> i ) ); 
-    delayMicroseconds(1);
+    delayMicroseconds(10);
     digitalWrite(PIN_DPLL_SCK, 1);
-    delayMicroseconds(1);
+    delayMicroseconds(10);
     digitalWrite(PIN_DPLL_SCK, 0);
   }
 
   for ( int i = 7; i >= 0; i-- ) {
     digitalWrite(PIN_DPLL_DAT, (bool)((data & (1 << i)) >> i ) ); 
-    delayMicroseconds(1);
+    delayMicroseconds(10);
     digitalWrite(PIN_DPLL_SCK, 1);
-    delayMicroseconds(1);
+    delayMicroseconds(10);
     digitalWrite(PIN_DPLL_SCK, 0);
   }
-  delayMicroseconds(1);
+  delayMicroseconds(10);
   dpll_stop();
-  delayMicroseconds(1);
+  delayMicroseconds(10);
   if ( debug_dpll_print ) {
-    Serial.print("dpll_write_register addr 0x"); Serial.print(addr, HEX);
-    Serial.print(" data 0x"); Serial.println(data, HEX);
+    SerialUSB.print("dpll_write_register addr 0x"); SerialUSB.print(addr, HEX);
+    SerialUSB.print(" data 0x"); SerialUSB.println(data, HEX);
   }
 }
 
@@ -90,6 +94,8 @@ byte dpll_read_register(int addr) {
   // bit 15 of register address is R / !W bit, set it high
   addr |= (1<<15);
 
+  SerialUSB.print("DPLL Read register debug 0x"); SerialUSB.println(addr,HEX);
+
   pinMode(PIN_DPLL_DAT, OUTPUT);
   // Send first eight bytes 
   // data on rising edge
@@ -98,55 +104,69 @@ byte dpll_read_register(int addr) {
   to_return = (byte) ((addr & 0xff00) >> 8);
   for ( int i = 7; i >= 0; i-- ) {
     digitalWrite(PIN_DPLL_DAT, (bool)((to_return & (1 << i)) >> i ) ); 
-    delayMicroseconds(1);
+    delayMicroseconds(10);
     digitalWrite(PIN_DPLL_SCK, 1);
-    delayMicroseconds(1);
+    delayMicroseconds(10);
     digitalWrite(PIN_DPLL_SCK, 0);
   }
-  delayMicroseconds(1);
+  delayMicroseconds(10);
 
   to_return = (byte) (addr & 0xff);
   // Send next eight bytes
   // Data on rising edge but don't trigger falling edge on last
   for ( int i = 7; i >= 1; i-- ) {
     digitalWrite(PIN_DPLL_DAT, (bool)((to_return & (1 << i)) >> i ) ); 
-    delayMicroseconds(1);
+    delayMicroseconds(10);
     digitalWrite(PIN_DPLL_SCK, 1);
-    delayMicroseconds(1);
+    delayMicroseconds(10);
     digitalWrite(PIN_DPLL_SCK, 0);
   }
 
   // SCK is low, send out last bit on rising edge
   digitalWrite(PIN_DPLL_DAT, (bool)(to_return & 0x1));
-  delayMicroseconds(1);
+  delayMicroseconds(10);
   digitalWrite(PIN_DPLL_SCK, 1);
 
   // now need to read input on falling edges
   pinMode(PIN_DPLL_DAT, INPUT);
   to_return = 0;
-  delayMicroseconds(1);
+  delayMicroseconds(10);
 
   for ( int i = 0; i < 8; i++ ) {
     digitalWrite(PIN_DPLL_SCK, 0);
     to_return <<= 1;
     to_return += (byte) digitalRead(PIN_DPLL_DAT);
-    delayMicroseconds(1);
+    delayMicroseconds(10);
     digitalWrite(PIN_DPLL_SCK, 1);
-    delayMicroseconds(1);
+    delayMicroseconds(10);
   }
 
 
   
   dpll_stop();
-  delayMicroseconds(1);
+  delayMicroseconds(10);
   // now put SCK back to idle and end
   digitalWrite(PIN_DPLL_SCK, 0);
+   pinMode(PIN_DPLL_DAT, OUTPUT);
+   digitalWrite(PIN_DPLL_DAT, 0);
 
   if ( debug_dpll_print ) {
-    Serial.print("DPLL Read register 0x"); Serial.print(addr & 0x7fff, HEX);
-    Serial.print(" = 0x"); Serial.println(to_return, HEX);
+    SerialUSB.print("DPLL Read register 0x"); SerialUSB.print(addr & 0x7fff, HEX);
+    SerialUSB.print(" = 0x"); SerialUSB.println(to_return, HEX);
   }
   return to_return;
+}
+
+
+void pinStr( uint32_t ulPin, unsigned strength) // works like pinMode(), but to set drive strength
+{
+  // Handle the case the pin isn't usable as PIO
+  if ( g_APinDescription[ulPin].ulPinType == PIO_NOT_A_PIN )
+  {
+    return ;
+  }
+  if(strength) strength = 1;      // set drive strength to either 0 or 1 copied
+  PORT->Group[g_APinDescription[ulPin].ulPort].PINCFG[g_APinDescription[ulPin].ulPin].bit.DRVSTR = strength ;
 }
 
 
@@ -156,27 +176,45 @@ void dpll_init(const PROGMEM uint16_t regcount, const PROGMEM uint16_t regs[],co
   pinMode(PIN_DPLL_SCK, OUTPUT);
   pinMode(PIN_DPLL_DAT, OUTPUT);
   pinMode(PIN_DPLL_RESETB, OUTPUT);
+  pinMode(PIN_DPLL_M5, OUTPUT);
+
+  SerialUSB.print("DPLL SS PIN OUTPUT "); SerialUSB.println(PIN_DPLL_SS);
+  SerialUSB.print("DPLL SCK PIN OUTPUT "); SerialUSB.println(PIN_DPLL_SCK);
+  SerialUSB.print("DPLL DAT PIN OUTPUT "); SerialUSB.println(PIN_DPLL_DAT);
+  SerialUSB.print("DPLL RESET PIN OUTPUT "); SerialUSB.println(PIN_DPLL_RESETB);
+  SerialUSB.print("DPLL M5 PIN OUTPUT "); SerialUSB.println(PIN_DPLL_M5);
+
+  
   digitalWrite(PIN_DPLL_SCK, 0);
   digitalWrite(PIN_DPLL_DAT, 0);
   digitalWrite(PIN_DPLL_SS, 1);
+  digitalWrite(PIN_DPLL_M5, 0);
+
+  pinStr(PIN_DPLL_RESETB, 1);
+
 
   // toggle the reset pin
   digitalWrite(PIN_DPLL_RESETB, 0); // make sure reset is high
-  delay(50);
+  delay(1000);
   digitalWrite(PIN_DPLL_RESETB, 1); // make sure reset is high
+  delay(1000);
+  
 
 
   // do a sanity check, read the ID register
   byte rddata = 0;
   while (1) {
-    rddata = dpll_read_register(DEVICE_CODE_0);
-    Serial.print("DPLL Debug read Register 0x"); Serial.print(rddata, HEX);
-    Serial.print(" = 0x"); Serial.println(rddata, HEX);
-    if ( rddata == 0x21 ) break;
-    Serial.print("WAITING FOR 0x21");
+    dpll_write_register(0xF, 0x1); // IO_UPDATE , same as what eval board does
+    delay(1);
+    rddata = dpll_read_register(0xC);
+    SerialUSB.print("DPLL Debug read Register 0x"); SerialUSB.print(0xC, HEX);
+    SerialUSB.print(" = 0x"); SerialUSB.println(rddata, HEX);
+    if ( rddata == 0x56 ) break;
+    SerialUSB.println("WAITING FOR 0x56");
     delay(1000);
   }
-  Serial.println("Writing DPLL config from file");
+
+  SerialUSB.println("Writing DPLL config from file");
   
   /* Write the config from the file */
   for ( int i = 0; i < regcount; i++ ) {
@@ -185,17 +223,17 @@ void dpll_init(const PROGMEM uint16_t regcount, const PROGMEM uint16_t regs[],co
 
   /*
   // JULIAN HACK, make sure 0x280f[1] = 1
-  Serial.println("JULIAN HACK MAKE SURE 0x280f[1] = 1");
+  SerialUSB.println("JULIAN HACK MAKE SURE 0x280f[1] = 1");
   dpll_write_register( 0x280f, dpll_read_register(0x280f) | 0x2 );
 
   */
-  Serial.println("JULIAN HACK MAKE SURE 0x111a[4] = 0");
+  SerialUSB.println("JULIAN HACK MAKE SURE 0x111a[4] = 0");
   dpll_write_register( 0x111a, dpll_read_register(0x111a) & 0xEF );
 
-  Serial.println("JULIAN HACK MAKE SURE 0x111a[3] = 1");
+  SerialUSB.println("JULIAN HACK MAKE SURE 0x111a[3] = 1");
   dpll_write_register( 0x111a, dpll_read_register(0x111a) | (1<<3) );
 
-  Serial.println("JULIAN HACK MAKE SURE 0x111a[2:0] = 6");
+  SerialUSB.println("JULIAN HACK MAKE SURE 0x111a[2:0] = 6");
   dpll_write_register( 0x111a, (dpll_read_register(0x111a) & 0x7) + 6 );
   
   
@@ -213,6 +251,10 @@ void dpll_init(const PROGMEM uint16_t regcount, const PROGMEM uint16_t regs[],co
   dpll_io_update();
   dpll_write_register(0x2000, rddata);
   dpll_io_update();
+  
+  delay(2000);
+  rddata = dpll_read_register(0x3001);
+  Serial.print("DPLL Debug, status register 0x3001 = 0x"); Serial.println(rddata, HEX);
   
 }
 
@@ -294,7 +336,7 @@ void dpll_discipline_offset() {
   // a small negative value in picosecond_offset is almost a max value in DPLL phase, close to 360
 
 
-  Serial.print("dpll_discipline_offset "); Serial.println(picosecond_offset);
+  SerialUSB.print("dpll_discipline_offset "); //SerialUSB.println(picosecond_offset);
   // first read back the divide ratio
   int64_t divratio = 0;
   int64_t phasevalue = 0;
@@ -308,8 +350,8 @@ void dpll_discipline_offset() {
     phasevalue += ((int64_t)1)<<32; // bit 32 is 0x111a[6]
   }
   
-  Serial.print("Divratio:0x"); Serial.println(divratio, HEX);
-  Serial.print("Initial phasevalue:0x"); Serial.println(phasevalue,HEX);
+  SerialUSB.print("Divratio:0x"); SerialUSB.println((long)divratio, HEX);
+  SerialUSB.print("Initial phasevalue:0x"); SerialUSB.println((long)phasevalue,HEX);
 
   // convert picosecond_offset to degrees 
   // period is 1Hz , 360 degrees in 1e12 picoseconds, multiply by that ratio 
@@ -318,24 +360,24 @@ void dpll_discipline_offset() {
   if ( offset_degrees < 0.0 ) { // if it's negative, shift it into 0 to 360 range 
     offset_degrees += 360.0;
   }
-  Serial.print("Offset degrees:"); Serial.println(offset_degrees,5);
+  SerialUSB.print("Offset degrees:"); SerialUSB.println(offset_degrees,5);
 
   // convert current phase to degrees
   // 180 degrees per divratio units, multiply current value by that ratio 
   double current_degrees = 0;
   current_degrees = (((double) 180.0 ) / ((double) divratio)) * ((double)phasevalue);
-  Serial.print("Current degrees:"); Serial.println(current_degrees,5);
+  SerialUSB.print("Current degrees:"); SerialUSB.println(current_degrees,5);
 
   current_degrees += offset_degrees;
   if ( current_degrees >= 360.0 ) { // if it's outside the range, shift it back into range
     current_degrees -= 360.0; 
   }
-  Serial.print("Current degrees after offset:"); Serial.println(current_degrees,5);
+  SerialUSB.print("Current degrees after offset:"); SerialUSB.println(current_degrees,5);
 
   // convert degrees into register value
   phasevalue = (int64_t) ( ( ((double)divratio) / ((double) 180.0) ) * current_degrees ); 
   
-  Serial.print("####################Phasevalue:0x"); Serial.println(phasevalue,HEX);
+  SerialUSB.print("####################Phasevalue:0x"); SerialUSB.println((long)phasevalue,HEX);
   
   // write lower four bytes to register
   for ( int i = 0; i < 4; i++ ) {
@@ -358,13 +400,13 @@ void dpll_discipline_freq() {
   for ( int i = 0; i < AUXNCO0_CENTERFREQ_SIZE; i++ ) {
     centerfreq += (double)(((uint64_t) dpll_read_register( AUXNCO0_CENTERFREQ + i )) << (8*i));
   }
-  Serial.print("dpll_discipline_freq read frequency value in units of 2^-40 Hz: "); Serial.println(centerfreq,HEX);
+  SerialUSB.print("dpll_discipline_freq read frequency value in units of 2^-40 Hz: "); SerialUSB.println(centerfreq,HEX);
   centerfreq *= frequency_ratio;
 
   int_center = (uint64_t) centerfreq;
   
 
-  Serial.print("######################dpll_discipline_freq change to 0x"); Serial.println(int_center, HEX);
+  SerialUSB.print("######################dpll_discipline_freq change to 0x"); SerialUSB.println((long)int_center, HEX);
 
   for ( int i = 0; i < AUXNCO0_CENTERFREQ_SIZE; i++ ) {
     dpll_write_register(  AUXNCO0_CENTERFREQ + i ,
@@ -385,9 +427,9 @@ bool is_dpll_still_adjusting() {
 
 //int64_t debug_picoseconds = MILLI_TO_PICO(-1);
 bool dpll_adjust_error() {
-  Serial.print("DPLL Adjust error:");
-  Serial.print(picosecond_offset); Serial.print(" ");
-  Serial.print(frequency_ratio, 12); Serial.println(" ");
+  SerialUSB.print("DPLL Adjust error:");
+  SerialUSB.print((long)picosecond_offset); SerialUSB.print(" ");
+  SerialUSB.print(frequency_ratio, 12); SerialUSB.println(" ");
 
 
   /*
@@ -396,7 +438,7 @@ bool dpll_adjust_error() {
   } else {
     debug_picoseconds = 0;
   }
-  Serial.println("###################HACK##################"); dpll_set_dist_phase(debug_picoseconds); return;
+  SerialUSB.println("###################HACK##################"); dpll_set_dist_phase(debug_picoseconds); return;
   */
 
   
@@ -404,7 +446,7 @@ bool dpll_adjust_error() {
     return false; // still doing something from previous loop, just back out
   }
 
-  Serial.print("FREQ_PPB:"); Serial.println(FREQ_PPB(frequency_ratio));
+  SerialUSB.print("FREQ_PPB:"); SerialUSB.println(FREQ_PPB(frequency_ratio));
 
   if ( (FREQ_PPM(frequency_ratio) >= 1000) || (FREQ_PPM(frequency_ratio) <= -1000) ) { // sanity check, 100ppm is probably math error somewhere or protocol error
     return false;
