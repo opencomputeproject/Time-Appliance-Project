@@ -330,6 +330,7 @@ struct ptp_ocp {
 	struct gpio_reg __iomem	*pps_select;
 	struct gpio_reg __iomem	*sma_map1;
 	struct gpio_reg __iomem	*sma_map2;
+	struct gpio_reg __iomem	*ext_ctrl;
 	struct irig_master_reg	__iomem *irig_out;
 	struct irig_slave_reg	__iomem *irig_in;
 	struct dcf_master_reg	__iomem *dcf_out;
@@ -349,6 +350,7 @@ struct ptp_ocp {
 	struct ptp_clock	*ptp;
 	struct ptp_clock_info	ptp_info;
 	struct platform_device	*i2c_ctrl;
+	struct platform_device	*i2c_mac;
 	struct platform_device	*spi_flash;
 	struct clk_hw		*i2c_clk;
 	struct timer_list	watchdog;
@@ -369,6 +371,7 @@ struct ptp_ocp {
 	u8			board_id[OCP_BOARD_ID_LEN];
 	u8			serial[OCP_SERIAL_LEN];
 	bool			has_eeprom_data;
+	int			i2c_count;
 	u32			pps_req_map;
 	int			flash_start;
 	u32			utc_tai_offset;
@@ -405,6 +408,8 @@ static int ptp_ocp_signal_from_perout(struct ptp_ocp *bp, int gen,
 				      struct ptp_perout_request *req);
 static int ptp_ocp_signal_enable(void *priv, u32 req, bool enable);
 static int ptp_ocp_sma_store(struct ptp_ocp *bp, const char *buf, int sma_nr);
+static void ptp_ocp_link_child(struct ptp_ocp *bp, const char *name,
+			       const char *link);
 
 static int ptp_ocp_art_board_init(struct ptp_ocp *bp, struct ocp_resource *r);
 
@@ -623,6 +628,10 @@ static struct ocp_resource ocp_fb_resource[] = {
 	{
 		OCP_MEM_RESOURCE(image),
 		.offset = 0x00020000, .size = 0x1000,
+	},
+	{
+		OCP_MEM_RESOURCE(ext_ctrl),
+		.offset = 0x00100000, .size = 0x1000,
 	},
 	{
 		OCP_MEM_RESOURCE(pps_select),
@@ -1803,17 +1812,22 @@ ptp_ocp_register_i2c(struct ptp_ocp *bp, struct ocp_resource *r)
 	int id;
 
 	info = r->extra;
-	id = pci_dev_id(bp->pdev);
+	id = pci_dev_id(bp->pdev) << 2;
+	id += bp->i2c_count;
 
-	sprintf(buf, "AXI.%d", id);
-	clk = clk_hw_register_fixed_rate(&pdev->dev, buf, NULL, 0,
-					 info->fixed_rate);
-	if (IS_ERR(clk))
-		return PTR_ERR(clk);
-	bp->i2c_clk = clk;
+	if (!bp->i2c_clk) {
+		sprintf(buf, "AXI.%d", id);
+		clk = clk_hw_register_fixed_rate(&pdev->dev, buf, NULL, 0,
+						 info->fixed_rate);
+		if (IS_ERR(clk))
+			return PTR_ERR(clk);
+
+		bp->i2c_clk = clk;
+	}
 
 	sprintf(buf, "%s.%d", info->name, id);
-	devm_clk_hw_register_clkdev(&pdev->dev, clk, NULL, buf);
+	devm_clk_hw_register_clkdev(&pdev->dev, bp->i2c_clk, NULL, buf);
+
 	p = ptp_ocp_i2c_bus(bp->pdev, r, id);
 	if (IS_ERR(p))
 		return PTR_ERR(p);
@@ -3386,6 +3400,116 @@ holdover_store(struct device *dev, struct device_attribute *attr,
 }
 static DEVICE_ATTR_RW(holdover);
 
+static struct ocp_resource ocp_mac_resource[] = {
+	[0] = {
+		OCP_SERIAL_RESOURCE(mac_port),
+		.offset = 0x00180000 + 0x1000, .irq_vec = 5,
+	},
+	[1] = {
+		OCP_I2C_RESOURCE(i2c_ctrl),
+		.offset = 0x00200000, .size = 0x10000, .irq_vec = 5,
+		.extra = &(struct ptp_ocp_i2c_info) {
+			.name = "xiic-i2c",
+			.fixed_rate = 50000000,
+		}
+	},
+};
+
+/* change selection */
+static int
+mac_mode_select(struct ptp_ocp *bp, bool use_i2c)
+{
+	struct ocp_resource *r;
+	char buf[32];
+	int err;
+
+	if (bp->i2c_mac) {
+		platform_device_unregister(bp->i2c_mac);
+		bp->i2c_mac = NULL;
+	}
+
+	if (bp->mac_port != -1) {
+		sysfs_remove_link(&bp->dev.kobj, "ttyMAC");
+		serial8250_unregister_port(bp->mac_port);
+		bp->mac_port = -1;
+	}
+
+	r = &ocp_mac_resource[use_i2c];
+
+	err = r->setup(bp, r);
+	if (err)
+		dev_err(&bp->pdev->dev,
+			"Could not register %s: err %d, skipping.\n",
+			r->name, err);
+
+	if (!err && bp->mac_port != -1) {
+		sprintf(buf, "ttyS%d", bp->mac_port);
+		ptp_ocp_link_child(bp, buf, "ttyMAC");
+	}
+
+	return err;
+}
+
+static bool
+mac_mode_selected(struct ptp_ocp *bp, bool use_i2c)
+{
+	if (use_i2c)
+		return bp->i2c_mac != NULL;
+
+	return bp->mac_port != -1;
+}
+
+static ssize_t
+mac_i2c_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct ptp_ocp *bp = dev_get_drvdata(dev);
+	bool i2c_mode, uart_mode;
+	int val;
+
+	i2c_mode = mac_mode_selected(bp, true);
+	uart_mode = mac_mode_selected(bp, false);
+	if (!i2c_mode && !uart_mode)
+		val = -1;
+	else
+		val = i2c_mode;
+
+	return sysfs_emit(buf, "%d\n", val);
+}
+
+static ssize_t
+mac_i2c_store(struct device *dev, struct device_attribute *attr,
+	      const char *buf, size_t count)
+{
+	struct ptp_ocp *bp = dev_get_drvdata(dev);
+	unsigned long flags;
+	bool use_i2c;
+	u32 reg;
+	int err;
+
+	err = kstrtobool(buf, &use_i2c);
+	if (err)
+		return err;
+
+	/* already selected this mode */
+	if (mac_mode_selected(bp, use_i2c))
+		goto out;
+
+	/* select correct mode */
+	spin_lock_irqsave(&bp->lock, flags);
+	reg = ioread32(&bp->ext_ctrl->gpio2);
+	reg = (reg &~ BIT(31)) | (use_i2c ? BIT(31) : 0);
+	iowrite32(reg, &bp->ext_ctrl->gpio2);
+	spin_unlock_irqrestore(&bp->lock, flags);
+
+	err = mac_mode_select(bp, use_i2c);
+	if (err)
+		return err;
+
+out:
+	return count;
+}
+static DEVICE_ATTR_RW(mac_i2c);
+
 static ssize_t
 ts_window_adjust_show(struct device *dev,
 		      struct device_attribute *attr, char *buf)
@@ -3618,6 +3742,7 @@ static struct attribute *fb_timecard_attrs[] = {
 	&dev_attr_external_pps_cable_delay.attr,
 	&dev_attr_internal_pps_cable_delay.attr,
 	&dev_attr_holdover.attr,
+	&dev_attr_mac_i2c.attr,
 	&dev_attr_sma1.attr,
 	&dev_attr_sma2.attr,
 	&dev_attr_sma3.attr,
@@ -4481,10 +4606,13 @@ ptp_ocp_i2c_notifier_call(struct notifier_block *nb,
 
 found:
 	bp = dev_get_drvdata(dev);
-	if (add)
-		ptp_ocp_symlink(bp, child, "i2c");
-	else
-		sysfs_remove_link(&bp->dev.kobj, "i2c");
+	if (add) {
+		if (bp->i2c_count++ == 0)
+			ptp_ocp_symlink(bp, child, "i2c");
+	} else {
+		if (--bp->i2c_count == 0)
+			sysfs_remove_link(&bp->dev.kobj, "i2c");
+	}
 
 	return 0;
 }
