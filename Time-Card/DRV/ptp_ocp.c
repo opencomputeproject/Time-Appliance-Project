@@ -38,6 +38,8 @@
 #define MRO50_SAVE_COARSE	_IO('M', 7)
 #define MRO50_READ_EEPROM_BLOB	_IOR('M', 8, u8 *)
 #define MRO50_WRITE_EEPROM_BLOB	_IOW('M', 8, u8 *)
+#define MRO50_BOARD_CONFIG_READ _IOR('M', 9, u32 *)
+#define MRO50_BOARD_CONFIG_WRITE _IOW('M', 9, u32 *)
 
 #endif /* MRO50_IOCTL_H */
 /*---------------------------------------------------------------------------*/
@@ -241,6 +243,11 @@ struct frequency_reg {
 	u32	ctrl;
 	u32	status;
 };
+
+struct board_config_reg {
+	u32 mro50_serial_activate;
+};
+
 #define FREQ_STATUS_VALID	BIT(31)
 #define FREQ_STATUS_ERROR	BIT(30)
 #define FREQ_STATUS_OVERRUN	BIT(29)
@@ -327,6 +334,7 @@ struct ptp_ocp {
 	struct tod_reg __iomem	*tod;
 	struct pps_reg __iomem	*pps_to_ext;
 	struct pps_reg __iomem	*pps_to_clk;
+	struct board_config_reg __iomem	*board_config;
 	struct gpio_reg __iomem	*pps_select;
 	struct gpio_reg __iomem	*sma_map1;
 	struct gpio_reg __iomem	*sma_map2;
@@ -361,6 +369,7 @@ struct ptp_ocp {
 	time64_t		gnss_lost;
 	int			id;
 	int			n_irqs;
+	int			mro50_port;
 	int			gnss_port;
 	int			gnss2_port;
 	int			mac_port;	/* miniature atomic clock */
@@ -722,6 +731,7 @@ struct ocp_art_osc_reg {
 	u32	adjust;
 	u32	temp;
 };
+
 #define MRO50_CTRL_ENABLE		BIT(0)
 #define MRO50_CTRL_LOCK			BIT(1)
 #define MRO50_CTRL_READ_CMD		BIT(2)
@@ -851,6 +861,14 @@ static struct ocp_resource ocp_art_resource[] = {
 				},
 			},
 		},
+	},
+	{
+		OCP_SERIAL_RESOURCE(mro50_port),
+		.offset = 0x00190000, .irq_vec = 7,
+	},
+	{
+		OCP_MEM_RESOURCE(board_config),
+		.offset = 0x210000, .size = 0x1000,
 	},
 	{
 		.setup = ptp_ocp_art_board_init,
@@ -2319,6 +2337,15 @@ ptp_ocp_mro50_ioctl(struct file *file, unsigned cmd, unsigned long arg)
 	bp = container_of(mro50, struct ptp_ocp, mro50);
 
 	switch (cmd) {
+	case MRO50_BOARD_CONFIG_READ:
+		val = ioread32(&bp->board_config->mro50_serial_activate);
+		err = 0;
+		break;
+	case MRO50_BOARD_CONFIG_WRITE:
+		if (get_user(val, (u32 __user *)arg))
+			return -EFAULT;
+		iowrite32(val, &bp->board_config->mro50_serial_activate);
+		return 0;
 	case MRO50_READ_FINE:
 		err = ptp_ocp_mro50_read(bp, MRO50_OP_READ_FINE, &val);
 		break;
@@ -3914,6 +3941,8 @@ ptp_ocp_summary_show(struct seq_file *s, void *data)
 		seq_printf(s, "%7s: /dev/ttyS%d\n", "MAC", bp->mac_port);
 	if (bp->nmea_port != -1)
 		seq_printf(s, "%7s: /dev/ttyS%d\n", "NMEA", bp->nmea_port);
+	if (bp->mro50_port != -1)
+		seq_printf(s, "%7s: /dev/ttyS%d\n", "MRO50_UART", bp->mro50_port);
 
 	memset(sma_val, 0xff, sizeof(sma_val));
 	if (bp->sma_map1) {
@@ -4248,6 +4277,7 @@ ptp_ocp_device_init(struct ptp_ocp *bp, struct pci_dev *pdev)
 	bp->gnss2_port = -1;
 	bp->mac_port = -1;
 	bp->nmea_port = -1;
+	bp->mro50_port = -1;
 	bp->pdev = pdev;
 
 	device_initialize(&bp->dev);
@@ -4322,6 +4352,10 @@ ptp_ocp_complete(struct ptp_ocp *bp)
 		sprintf(buf, "ttyS%d", bp->nmea_port);
 		ptp_ocp_link_child(bp, buf, "ttyNMEA");
 	}
+	if (bp->mro50_port != -1) {
+		sprintf(buf, "ttyS%d", bp->mro50_port);
+		ptp_ocp_link_child(bp, buf, "ttyMRO_UART");
+	}
 	sprintf(buf, "ptp%d", ptp_clock_index(bp->ptp));
 	ptp_ocp_link_child(bp, buf, "ptp");
 
@@ -4386,6 +4420,7 @@ ptp_ocp_info(struct ptp_ocp *bp)
 
 	ptp_ocp_phc_info(bp);
 
+	ptp_ocp_serial_info(dev, "MRO_UART", bp->mro50_port, 9600);
 	ptp_ocp_serial_info(dev, "GNSS", bp->gnss_port, 115200);
 	ptp_ocp_serial_info(dev, "GNSS2", bp->gnss2_port, 115200);
 	ptp_ocp_serial_info(dev, "MAC", bp->mac_port, 57600);
@@ -4447,6 +4482,8 @@ ptp_ocp_detach(struct ptp_ocp *bp)
 		serial8250_unregister_port(bp->mac_port);
 	if (bp->nmea_port != -1)
 		serial8250_unregister_port(bp->nmea_port);
+	if (bp->mro50_port != -1)
+		serial8250_unregister_port(bp->mro50_port);
 	if (bp->spi_flash)
 		platform_device_unregister(bp->spi_flash);
 	if (bp->i2c_ctrl)
