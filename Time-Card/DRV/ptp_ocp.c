@@ -1573,7 +1573,7 @@ ptp_ocp_devlink_flash_check(struct devlink *devlink, const struct firmware *fw,
 					   NULL, 0, 0);
 
 	hdr = (const struct ptp_ocp_firmware_header *)fw->data;
-	if (!memcmp(hdr->magic, OCP_FIRMWARE_MAGIC_HEADER, 4)) {
+	if (memcmp(hdr->magic, OCP_FIRMWARE_MAGIC_HEADER, 4)) {
 		dev_err(&pdev->dev, "No image header found, fallback to raw data flashing\n");
 		*image_size = fw->size;
 		return 0;
