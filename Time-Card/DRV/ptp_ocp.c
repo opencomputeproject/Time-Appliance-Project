@@ -3406,7 +3406,7 @@ static struct ocp_resource ocp_mac_resource[] = {
 		.offset = 0x00180000 + 0x1000, .irq_vec = 5,
 	},
 	[1] = {
-		OCP_I2C_RESOURCE(i2c_ctrl),
+		OCP_I2C_RESOURCE(i2c_mac),
 		.offset = 0x00200000, .size = 0x10000, .irq_vec = 5,
 		.extra = &(struct ptp_ocp_i2c_info) {
 			.name = "xiic-i2c",
@@ -4451,6 +4451,8 @@ ptp_ocp_detach(struct ptp_ocp *bp)
 		platform_device_unregister(bp->spi_flash);
 	if (bp->i2c_ctrl)
 		platform_device_unregister(bp->i2c_ctrl);
+	if (bp->i2c_mac)
+		platform_device_unregister(bp->i2c_mac);
 	if (bp->i2c_clk)
 		clk_hw_unregister_fixed_rate(bp->i2c_clk);
 	if (bp->mro50.name)
