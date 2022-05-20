@@ -40,6 +40,8 @@
 #define MRO50_WRITE_EEPROM_BLOB	_IOW('M', 8, u8 *)
 #define MRO50_BOARD_CONFIG_READ _IOR('M', 9, u32 *)
 #define MRO50_BOARD_CONFIG_WRITE _IOW('M', 9, u32 *)
+#define MRO50_TEMP_FIELD_A_READ _IOR('M', 10, u32 *)
+#define MRO50_TEMP_FIELD_B_READ _IOR('M', 11, u32 *)
 
 #endif /* MRO50_IOCTL_H */
 /*---------------------------------------------------------------------------*/
@@ -730,6 +732,8 @@ struct ocp_art_osc_reg {
 	u32	value;
 	u32	adjust;
 	u32	temp;
+	u32 temp_field_a;
+	u32 temp_field_b;
 };
 
 #define MRO50_CTRL_ENABLE		BIT(0)
@@ -2397,6 +2401,14 @@ ptp_ocp_mro50_ioctl(struct file *file, unsigned cmd, unsigned long arg)
 		if (err != 256)
 			return -EFAULT;
 		return 0;
+	case MRO50_TEMP_FIELD_A_READ:
+		val = ioread32(&bp->osc->temp_field_a);
+		err = 0;
+		break;
+	case MRO50_TEMP_FIELD_B_READ:
+		val = ioread32(&bp->osc->temp_field_b);
+		err = 0;
+		break;
 	default:
 		return -ENOTTY;
 	}
