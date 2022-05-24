@@ -317,6 +317,7 @@ struct ptp_ocp_signal {
 
 #define OCP_BOARD_ID_LEN		13
 #define OCP_SERIAL_LEN			6
+#define OCP_CONFIG_SIZE			4096
 
 struct ptp_ocp {
 	struct pci_dev		*pdev;
@@ -374,6 +375,7 @@ struct ptp_ocp {
 	int			i2c_count;
 	u32			pps_req_map;
 	int			flash_start;
+	int			config_start;
 	u32			utc_tai_offset;
 	u32			ts_window_adjust;
 	u64			fw_cap;
@@ -2223,6 +2225,7 @@ ptp_ocp_fb_board_init(struct ptp_ocp *bp, struct ocp_resource *r)
 	int err;
 
 	bp->flash_start = 1024 * 4096;
+	bp->config_start = bp->flash_start - OCP_CONFIG_SIZE;
 	bp->eeprom_map = fb_eeprom_map;
 	bp->fw_version = ioread32(&bp->image->version);
 	bp->attr_tbl = fb_timecard_groups;
@@ -2435,6 +2438,7 @@ ptp_ocp_art_board_init(struct ptp_ocp *bp, struct ocp_resource *r)
 	int err;
 
 	bp->flash_start = 0x1000000;
+	bp->config_start = bp->flash_start - OCP_CONFIG_SIZE;
 	bp->eeprom_map = art_eeprom_map;
 	bp->attr_tbl = art_timecard_groups;
 	bp->fw_version = ioread32(&bp->reg->version);
@@ -3734,6 +3738,108 @@ DEVICE_FREQ_GROUP(freq2, 1);
 DEVICE_FREQ_GROUP(freq3, 2);
 DEVICE_FREQ_GROUP(freq4, 3);
 
+static int
+config_flash_rw(struct ptp_ocp *bp, bool write, char *buf,
+		loff_t off, size_t count)
+{
+	struct erase_info erase;
+	struct mtd_info *mtd;
+	size_t base, blksz;
+	struct device *dev;
+	size_t len, rv;
+	int err;
+
+	base = bp->config_start;
+	blksz = 4096;
+
+	if (off % blksz)
+		return -EINVAL;
+
+	dev = ptp_ocp_find_flash(bp);
+	if (!dev) {
+		dev_err(&bp->pdev->dev, "Can't find Flash SPI adapter\n");
+		return -ENODEV;
+	}
+	mtd = dev_get_drvdata(dev);
+
+	while (count) {
+		len = min_t(size_t, count, blksz);
+
+		if (write) {
+			erase.addr = base + off;
+			erase.len = blksz;
+
+			err = mtd_erase(mtd, &erase);
+			if (err)
+				goto out;
+
+			err = mtd_write(mtd, base + off, len, &rv, buf + off);
+		} else {
+			err = mtd_read(mtd, base + off, len, &rv, buf + off);
+		}
+
+		if (err)
+			goto out;
+
+		off += blksz;
+		count -= len;
+	}
+
+out:
+	put_device(dev);
+	return err;
+}
+
+static ssize_t
+config_read(struct file *filp, struct kobject *kobj,
+	    struct bin_attribute *bin_attr, char *buf,
+	    loff_t off, size_t count)
+{
+	struct ptp_ocp *bp = dev_get_drvdata(kobj_to_dev(kobj));
+	size_t size = OCP_CONFIG_SIZE;
+	int err;
+
+	if (off > size)
+		return 0;
+
+	if (off + count > size)
+		count = size - off;
+
+	err = config_flash_rw(bp, false, buf, off, count);
+	if (err)
+		return err;
+
+	return count;
+}
+
+static ssize_t
+config_write(struct file *filp, struct kobject *kobj,
+	     struct bin_attribute *bin_attr, char *buf,
+	     loff_t off, size_t count)
+{
+	struct ptp_ocp *bp = dev_get_drvdata(kobj_to_dev(kobj));
+	size_t size = OCP_CONFIG_SIZE;
+	int err;
+
+	if (off > size)
+		return 0;
+
+	if (off + count > size)
+		count = size - off;
+
+	err = config_flash_rw(bp, true, buf, off, count);
+	if (err)
+		return err;
+
+	return count;
+}
+static BIN_ATTR_RW(config, OCP_CONFIG_SIZE);
+
+static struct bin_attribute *bin_timecard_attrs[] = {
+        &bin_attr_config,
+        NULL,
+};
+
 static struct attribute *fb_timecard_attrs[] = {
 	&dev_attr_serialnum.attr,
 	&dev_attr_gnss_sync.attr,
@@ -3759,6 +3865,7 @@ static struct attribute *fb_timecard_attrs[] = {
 };
 static const struct attribute_group fb_timecard_group = {
 	.attrs = fb_timecard_attrs,
+	.bin_attrs = bin_timecard_attrs,
 };
 static const struct ocp_attr_group fb_timecard_groups[] = {
 	{ .cap = OCP_CAP_BASIC,	    .group = &fb_timecard_group },
@@ -3788,6 +3895,7 @@ static struct attribute *art_timecard_attrs[] = {
 };
 static const struct attribute_group art_timecard_group = {
 	.attrs = art_timecard_attrs,
+	.bin_attrs = bin_timecard_attrs,
 };
 static const struct ocp_attr_group art_timecard_groups[] = {
 	{ .cap = OCP_CAP_BASIC,	    .group = &art_timecard_group },
