@@ -27,7 +27,7 @@ func firmwareImageSize(c *Config) (uint32, error) {
 
 }
 
-// Creates header structure from Config values
+// PrepareHeader creates header structure from Config values
 func PrepareHeader(c *Config) (*Header, error) {
 	imageSize, err := firmwareImageSize(c)
 	if err != nil {
@@ -45,7 +45,7 @@ func PrepareHeader(c *Config) (*Header, error) {
 	return hdr, nil
 }
 
-// Writes header at the beginning of the output file
+// WriteHeader writes header structure at the beginning of the output file
 func WriteHeader(c *Config, hdr *Header) error {
 	if !c.Apply {
 		return nil
@@ -57,7 +57,7 @@ func WriteHeader(c *Config, hdr *Header) error {
 	return err
 }
 
-// Calculates CRC16 of input file and copies data to output file if specified
+// CalcCRC calculates CRC16 of input file and copies data to output file if specified
 func CalcCRC(c *Config) (uint16, error) {
 	crcTable := crc.MakeTable(crc.CRC16_ARC)
 	buf := make([]byte, 16384)

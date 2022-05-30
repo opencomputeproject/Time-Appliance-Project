@@ -16,7 +16,7 @@ type Config struct {
 	OutputFile       *os.File
 }
 
-// Check config structure for valid values
+// CheckConfig checks config structure for valid values
 // PCI Vendor ID, Device ID should fit into uint16 and be positive
 // PCI Hardware Revision should be any uint16
 func CheckConfig(c *Config) error {
@@ -43,7 +43,7 @@ func CheckConfig(c *Config) error {
 	return nil
 }
 
-// Opens files provided in config. Returns any error
+// OpenFiles actually opens files provided in config. Returns any error
 func OpenFiles(c *Config) error {
 	var err error
 	c.InputFile, err = os.Open(c.InputPath)
@@ -59,7 +59,7 @@ func OpenFiles(c *Config) error {
 	return nil
 }
 
-// Closes all opened files
+// CloseFiles closes previously opened files
 func CloseFiles(c *Config) {
 	c.InputFile.Close()
 	if c.Apply {

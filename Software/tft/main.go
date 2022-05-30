@@ -18,8 +18,6 @@ func main() {
 	flag.IntVar(&c.HardwareRevision, "hw", 0, "PCI REV_ID (Hardware revision) to add to header")
 	flag.Parse()
 
-	log.SetLevel(log.InfoLevel)
-
 	if err := h.CheckConfig(c); err != nil {
 		log.Fatal(err)
 	}
