@@ -2,7 +2,7 @@
 
 This version is **NOT** compatible with the SOM Module (e.g. AC7100B).
 The binaries for the Time Card with the **System On Module (SOM)** can be found here:
-[SOM Version](https://github.com/opencomputeproject/Time-Appliance-Project/tree/master/Time-Card/SOM)
+[SOM Version](../SOM)
 
 
 # FPGA for the production version of the Time Card
@@ -10,9 +10,9 @@ The binaries for the Time Card with the **System On Module (SOM)** can be found 
 
 The FPGA bitstream can be configured to various options. Currently it is based on the [NetTimeLogic clock module](https://www.nettimelogic.com/clock-products.php). <br />
 
-Check the [Readme_Production.pdf](https://github.com/opencomputeproject/Time-Appliance-Project/blob/master/Time-Card/FPGA/Readme_Production.pdf) for more details about the implementation. <br />
+Check the [Readme_Production.pdf](Readme_Production.pdf) for more details about the implementation. <br />
 
-In the [Doc folder](https://github.com/opencomputeproject/Time-Appliance-Project/tree/master/Time-Card/SOM/FPGA/Doc) are all relevant documents about the integrated IP Cores (e.g. register description). <br />
+In the [Doc folder](../SOM/FPGA/Doc) are all relevant documents about the integrated IP Cores (e.g. register description). <br />
 
 ## The FPGA starts with a static configuration with following settings: ##
 * PPS (including TOD) is used as correction input for the clock  
