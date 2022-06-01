@@ -2,7 +2,7 @@
 
 This version is **NOT** compatible with the SOM Module (e.g. AC7100B).
 The binaries for the Time Card with the **System On Module (SOM)** can be found here:
-[SOM Version](../SOM)
+[SOM Version](../../../SOM)
 
 
 # FPGA for the production version of the Time Card
@@ -12,7 +12,7 @@ The FPGA bitstream can be configured to various options. Currently it is based o
 
 Check the [Readme_Production.pdf](Readme_Production.pdf) for more details about the implementation. <br />
 
-In the [Doc folder](../SOM/FPGA/Doc) are all relevant documents about the integrated IP Cores (e.g. register description). <br />
+In the [Doc folder](../../../SOM/FPGA/Doc) are all relevant documents about the integrated IP Cores (e.g. register description). <br />
 
 ## The FPGA starts with a static configuration with following settings: ##
 * PPS (including TOD) is used as correction input for the clock  
