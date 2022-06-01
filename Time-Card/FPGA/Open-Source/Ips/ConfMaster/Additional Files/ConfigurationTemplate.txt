@@ -1,0 +1,26 @@
+// Commands
+//      Skip    1
+//      Wait    2
+//      Read    3
+//      Write   4
+// Command; BaseAddr; RegAddr; Data or Time in ns if Wait;
+
+// Enable Adj Clock
+00000004 01000000 00000000 00000001
+// Wait for about a second
+00000002 00000000 00000000 40000000
+
+// PPS Polarity=1
+00000004 01030000 00000008 00000001
+// Enable PPS Generator
+00000004 01030000 00000000 00000001
+// Wait for about a second
+00000002 00000000 00000000 40000000
+
+// Timestamp Polarity=1
+00000004 01010000 00000008 00000001
+// Enable Irq
+00000004 01010000 00000034 00000001
+// Enable Signal Timestamper
+00000004 01010000 00000000 00000001
+

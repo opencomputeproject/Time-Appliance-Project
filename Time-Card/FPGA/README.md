@@ -1,5 +1,5 @@
 # Time-Card FPGA Designs
-The FPGA design of the Time-Card is in two different versions available. 
+The FPGA design of the Time-Card is available in two different versions.
 Functional wise they are very similar (same register set etc.) but the licensing is different.
 
 More details can be found in the subfolders:
