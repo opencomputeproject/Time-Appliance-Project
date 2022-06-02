@@ -2312,12 +2312,56 @@ ptp_ocp_mro50_write(struct ptp_ocp *bp, u32 ctrl, u32 val)
 }
 
 static long
-ptp_ocp_mro50_ioctl(struct file *file, unsigned cmd, unsigned long arg)
+ptp_ocp_mro50_ioctl_blob(struct ptp_ocp *bp, unsigned cmd, unsigned long arg, size_t sz)
 {
 	struct nvmem_device *nvmem;
+	u8 buf[512];
+	int err = 0;
+
+	nvmem = ptp_ocp_nvmem_device_get(bp, NULL);
+	if (IS_ERR(nvmem))
+		return PTR_ERR(nvmem);
+
+	switch (cmd) {
+	case MRO50_READ_EEPROM_BLOB:
+	case MRO50_READ_EXTENDED_EEPROM_BLOB:
+		err = nvmem_device_read(nvmem, 0x0, sz, buf);
+		if (err != sz) {
+			err = -EFAULT;
+			goto out;
+		}
+		err = 0;
+		if (copy_to_user((u8 __user *)arg, buf, sz))
+			err = -EFAULT;
+		break;
+	case MRO50_WRITE_EEPROM_BLOB:
+	case MRO50_WRITE_EXTENDED_EEPROM_BLOB:
+		err = copy_from_user(buf, (void __user *)arg, sz);
+		if (err) {
+			err = -EFAULT;
+			goto out;
+		}
+		err = nvmem_device_write(nvmem, 0x0, sz, buf);
+		if (err != sz)
+			err = -EFAULT;
+		else
+		  err = 0;
+		break;
+	default:
+		err = -ENOTTY;
+	}
+
+out:
+	ptp_ocp_nvmem_device_put(&nvmem);
+
+	return err;
+}
+
+static long
+ptp_ocp_mro50_ioctl(struct file *file, unsigned cmd, unsigned long arg)
+{
 	struct miscdevice *mro50;
 	struct ptp_ocp *bp;
-	u8 buf[512];
 	u32 val;
 	int err;
 
@@ -2353,53 +2397,11 @@ ptp_ocp_mro50_ioctl(struct file *file, unsigned cmd, unsigned long arg)
 		mutex_unlock(&bp->mutex);
 		return 0;
 	case MRO50_READ_EEPROM_BLOB:
-		nvmem = ptp_ocp_nvmem_device_get(bp, NULL);
-		if (IS_ERR(nvmem))
-			return PTR_ERR(nvmem);
-		err = nvmem_device_read(nvmem, 0x0, 256, buf);
-		ptp_ocp_nvmem_device_put(&nvmem);
-		if (err != 256)
-			return -EFAULT;
-
-		if (copy_to_user((u8 __user *)arg, buf, 256))
-			return -EFAULT;
-		return 0;
 	case MRO50_WRITE_EEPROM_BLOB:
-		err = copy_from_user(buf, (void __user *)arg, 256);
-		if (err)
-			return -EFAULT;
-		nvmem = ptp_ocp_nvmem_device_get(bp, NULL);
-		if (IS_ERR(nvmem))
-			return PTR_ERR(nvmem);
-		err = nvmem_device_write(nvmem, 0x0, 256, buf);
-		ptp_ocp_nvmem_device_put(&nvmem);
-		if (err != 256)
-			return -EFAULT;
-		return 0;
+		return ptp_ocp_mro50_ioctl_blob(bp, cmd, arg, 256);
 	case MRO50_READ_EXTENDED_EEPROM_BLOB:
-		nvmem = ptp_ocp_nvmem_device_get(bp, NULL);
-		if (IS_ERR(nvmem))
-			return PTR_ERR(nvmem);
-		err = nvmem_device_read(nvmem, 0x0, 512, buf);
-		ptp_ocp_nvmem_device_put(&nvmem);
-		if (err != 512)
-			return -EFAULT;
-
-		if (copy_to_user((u8 __user *)arg, buf, 512))
-			return -EFAULT;
-		return 0;
 	case MRO50_WRITE_EXTENDED_EEPROM_BLOB:
-		err = copy_from_user(buf, (void __user *)arg, 512);
-		if (err)
-			return -EFAULT;
-		nvmem = ptp_ocp_nvmem_device_get(bp, NULL);
-		if (IS_ERR(nvmem))
-			return PTR_ERR(nvmem);
-		err = nvmem_device_write(nvmem, 0x0, 512, buf);
-		ptp_ocp_nvmem_device_put(&nvmem);
-		if (err != 512)
-			return -EFAULT;
-		return 0;
+		return ptp_ocp_mro50_ioctl_blob(bp, cmd, arg, 512);
 	default:
 		return -ENOTTY;
 	}
