@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 
-	h "github.com/opencomputeproject/Time-Appliance-Project/Time-Card/TOOL/header"
+	h "github.com/opencomputeproject/Time-Appliance-Project/Software/tft/header"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -36,7 +36,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	hdr.CRC, err := h.CalcCRC(c)
+	hdr.CRC, err = h.CalcCRC(c)
 	if err != nil {
 		log.Fatal(err)
 	}

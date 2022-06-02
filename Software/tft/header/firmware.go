@@ -35,7 +35,7 @@ func PrepareHeader(c *Config) (*Header, error) {
 	}
 
 	hdr := &Header{
-		Magic:            [4]byte{'O', 'C', 'T', 'C'},
+		Magic:            [4]byte{'O', 'C', 'P', 'C'},
 		VendorId:         uint16(c.VendorId),
 		DeviceId:         uint16(c.DeviceId),
 		ImageSize:        imageSize,
@@ -54,6 +54,11 @@ func WriteHeader(c *Config, hdr *Header) error {
 	binary.Write(h, binary.BigEndian, hdr)
 	_, err := c.OutputFile.WriteAt(h.Bytes(), 0)
 
+	if err != nil {
+		return err
+	}
+
+	_, err = c.OutputFile.Seek(0, 2)
 	return err
 }
 
@@ -61,7 +66,7 @@ func WriteHeader(c *Config, hdr *Header) error {
 func CalcCRC(c *Config) (uint16, error) {
 	crcTable := crc.MakeTable(crc.CRC16_ARC)
 	buf := make([]byte, 16384)
-	crc16 := uint16(0)
+	crc16 := uint16(0xFFFF)
 
 	n, err := c.InputFile.Read(buf)
 	for ; n > 0 && (err == nil || err == io.EOF); n, err = c.InputFile.Read(buf) {
