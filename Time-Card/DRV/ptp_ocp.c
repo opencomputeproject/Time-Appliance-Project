@@ -38,6 +38,9 @@
 #define MRO50_SAVE_COARSE	_IO('M', 7)
 #define MRO50_READ_EEPROM_BLOB	_IOR('M', 8, u8 *)
 #define MRO50_WRITE_EEPROM_BLOB	_IOW('M', 8, u8 *)
+#define MRO50_READ_EXTENDED_EEPROM_BLOB	_IOR('M', 9, u8 *)
+#define MRO50_WRITE_EXTENDED_EEPROM_BLOB	_IOW('M', 9, u8 *)
+
 
 #endif /* MRO50_IOCTL_H */
 /*---------------------------------------------------------------------------*/
@@ -2314,7 +2317,7 @@ ptp_ocp_mro50_ioctl(struct file *file, unsigned cmd, unsigned long arg)
 	struct nvmem_device *nvmem;
 	struct miscdevice *mro50;
 	struct ptp_ocp *bp;
-	u8 buf[256];
+	u8 buf[512];
 	u32 val;
 	int err;
 
@@ -2371,6 +2374,30 @@ ptp_ocp_mro50_ioctl(struct file *file, unsigned cmd, unsigned long arg)
 		err = nvmem_device_write(nvmem, 0x0, 256, buf);
 		ptp_ocp_nvmem_device_put(&nvmem);
 		if (err != 256)
+			return -EFAULT;
+		return 0;
+	case MRO50_READ_EXTENDED_EEPROM_BLOB:
+		nvmem = ptp_ocp_nvmem_device_get(bp, NULL);
+		if (IS_ERR(nvmem))
+			return PTR_ERR(nvmem);
+		err = nvmem_device_read(nvmem, 0x0, 512, buf);
+		ptp_ocp_nvmem_device_put(&nvmem);
+		if (err != 512)
+			return -EFAULT;
+
+		if (copy_to_user((u8 __user *)arg, buf, 512))
+			return -EFAULT;
+		return 0;
+	case MRO50_WRITE_EXTENDED_EEPROM_BLOB:
+		err = copy_from_user(buf, (void __user *)arg, 512);
+		if (err)
+			return -EFAULT;
+		nvmem = ptp_ocp_nvmem_device_get(bp, NULL);
+		if (IS_ERR(nvmem))
+			return PTR_ERR(nvmem);
+		err = nvmem_device_write(nvmem, 0x0, 512, buf);
+		ptp_ocp_nvmem_device_put(&nvmem);
+		if (err != 512)
 			return -EFAULT;
 		return 0;
 	default:
