@@ -11,7 +11,7 @@ import (
 )
 
 func TestFirmwareHeader(t *testing.T) {
-	b := []byte{'O', 'C', 'T', 'C', 0, 0x10, 0, 0x10, 0, 0, 0, 4, 0, 0, 0, 0}
+	b := []byte{'O', 'C', 'P', 'C', 0, 0x10, 0, 0x10, 0, 0, 0, 4, 0, 0, 0, 0}
 	tmp, err := ioutil.TempFile("", "fw.bin")
 	require.NoError(t, err)
 	defer os.Remove(tmp.Name())
@@ -42,6 +42,6 @@ func TestFirmwareHeader(t *testing.T) {
 	crc, err := CalcCRC(c)
 
 	require.NoError(t, err)
-	require.Equal(t, crc, uint16(0x1b1b))
+	require.Equal(t, uint16(0x3f1b), crc)
 	CloseFiles(c)
 }
