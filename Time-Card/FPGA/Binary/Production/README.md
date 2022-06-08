@@ -35,3 +35,8 @@ In the [Doc folder](../../../SOM/FPGA/Doc) are all relevant documents about the 
 * Factory_TimeCardProduction.bin to load the SPI flash via JTAG (Golden Image + Update Image)
 * TimeCardProduction.bin to updated the SPI flash via SPI starting @ 0x00400000 (Update Image only)
     
+## Firmware upgrade
+$ dmesg | grep ptp_ocp | head -1
+[   21.342167] ptp_ocp 0000:11:00.0: enabling device (0140 -> 0142)
+$ cp TimeCardProduction.bin /lib/firmware
+$ devlink dev flash pci/0000:11:00.0 file TimeCardProduction.bin
