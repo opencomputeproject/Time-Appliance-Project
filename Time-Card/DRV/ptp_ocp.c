@@ -276,7 +276,8 @@ struct ptp_ocp_i2c_info {
 struct ptp_ocp_ext_info {
 	int index;
 	irqreturn_t (*irq_fcn)(int irq, void *priv);
-	int (*enable)(void *priv, u32 req, bool enable);
+	int (*enable)(void *priv, struct ptp_clock_request *rq,
+		      u32 req, bool enable);
 };
 
 struct ptp_ocp_ext_src {
@@ -408,10 +409,12 @@ static int ptp_ocp_register_ext(struct ptp_ocp *bp, struct ocp_resource *r);
 static int ptp_ocp_fb_board_init(struct ptp_ocp *bp, struct ocp_resource *r);
 static irqreturn_t ptp_ocp_ts_irq(int irq, void *priv);
 static irqreturn_t ptp_ocp_signal_irq(int irq, void *priv);
-static int ptp_ocp_ts_enable(void *priv, u32 req, bool enable);
+static int ptp_ocp_ts_enable(void *priv, struct ptp_clock_request *rq,
+			     u32 req, bool enable);
 static int ptp_ocp_signal_from_perout(struct ptp_ocp *bp, int gen,
 				      struct ptp_perout_request *req);
-static int ptp_ocp_signal_enable(void *priv, u32 req, bool enable);
+static int ptp_ocp_signal_enable(void *priv, struct ptp_clock_request *rq,
+				 u32 req, bool enable);
 static int ptp_ocp_sma_store(struct ptp_ocp *bp, const char *buf, int sma_nr);
 static void ptp_ocp_link_child(struct ptp_ocp *bp, const char *name,
 			       const char *link);
@@ -1236,7 +1239,7 @@ ptp_ocp_enable(struct ptp_clock_info *ptp_info, struct ptp_clock_request *rq,
 
 	err = -ENXIO;
 	if (ext)
-		err = ext->info->enable(ext, req, on);
+		err = ext->info->enable(ext, rq, req, on);
 
 	return err;
 }
@@ -1933,7 +1936,8 @@ ptp_ocp_signal_from_perout(struct ptp_ocp *bp, int gen,
 }
 
 static int
-ptp_ocp_signal_enable(void *priv, u32 req, bool enable)
+ptp_ocp_signal_enable(void *priv, struct ptp_clock_request *rq,
+		      u32 req, bool enable)
 {
 	struct ptp_ocp_ext_src *ext = priv;
 	struct signal_reg __iomem *reg = ext->mem;
@@ -2008,11 +2012,13 @@ out:
 }
 
 static int
-ptp_ocp_ts_enable(void *priv, u32 req, bool enable)
+ptp_ocp_ts_enable(void *priv, struct ptp_clock_request *rq,
+		  u32 req, bool enable)
 {
 	struct ptp_ocp_ext_src *ext = priv;
 	struct ts_reg __iomem *reg = ext->mem;
 	struct ptp_ocp *bp = ext->bp;
+	u32 val;
 
 	if (ext == bp->pps) {
 		u32 old_map = bp->pps_req_map;
@@ -2028,6 +2034,8 @@ ptp_ocp_ts_enable(void *priv, u32 req, bool enable)
 	}
 
 	if (enable) {
+		val = rq->extts.flags & PTP_FALLING_EDGE ? 1 : 0;
+		iowrite32(val, &reg->polarity);
 		iowrite32(1, &reg->enable);
 		iowrite32(1, &reg->intr_mask);
 		iowrite32(1, &reg->intr);
@@ -2042,7 +2050,7 @@ ptp_ocp_ts_enable(void *priv, u32 req, bool enable)
 static void
 ptp_ocp_unregister_ext(struct ptp_ocp_ext_src *ext)
 {
-	ext->info->enable(ext, ~0, false);
+	ext->info->enable(ext, NULL, ~0, false);
 	pci_free_irq(ext->bp->pdev, ext->irq_vec, ext);
 	kfree(ext);
 }
@@ -3084,7 +3092,8 @@ signal_store(struct device *dev, struct device_attribute *attr,
 	if (err)
 		goto out;
 
-	err = ptp_ocp_signal_enable(bp->signal_out[gen], gen, s.period != 0);
+	err = ptp_ocp_signal_enable(bp->signal_out[gen],
+				    NULL, gen, s.period != 0);
 
 out:
 	argv_free(argv);
