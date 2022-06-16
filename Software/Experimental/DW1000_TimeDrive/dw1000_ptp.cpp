@@ -1,9 +1,9 @@
 #include "dw1000_ptp.h"
-#include <DW1000.h>
-#include <DW1000Time.h>
-#include <DW1000Constants.h>
+#include "DW1000.h"
+#include "DW1000Time.h"
+#include "DW1000Constants.h"
 #include "dw1000_regs.h"
-#include <require_cpp11.h>
+#include "require_cpp11.h"
 #include <Arduino.h>
 #include <SPI.h>
 
@@ -16,6 +16,8 @@
 
 
 uint8_t seq_num = 0;
+
+
 
 
 // software data buffers
@@ -86,7 +88,66 @@ DW1000Time * last_store_txTS;
 
 
 
+bool last_pps_pin_val = 0;
+bool PPS_IN_FALLING_EDGE = 0;
+bool PPS_IN_RISING_EDGE = 0;
+
+
+
+void print_int64t(int64_t val) {
+  char buffer[100];
+  sprintf(buffer, "%0ld", val/1000000L);
+  SerialUSB.print(buffer); 
+
+  if ( val < 0 ) { // don't double print the negative sign
+    sprintf(buffer, "%0ld", (-1*val)%1000000L);
+  } else {
+    sprintf(buffer, "%06ld", val%1000000L);
+  }
+  SerialUSB.print(buffer);
+} 
+
+
+
 void print_pkt(byte data[], int len) {
+
+
+  if ( len > 10 ) {
+    struct uwb_ptp_hdr * ptp_hdr = (struct uwb_ptp_hdr *) data;
+  
+    // do a little parsing to be smarter
+    if ( ptp_hdr->frame_control == 0x4188 ) {
+      // ptp packet
+      if ( ptp_hdr->function_code == SYNC_FOLLOWUP ) {
+        struct uwb_ptp_sync_followup_pkt * sync_pkt = (struct uwb_ptp_sync_followup_pkt *) data;
+        SerialUSB.println("--Sync-Followup packet--");
+        SerialUSB.print("Sequence Num:"); SerialUSB.println(ptp_hdr->seq_num);
+        SerialUSB.print("Sync Num:"); SerialUSB.println(sync_pkt->sync_num);
+        SerialUSB.print("Num syncs sending:"); SerialUSB.println(sync_pkt->num_syncs_sending);
+        
+        SerialUSB.print("GPS Time Second:0x"); 
+        for ( int i = 6; i > 0; i-- ) {
+          if ( sync_pkt->gps_time_sec[i] < 0x10 )  SerialUSB.print("0"); // add leading zero
+          SerialUSB.print(sync_pkt->gps_time_sec[i], HEX);
+        }
+        SerialUSB.println("");
+
+        for ( int i = 0; i < 5; i++ ) {
+          SerialUSB.print("Followup "); SerialUSB.print(i); SerialUSB.print(": 0x");
+          for ( int j = 5; j > 0; j-- ) {
+            if ( sync_pkt->followups[i][j] < 0x10 ) SerialUSB.print("0"); // add leading zero
+            SerialUSB.print(sync_pkt->followups[i][j], HEX);
+          }
+          SerialUSB.println("");
+        }
+        
+        SerialUSB.println("------End Packet--------");
+        return;
+      }
+    }
+  }
+  
+
 
   for ( int i = 0; i < len; i++ ) {
     SerialUSB.print("0x"); SerialUSB.print( data[i] , HEX); SerialUSB.print(" ");
@@ -121,7 +182,7 @@ void receiver() {
 
 void initTransmit() {
   DW1000.newTransmit();
-  DW1000.setDefaults();
+  //DW1000.setDefaults();
 }
 
 
@@ -138,30 +199,31 @@ void decawave_ptp_init() {
   // EDIT DW1000 LIBRARY TO ALLOW FOR DIFFERENT SPI 
   while ( 1 ) {
     // initialize the driver
-    DW1000.begin_newspi(PIN_DW_IRQ, PIN_DW_RST, &mySPI);
+    DW1000.begin_hardspi(PIN_DW_IRQ, PIN_DW_RST, &myHardSPI, false);
     DW1000.select(PIN_DW_SS);
     SerialUSB.println(F("DW1000 initialized ..."));
     // general configuration
     DW1000.newConfiguration();
     DW1000.setDefaults();
-  if ( is_gug ) 
-    DW1000.setDeviceAddress(1);
-  else
-    DW1000.setDeviceAddress(2);
+    if ( is_gug ) 
+      DW1000.setDeviceAddress(1);
+    else
+      DW1000.setDeviceAddress(2);
     DW1000.setNetworkId(10);
     DW1000.enableMode(DW1000.MODE_LONGDATA_RANGE_ACCURACY);
     DW1000.commitConfiguration();
     SerialUSB.println(F("Committed configuration ..."));
     // DEBUG chip info and registers pretty printed
-    
     DW1000.getPrintableDeviceIdentifier(msg);
     SerialUSB.print("Device ID: "); SerialUSB.println(msg);
+
     if ( msg[0] != 'D' && msg[1] != 'E' &&
       msg[2] != 'C' && msg[3] != 'A' ) {
-      SerialUSB.println("Didn't get DECA, waiting for DECA!");
+      SerialUSB.print("Didn't get DECA, waiting for DECA! Got"); SerialUSB.println(msg);
       delay(1000);
       DW1000.reset();
     } else {
+
       break;
     }
   }
@@ -182,7 +244,7 @@ void decawave_ptp_init() {
 
 
 void deca_tx(byte data[], uint16_t n, DW1000Time * txTS) {
-
+  //SerialUSB.print("Value of IRQ pin:"); SerialUSB.println(digitalRead(22));
   if ( is_gug ) 
     SerialUSB.print("GUG ");
   else
@@ -195,7 +257,9 @@ void deca_tx(byte data[], uint16_t n, DW1000Time * txTS) {
   } else {
     store_tx = &txTimeStamp;
   }
+  //SerialUSB.print("Value of IRQ pin before tx:"); SerialUSB.println(digitalRead(22));
   DW1000.startTransmit();
+  //SerialUSB.print("Value of IRQ pin after tx:"); SerialUSB.println(digitalRead(22));
 }
 
 bool deca_tx_done() {
@@ -206,6 +270,7 @@ bool deca_rx_has_data() {
 }
 
 void deca_loop() {
+  //DW1000Class::poll_irq();
   /* Basic receiver */
   if (received) {
     received = false; 
@@ -213,14 +278,16 @@ void deca_loop() {
     data_len = DW1000.getDataLength(); 
     DW1000.getData( rx_data, BUF_LEN_DATA );
     DW1000.getReceiveTimestamp(rxTimeStamp);
-
-    /*
+    //receiver(); // enable receiving 
     if ( is_gug )
       SerialUSB.print("GUG ");
     else
       SerialUSB.print("TimeStick ");
-    SerialUSB.print("Received Data is ... "); print_pkt(rx_data, data_len);
-    */
+
+    SerialUSB.print("RX Timestamp in uS is... "); SerialUSB.print(rxTimeStamp.getAsMicroSeconds()); 
+    SerialUSB.print(" , decawave time is "); rxTimeStamp.printTo(SerialUSB); SerialUSB.println("");  
+    SerialUSB.println("Received Data is ... "); print_pkt(rx_data, data_len);  
+
     //SerialUSB.print("FP power is [dBm] ... "); SerialUSB.println(DW1000.getFirstPathPower());
     //SerialUSB.print("RX power is [dBm] ... "); SerialUSB.println(DW1000.getReceivePower());
     //SerialUSB.print("Signal quality is ... "); SerialUSB.println(DW1000.getReceiveQuality());
@@ -235,6 +302,7 @@ void deca_loop() {
       *store_tx = txTimeStamp;
       store_tx = 0;
     }
+    SerialUSB.println("Sent PKT from Decawave!");
     receiver(); // enable receiving 
   
     if ( is_gug ) 
@@ -251,7 +319,6 @@ void deca_loop() {
     //SerialUSB.println("Error data is ... "); 
   }  
 }
-
 
 
 void open_pseudo_socket(uint16_t remote, uint16_t local) {
@@ -355,6 +422,7 @@ void Send_Sync_Followup() {
   sync_num++;
   seq_num = ( seq_num + 1 ) % 256;
   print_pkt(tx_data, SYNCFOLLOWUP_PKTSIZE);
+  //SerialUSB.print("Value of IRQ pin after deca tx:"); SerialUSB.println(digitalRead(22));
 }
 
 void Send_Poll() {
@@ -416,9 +484,11 @@ void gug_respond() {
   }
 }
 
+
 void GUGFSM() {
   // state machine
   //SerialUSB.print("GUG FSM "); SerialUSB.println(fsm_state);
+
   if ( fsm_state == TD_IDLE ) {
     receiver();
     fsm_state = LISTEN;
@@ -430,9 +500,13 @@ void GUGFSM() {
       gug_respond();    
     }
     if (( millis() - time_since_last_sync ) > TIME_BETWEEN_BURSTS ) {
-      fsm_state = BROADCAST;
-      sync_num = 0;
-      SerialUSB.println("#####################GUG LISTEN -> BROADCAST#################################");
+      if ( PPS_IN_RISING_EDGE ) {
+        // only go into broadcast after rising edge of PPS in
+
+        fsm_state = BROADCAST;
+        sync_num = 0;
+        SerialUSB.println("#####################GUG LISTEN -> BROADCAST#################################");
+      }
     }
   } else if ( fsm_state == BROADCAST ) {
     //SerialUSB.print( millis() - time_since_last_sync ); SerialUSB.print(" "); 
@@ -446,7 +520,7 @@ void GUGFSM() {
       time_since_last_sync = millis();
     }    
     // sent out last sync+followup, go to listen now
-    if ( sync_num > NUM_SYNC_RETRANSMITS && deca_tx_done() ) {
+    if ( sync_num > NUM_SYNC_RETRANSMITS && deca_tx_done()  ) {
       receiver(); // enable RX mode 
       fsm_state = LISTEN;  
       SerialUSB.println("######################GUG BROADCAST -> LISTEN################################");
@@ -524,14 +598,14 @@ void calculate_delay() {
 }
 
 void TimeStickStoreFirstSync() {
-  SerialUSB.print("TimeStickStoreFirstSync "); SerialUSB.println(rxTimeStamp.getAsMicroSeconds());
+  SerialUSB.print("TimeStickStoreFirstSync in decawave time: "); rxTimeStamp.printTo(SerialUSB); SerialUSB.println("");
   memcpy( timestick_seen_follow_ups, rx_data, SYNCFOLLOWUP_PKTSIZE );
   time_last_sync_seen = millis();
   sync_followup_rx_time[0] = rxTimeStamp; 
 }
 
 void TimeStickStoreSecondSync() {
-  SerialUSB.print("TimeStickStoreSecondSync "); SerialUSB.println(rxTimeStamp.getAsMicroSeconds());
+  SerialUSB.print("TimeStickStoreSecondSync in decawave time: "); rxTimeStamp.printTo(SerialUSB); SerialUSB.println("");
   memcpy( &(timestick_seen_follow_ups[1]), rx_data, SYNCFOLLOWUP_PKTSIZE );
   time_last_sync_seen = millis();
   sync_followup_rx_time[1] = rxTimeStamp; 
@@ -576,10 +650,12 @@ void ComputeThreePointCorrection() {
   // compute the delta to adjust from this data set
   // ALSO compute using the TOF estimate 
     
-  DW1000Time time1;
-  DW1000Time time2;
-  DW1000Time time3;  
+  int64_t time1 = 0;
+  int64_t time2 = 0;
+  int64_t time3 = 0;  
   struct uwb_ptp_sync_followup_pkt * rx_sync_followup = (struct uwb_ptp_sync_followup_pkt*) &rx_data;
+
+   
   
   update_dpll = true;
 
@@ -590,33 +666,102 @@ void ComputeThreePointCorrection() {
   SerialUSB.print("NEED TO ADD IN CalculatedTOF:"); SerialUSB.println(CalculatedTOFDelay.getAsMicroSeconds());
   
   // compute offset first, easier. Just need info from one packet 
-  time1.setTimestamp( rx_sync_followup->followups[ timestick_seen_follow_ups[0].sync_num ] );
-  SerialUSB.print("First followup value:"); SerialUSB.println(time1.getAsMicroSeconds());  
-  time1 = time1 - sync_followup_rx_time[0]; 
-  SerialUSB.print("RX time:"); SerialUSB.println(sync_followup_rx_time[0].getAsMicroSeconds());
-  SerialUSB.print("Calculated offset in decawave units:"); SerialUSB.println(time1.getAsMicroSeconds());
+  SerialUSB.print("Sync_num using:"); SerialUSB.println(timestick_seen_follow_ups[0].sync_num);
+
+
+
+  SerialUSB.print("Followup raw value: 0x"); 
+  for ( int i = 5; i > 0; i-- ) {
+    if ( rx_sync_followup->followups[ timestick_seen_follow_ups[0].sync_num ][i] < 0x10 ) SerialUSB.print("0");
+    SerialUSB.print( rx_sync_followup->followups[ timestick_seen_follow_ups[0].sync_num ][i], HEX);
+  }
+  SerialUSB.println("");
+
+  // The time GUG transmitted a packet
+
+  for ( int i = 5; i > 0; i-- ) {
+    time1 += (rx_sync_followup->followups[ timestick_seen_follow_ups[0].sync_num ][i]) << (8 * (i-1));
+  }
+
+
+  SerialUSB.print("First followup value decawave time:"); print_int64t(time1); SerialUSB.println("");
+
+
   
-  picosecond_offset = (int64_t)(((double)time1.getTimestamp()) * 15.65);  // approx 15.65 ps per tick in decawave
-  // rounding to nearest picosecond is fine, won't ever get that precise anyways
 
-  SerialUSB.print("picosecond_offset "); //SerialUSB.println(picosecond_offset);
+  // The time I received that packet
+  time2 = sync_followup_rx_time[0].getTimestamp();
+  
 
+
+  SerialUSB.print("RX time in decawave time: "); sync_followup_rx_time[0].printTo(SerialUSB); SerialUSB.println( "" );
+
+  if ( time1 > time2 ) {
+    // GUG transmitted a packet from a time in the future
+    // my local time needs to adjust forward
+    picosecond_offset = time1 - time2;
+    SerialUSB.print("Time1 > Time2 , Difference: "); print_int64t(picosecond_offset); SerialUSB.println("");
+    picosecond_offset = picosecond_offset * 1565;
+    SerialUSB.print("After mult: "); print_int64t(picosecond_offset); SerialUSB.println("");
+    picosecond_offset = picosecond_offset / 100;
+    SerialUSB.print("After div: "); print_int64t(picosecond_offset); SerialUSB.println("");
+  } else {
+    // GUG transmitted packet from time in the past
+    // my local time is needs to adjust backwards
+
+    picosecond_offset = time2 - time1;
+    SerialUSB.print("Time1 < Time2 , Difference: "); print_int64t(picosecond_offset); SerialUSB.println("");
+    picosecond_offset = picosecond_offset * -1565;
+    SerialUSB.print("After mult: "); print_int64t(picosecond_offset); SerialUSB.println("");
+    picosecond_offset = picosecond_offset / 100;
+    SerialUSB.print("After div: "); print_int64t(picosecond_offset); SerialUSB.println("");
+    
+ 
+  }
+
+  SerialUSB.print("picosecond_offset "); print_int64t(picosecond_offset); SerialUSB.println("");
+
+
+  
+  time1 = 0;
+  time2 = 0;
+  time3 = 0;
   // compute frequency ratio of local clock versus remote clock
-  time1.setTimestamp(rx_sync_followup->followups[ timestick_seen_follow_ups[0].sync_num ]);
-  time2.setTimestamp(rx_sync_followup->followups[ timestick_seen_follow_ups[1].sync_num ]);
-  SerialUSB.print("Remote time1:"); SerialUSB.println(time1.getAsMicroSeconds());
-  SerialUSB.print("Remote time2:"); SerialUSB.println(time2.getAsMicroSeconds());
-  time1 = time2 - time1; // remote time difference
-  SerialUSB.print("Remote time difference:"); SerialUSB.println(time1.getAsMicroSeconds(), 9);
+  SerialUSB.print("Freq calc, first sync_num:"); SerialUSB.println(timestick_seen_follow_ups[0].sync_num);
+  SerialUSB.print("Freq calc, second sync_num:"); SerialUSB.println(timestick_seen_follow_ups[1].sync_num);
+  for ( int i = 5; i > 0; i-- ) {
+    time1 += rx_sync_followup->followups[ timestick_seen_follow_ups[0].sync_num ][i] << (8*(i-1));
+    time2 += rx_sync_followup->followups[ timestick_seen_follow_ups[1].sync_num ][i] << (8*(i-1));
+  }
 
+  SerialUSB.print("Remote time1 in decawave time:"); SerialUSB.println((double)time1);
+  SerialUSB.print("Remote time2 in decawave time:"); SerialUSB.println((double)time2);
+
+  // remote time difference calculation
+  // ONLY VALID IF TIME2 > TIME1
+  // If decawave counter gets reset in the middle of a burst, can't consider it
   
-  time3 = sync_followup_rx_time[1] - sync_followup_rx_time[0]; // local time difference 
-  SerialUSB.print("Local time0:"); SerialUSB.println(sync_followup_rx_time[0].getAsMicroSeconds());
-  SerialUSB.print("Local time1:"); SerialUSB.println(sync_followup_rx_time[1].getAsMicroSeconds());
-  SerialUSB.print("Local time difference:"); SerialUSB.println(time3.getAsMicroSeconds(), 9);
+  if ( time1 > time2 ) {
+    frequency_ratio = FREQ_RATIO_INVALID; 
+    SerialUSB.println("!!Time1 > time2, invalid!!");
+    return;
+  }
+  time1 = time2 - time1;
+  SerialUSB.print("Remote time difference in decawave time:"); SerialUSB.println((long)time1);
+
+
+  if ( sync_followup_rx_time[0].getTimestamp() > sync_followup_rx_time[1].getTimestamp() ) {
+    frequency_ratio = FREQ_RATIO_INVALID;
+    SerialUSB.println("Local time difference invalid!");
+    return;
+  }
+  time3 = sync_followup_rx_time[1].getTimestamp() - sync_followup_rx_time[0].getTimestamp(); // local time difference 
+  SerialUSB.print("Local time0: "); sync_followup_rx_time[0].printTo(SerialUSB); SerialUSB.println("");
+  SerialUSB.print("Local time1: "); sync_followup_rx_time[1].printTo(SerialUSB); SerialUSB.println("");
+  SerialUSB.print("Local time difference in decawave time: "); print_int64t(time3); SerialUSB.println("");
 
   // these are in absolute time , compute the ratio in frequency
-  frequency_ratio = ( (double) time1.getTimestamp() ) / ( (double) time3.getTimestamp() );
+  frequency_ratio = ( (double) time1 ) / ( (double) time3 );
   
   SerialUSB.print("////////////ComputeThreePointCorrection frequency_ratio:"); SerialUSB.println(frequency_ratio, 15);
 }
@@ -697,6 +842,26 @@ void TimeStickListenGotPkt() {
 }
 
 
+void debug_dw_irq() {
+    DW1000Class::readSystemEventStatusRegister();
+    DW1000Class::readSystemEventMaskRegister();
+    if ( DW1000Class::_sysstatus[0] != 0 ||
+          DW1000Class::_sysstatus[1] != 0 ||
+          DW1000Class::_sysstatus[2] != 0 ||
+          DW1000Class::_sysstatus[3] != 0  ) {
+          SerialUSB.print("See system event status non-zero, values: 0x");
+          SerialUSB.print(DW1000Class::_sysstatus[3], HEX); SerialUSB.print(",0x");
+          SerialUSB.print(DW1000Class::_sysstatus[2], HEX); SerialUSB.print(",0x");
+          SerialUSB.print(DW1000Class::_sysstatus[1], HEX); SerialUSB.print(",0x");
+          SerialUSB.print(DW1000Class::_sysstatus[0], HEX); SerialUSB.print(" ; Mask = 0x");
+
+          SerialUSB.print(DW1000Class::_sysmask[3], HEX); SerialUSB.print(",0x");
+          SerialUSB.print(DW1000Class::_sysmask[2], HEX); SerialUSB.print(",0x");
+          SerialUSB.print(DW1000Class::_sysmask[1], HEX); SerialUSB.print(",0x");
+          SerialUSB.println(DW1000Class::_sysmask[0], HEX);
+          
+    }
+}
 
 void TimeStickFSM() {
   // state machine
@@ -705,13 +870,14 @@ void TimeStickFSM() {
     fsm_state = LISTEN;
     SerialUSB.println("###################Time stick TD_IDLE -> LISTEN############################");
   } else if ( fsm_state == LISTEN ) {
+
     if ( deca_rx_has_data() ) {
       //SerialUSB.println("Time stick LISTEN got packet");
       TimeStickListenGotPkt();
     }
     if ( ( (millis() - last_time_rangefound) > TIME_BETWEEN_RANGEFIND_MSEC ) &&
       num_gugs_found > 0 ) {
-      fsm_state = RANGEFIND;
+      fsm_state = RANGEFIND; 
       SerialUSB.println("##############Time stick LISTEN -> RANGEFIND###################");
     }
   } else if ( fsm_state == RANGEFIND ) {    
@@ -764,8 +930,68 @@ void TimeStickFSM() {
   }
 }
 
+
+int numReceived = 0;
+
+void BasicReceiver()
+{
+  String message;
+  DW1000Class::poll_irq();
+  if (received) {
+     // get data as string
+    data_len = DW1000.getDataLength(); 
+    DW1000.getData( message );
+    SerialUSB.print("Received message ... #"); SerialUSB.println(numReceived++);
+    SerialUSB.print("Received Data is ... "); SerialUSB.println(message);
+    SerialUSB.print("FP power is [dBm] ... "); SerialUSB.println(DW1000.getFirstPathPower());
+    SerialUSB.print("RX power is [dBm] ... "); SerialUSB.println(DW1000.getReceivePower());
+    SerialUSB.print("Signal quality is ... "); SerialUSB.println(DW1000.getReceiveQuality());
+    received = false;
+  }
+  if (error) {
+    Serial.println("Error receiving a message");
+    error = false;
+    DW1000.getData( message );
+    SerialUSB.print("Error data is ... "); SerialUSB.println(message);
+  }
+}
+
+uint32_t sentNum = 0; 
+void BasicSender()
+{
+   // transmit some data
+  SerialUSB.print("Transmitting packet ... #"); SerialUSB.println(sentNum);
+  DW1000.newTransmit();
+  DW1000.setDefaults();
+  String msg = "Hello DW1000, it's #"; msg += sentNum++;
+  DW1000.setData(msg);
+  // delay sending the message for the given amount
+  DW1000Time deltaTime = DW1000Time(10, DW1000Time::MILLISECONDS);
+  DW1000.setDelay(deltaTime);
+  DW1000.startTransmit();
+
+  delay(50);
+
+}
+
+
+
 // called every loop 
 void TopLevelFSM() {
+
+  
+  if ( digitalRead(PIN_1PPS_UC_IN) && !last_pps_pin_val ) {
+    PPS_IN_RISING_EDGE = 1;
+    PPS_IN_FALLING_EDGE = 0;
+  } else if ( !digitalRead(PIN_1PPS_UC_IN) && last_pps_pin_val ) {
+    PPS_IN_RISING_EDGE = 0;
+    PPS_IN_FALLING_EDGE = 1;
+  } else {
+    PPS_IN_RISING_EDGE = 0;
+    PPS_IN_FALLING_EDGE = 0;
+  }
+  last_pps_pin_val = digitalRead(PIN_1PPS_UC_IN);
+  
   deca_loop(); // handle basic TX and RX 
   if ( is_gug ) {
     GUGFSM();

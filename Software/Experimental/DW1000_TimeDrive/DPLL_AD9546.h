@@ -17,6 +17,24 @@
 #define FREQ_PPM(x) ((1.0-x)*1000.0*1000.0)  
 #define FREQ_PPB(x) ((1.0-x)*1000.0*1000.0*1000.0)
 
+// given a PPB , like 1 , give the value to multiply a frequency value by
+// example. 1 PPB = increase frequency by 1PPB , multiply by 1 + 1e-9
+//    
+#define PPB_TO_FREQ_RATIO(x) (1.0+(x * 1000.0 * 1000.0 * 1000.0))
+
+#define INT_PPB(x) (x / (1000*1000*1000))
+
+
+
+// BE CAREFUL WITH THIS MAX VALUE, Decawave or DPLL (probably DPLL) gets unstable if you adjust too quickly
+// ideally the delay after adjusting the DPLL should be proportional to the amount adjusted
+// or should be read back by a status register in the DPLL
+#define MAX_FREQ_ADJ_PPB 500.0
+#define MAX_FREQ_ADJ_PPB_INT ((uint64_t)MAX_FREQ_ADJ_PPB)
+
+#define FREQ_ADJ_KP 0.05
+#define PHASE_ADJ_KP 0.6
+
 #define SERIAL_PORT_CONFIG_0 0x0
 #define SERIAL_PORT_CONFIG_1 0x1
 
@@ -109,6 +127,10 @@
 #define AUXNCO0_UIADJUST_SIZE 5
 
 #define AUXNCO0_PULSEWIDTH 0x281e
+
+
+#define Q0B_DIV_RATIO 0x1112
+#define Q0B_DIV_RATIO_SIZE 5
 
 
 #define PLL0_STATUS_0 0x3100

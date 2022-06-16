@@ -812,15 +812,15 @@
               "FaqBwScale": "0",
               "FaqLockTime": "0",
               "FaqLockTimeout": "0",
-              "IntZdDriverPath": "1",
+              "IntZdDriverPath": "2",
               "LfBase": "0",
               "LoopMode": "1",
               "SelectPriority": "0",
               "SourcePath": "8",
               "TagMode": "0",
               "ZeroDelayN": "0",
-              "ZeroDelayPathExternal": "2",
-              "ZeroDelayPathInternal": "2"
+              "ZeroDelayPathExternal": "4",
+              "ZeroDelayPathInternal": "4"
             },
             {
               "_index": "1",
@@ -999,7 +999,7 @@
             "DistAutoMuteMaskBb": "0",
             "DistAutoMuteMode": "0",
             "DrvrCurrentA": "2",
-            "DrvrCurrentB": "0",
+            "DrvrCurrentB": "2",
             "FbdivSyncEdge": "1",
             "HcslEnA": "1",
             "HcslEnB": "1",
@@ -2881,7 +2881,7 @@
     "0x1135": "0x07",
     "0x1200": "0x01",
     "0x1201": "0x08",
-    "0x1202": "0x02",
+    "0x1202": "0x04",
     "0x1203": "0x01",
     "0x1204": "0x50",
     "0x1205": "0xC3",
@@ -3089,7 +3089,7 @@
     "0x14D4": "0x00",
     "0x14D6": "0x00",
     "0x14D7": "0x0D",
-    "0x14D8": "0x01",
+    "0x14D8": "0x05",
     "0x14DA": "0x00",
     "0x14DB": "0x00",
     "0x14DC": "0x00",
@@ -3591,7 +3591,7 @@
         {
           "Freq": "1E-06",
           "Demodulator": {
-            "Freq": "0.001"
+            "Freq": "1.66666666666667E-07"
           }
         },
         {
@@ -3605,13 +3605,13 @@
         {
           "Freq": "1E-06",
           "Demodulator": {
-            "Freq": "1E-06"
+            "Freq": "1.66666666666667E-07"
           }
         },
         {
           "Freq": "1E-06",
           "Demodulator": {
-            "Freq": "1E-06"
+            "Freq": "1.66666666666667E-07"
           }
         },
         {

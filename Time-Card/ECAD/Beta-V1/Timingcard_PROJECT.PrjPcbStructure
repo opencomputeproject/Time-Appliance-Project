@@ -1,0 +1,6 @@
+Record=TopLevelDocument|FileName=FPGA.SchDoc|SheetNumber=7
+Record=NoMainPathDocument|SourceDocument=FPGA.SchDoc|FileName=GPS_IMU_SENSORS.SchDoc|SheetNumber=5
+Record=NoMainPathDocument|SourceDocument=FPGA.SchDoc|FileName=MAC.SchDoc|SheetNumber=6
+Record=NoMainPathDocument|SourceDocument=FPGA.SchDoc|FileName=PCIe_JTAG.SchDoc|SheetNumber=3
+Record=NoMainPathDocument|SourceDocument=FPGA.SchDoc|FileName=POWER.SchDoc|SheetNumber=2
+Record=NoMainPathDocument|SourceDocument=FPGA.SchDoc|FileName=USER_IO.SchDoc|SheetNumber=1

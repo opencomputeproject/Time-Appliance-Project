@@ -24,14 +24,15 @@ uint64_t dw1000_read_reg(uint16_t reg, uint16_t subaddress, uint8_t nbytes) {
   byte buf[8];
   uint64_t to_return = 0;
 #if GPIO_DEBUG
-  Serial.print("DW1000 read reg 0x"); Serial.print(reg, HEX);
-  Serial.print(" Subaddr 0x"); Serial.print(subaddress, HEX);
+  SerialUSB.print("DW1000 read reg 0x"); SerialUSB.print(reg, HEX);
+  SerialUSB.print(" Subaddr 0x"); SerialUSB.println(subaddress, HEX);
 #endif
   if ( nbytes > 8 ) return 0;
   DW1000.readBytes(reg, subaddress, buf, nbytes);
   memcpy(&to_return, buf, nbytes);
+  
 #if GPIO_DEBUG
-  Serial.print(" = 0x"); Serial.println(to_return, HEX);
+  SerialUSB.print(" = 0x"); SerialUSB.println((long unsigned int)to_return, HEX);
 #endif
   return to_return;
 }
@@ -39,32 +40,35 @@ uint64_t dw1000_read_reg(uint16_t reg, uint16_t subaddress, uint8_t nbytes) {
 void dw1000_write_reg(uint16_t reg, uint16_t subaddress, uint64_t data, uint8_t nbytes) {  
   byte buf[8];
 
-#if GPIO_DEBUG
-  Serial.print("DW1000 write reg 0x"); Serial.print(reg, HEX);
-  Serial.print(" Subaddr 0x"); Serial.print(subaddress, HEX);
+#if GPIO_DEBUG 
+  SerialUSB.print("DW1000 write reg 0x"); SerialUSB.print(reg, HEX);
+  SerialUSB.print(" Subaddr 0x"); SerialUSB.println(subaddress, HEX);
 #endif
   if ( nbytes > 8 ) return;
   memcpy(buf, &data, nbytes);
+
+
 #if GPIO_DEBUG
-  Serial.print(" 0x"); Serial.println(data, HEX);
+  SerialUSB.print(" 0x"); SerialUSB.println((long unsigned int)data, HEX);
 #endif
+
   DW1000.writeBytes(reg, subaddress, buf, nbytes);
 }
 
 void dw1000_gpio_set_mode(uint8_t gpioNum, uint8_t mode) {
     uint32_t reg;
 #if GPIO_DEBUG
-    Serial.print("dw1000_gpio_set_mode gpio "); Serial.print(gpioNum);
-    Serial.print(" mode 0x"); Serial.println(mode,HEX);
+    SerialUSB.print("dw1000_gpio_set_mode gpio "); SerialUSB.print(gpioNum);
+    SerialUSB.print(" mode 0x"); SerialUSB.println(mode,HEX);
 #endif
     reg = (uint32_t) dw1000_read_reg(GPIO_CTRL_ID, GPIO_MODE_OFFSET , sizeof(uint32_t));
     reg &= ~(0x3UL << (6+gpioNum*2));
 #if GPIO_DEBUG
-    Serial.print("First reg &= 0x"); Serial.println(reg, HEX);
+    SerialUSB.print("First reg &= 0x"); SerialUSB.println(reg, HEX);
 #endif
     reg |= (mode << (6+gpioNum*2));
 #if GPIO_DEBUG
-    Serial.print("Second reg |= 0x"); Serial.println(reg, HEX);
+    SerialUSB.print("Second reg |= 0x"); SerialUSB.println(reg, HEX);
 #endif
     dw1000_write_reg(GPIO_CTRL_ID, GPIO_MODE_OFFSET , reg, sizeof(uint32_t));
 }
@@ -83,8 +87,8 @@ void dw1000_gpio_set_direction(uint8_t gpioNum, uint8_t dir)
     uint8_t buf[GPIO_DIR_LEN];
     uint32_t command;
 #if GPIO_DEBUG
-    Serial.print("dw1000_gpio_set_direction gpio "); Serial.print(gpioNum);
-    Serial.print(" dir "); Serial.println(dir);
+    SerialUSB.print("dw1000_gpio_set_direction gpio "); SerialUSB.print(gpioNum);
+    SerialUSB.print(" dir "); SerialUSB.println(dir);
 #endif
     if (!(gpioNum < 9)) return;
     /* Activate GPIO Clock if not already active */
@@ -106,14 +110,14 @@ void dw1000_gpio_set_direction(uint8_t gpioNum, uint8_t dir)
     buf[1] = (command >> 8) & 0xff;
     buf[2] = (command >> 16) & 0xff;
 #if GPIO_DEBUG
-    Serial.print("writeBytes reg 0x"); Serial.print(GPIO_CTRL_ID, HEX);
-    Serial.print(" subaddress 0x"); Serial.print(GPIO_DIR_OFFSET, HEX);
-    Serial.print(" len "); Serial.print(GPIO_DIR_LEN);
-    Serial.print(" command 0x"); Serial.print(command, HEX);
+    SerialUSB.print("writeBytes reg 0x"); SerialUSB.print(GPIO_CTRL_ID, HEX);
+    SerialUSB.print(" subaddress 0x"); SerialUSB.print(GPIO_DIR_OFFSET, HEX);
+    SerialUSB.print(" len "); SerialUSB.print(GPIO_DIR_LEN);
+    SerialUSB.print(" command 0x"); SerialUSB.print(command, HEX);
     for ( int i = 0; i < GPIO_DIR_LEN; i++ ) {
-      Serial.print(" 0x"); Serial.print(buf[i], HEX);
+      SerialUSB.print(" 0x"); SerialUSB.print(buf[i], HEX);
     }
-    Serial.println("");
+    SerialUSB.println("");
 #endif
     DW1000.writeBytes(GPIO_CTRL_ID, GPIO_DIR_OFFSET, buf, GPIO_DIR_LEN);
 }
@@ -153,14 +157,14 @@ void dw1000_gpio_set_value(uint8_t gpioNum, uint8_t value)
     buf[2] = (command >> 16) & 0xff;
 
 #if GPIO_DEBUG
-    Serial.print("dw1000_gpio_set_value reg 0x"); Serial.print(GPIO_CTRL_ID, HEX);
-    Serial.print(" subaddress 0x"); Serial.print(GPIO_DOUT_OFFSET, HEX);
-    Serial.print(" len "); Serial.print(GPIO_DOUT_LEN);
-    Serial.print(" command 0x"); Serial.print(command, HEX);
+    SerialUSB.print("dw1000_gpio_set_value reg 0x"); SerialUSB.print(GPIO_CTRL_ID, HEX);
+    SerialUSB.print(" subaddress 0x"); SerialUSB.print(GPIO_DOUT_OFFSET, HEX);
+    SerialUSB.print(" len "); SerialUSB.print(GPIO_DOUT_LEN);
+    SerialUSB.print(" command 0x"); SerialUSB.print(command, HEX);
     for ( int i = 0; i < GPIO_DOUT_LEN; i++ ) {
-      Serial.print(" 0x"); Serial.print(buf[i], HEX);
+      SerialUSB.print(" 0x"); SerialUSB.print(buf[i], HEX);
     }
-    Serial.println("");
+    SerialUSB.println("");
 #endif
 
 
@@ -176,8 +180,8 @@ uint32_t dw1000_gpio_get_values()
 void dw1000_gpio_init_out(int gpioNum, int val)
 {
 #if GPIO_DEBUG
-    Serial.print("dw1000_gpio_init_out gpio "); Serial.print(gpioNum); 
-    Serial.print(" val "); Serial.println(val);
+    SerialUSB.print("dw1000_gpio_init_out gpio "); SerialUSB.print(gpioNum); 
+    SerialUSB.print(" val "); SerialUSB.println(val);
 #endif
     dw1000_gpio_set_direction(gpioNum, 0);
     dw1000_gpio_set_value(gpioNum, val);
@@ -185,7 +189,7 @@ void dw1000_gpio_init_out(int gpioNum, int val)
 void dw1000_gpio_init_in(int gpioNum)
 {
 #if GPIO_DEBUG
-    Serial.print("dw1000_gpio_init_in gpio "); Serial.println(gpioNum); 
+    SerialUSB.print("dw1000_gpio_init_in gpio "); SerialUSB.println(gpioNum); 
 #endif
     dw1000_gpio_set_direction(gpioNum, 1);
 }
@@ -201,8 +205,8 @@ int dw1000_gpio_read(uint8_t gpioNum)
 void dw1000_gpio_write(int gpioNum, int val)
 {
 #if GPIO_DEBUG
-    Serial.print("dw1000_gpio_write "); Serial.print(gpioNum);
-    Serial.print(" = "); Serial.println(val);
+    SerialUSB.print("dw1000_gpio_write "); SerialUSB.print(gpioNum);
+    SerialUSB.print(" = "); SerialUSB.println(val);
 #endif
     dw1000_gpio_set_value(gpioNum, val);
 }
@@ -230,7 +234,7 @@ void debug_toggle_sync_as_output() {
   while ( 1 ) {
     if ( (millis() - led_counter) >= 1000 ) {
       led_counter = millis();
-      Serial.println("Toggle sync output");
+      SerialUSB.println("Toggle sync output");
       dw1000_gpio_write(7, blink ? 1 : 0 );
       blink = !blink;
     }
@@ -258,58 +262,74 @@ void deca_setup_gpio() {
 
 
   /* Wait for sync pin to get exercised */
-  Serial.println("Waiting for decawave sync pin to toggle");
+  SerialUSB.println("Waiting for decawave sync pin to toggle");
   dw1000_gpio_init_in(7); 
   dw1000_gpio_set_mode(7, 0x1);
   dw1000_gpio_init_in(7); 
   int init_val = 0;
+  int sync_toggle_count = 0;
   
   init_val = dw1000_gpio_read(7);
-  while ( init_val == dw1000_gpio_read(7) ) {
-    delay(250);
-    if ( (millis() - deca_led_counter) >= DECA_SETUP_BLINK_INTERVAL ) {
-      deca_led_counter = millis();
-      dw1000_gpio_write(0, blink ? 1 : 0 );
-      dw1000_gpio_write(1, blink ? 1 : 0 );
-      dw1000_gpio_write(2, blink ? 1 : 0 );
-      dw1000_gpio_write(3, blink ? 1 : 0 );
-      blink = !blink;
+  while ( sync_toggle_count < 2 ) {
+    while ( init_val == dw1000_gpio_read(7) ) {
+      delay(100);
+      if ( (millis() - deca_led_counter) >= DECA_SETUP_BLINK_INTERVAL ) {
+        deca_led_counter = millis();
+        dw1000_gpio_write(0, blink ? 0 : 1 );
+        dw1000_gpio_write(1, blink ? 0 : 1 );
+        dw1000_gpio_write(2, blink ? 1 : 0 );
+        dw1000_gpio_write(3, blink ? 1 : 0 );
+        blink = !blink;
+      }
     }
+    sync_toggle_count++;
   }
-  Serial.println("Saw sync pin toggle!");
+  SerialUSB.println("Saw sync pin toggle!");
 
-  Serial.println("Setting sync pin to external reset mode (OSTR)");
+  SerialUSB.println("Setting sync pin to external reset mode (OSTR)");
+  SerialUSB.print("Value of IRQ pin:"); SerialUSB.println(digitalRead(22));
   dw1000_gpio_set_mode(7, 0x0); // set it to mode zero, sync mode 
   dw1000_phy_external_sync(33, true); // 33 recommended by user guide
   // wait is 8 bits, and modulo 4 should give 1 
+
+
 }
 
 void decawave_led_setmode(uint8_t dw_led_mode) {
   deca_led_mode = dw_led_mode;
 }
 
+
+// For some reason, the first line doesn't get applied????
 void decawave_led_loop() {
   if ( (millis() - deca_led_counter) >= DECA_SETUP_BLINK_INTERVAL ) {
     deca_led_counter = millis();
-    if ( deca_led_mode == DECA_LEDMODE_COUNTUP ) {        
-      dw1000_gpio_write(0, deca_led_shift_counter & 0x1 ? 1 : 0 );
-      dw1000_gpio_write(1, deca_led_shift_counter & 0x2 ? 1 : 0 );
+    
+    if ( deca_led_mode == DECA_LEDMODE_COUNTUP ) {  
+      //SerialUSB.println("DECAWAVE COUNTUP");  
+      dw1000_gpio_write(1, deca_led_shift_counter & 0x1 ? 1 : 0 );
+      dw1000_gpio_write(3, deca_led_shift_counter & 0x2 ? 1 : 0 );
       dw1000_gpio_write(2, deca_led_shift_counter & 0x4 ? 1 : 0 );
-      dw1000_gpio_write(3, deca_led_shift_counter & 0x8 ? 1 : 0 );
+      dw1000_gpio_write(0, deca_led_shift_counter & 0x8 ? 1 : 0 );
       deca_led_shift_counter++;
     } else if ( deca_led_mode == DECA_LEDMODE_COUNTDOWN ) {
-      dw1000_gpio_write(0, deca_led_shift_counter & 0x1 ? 1 : 0 );
-      dw1000_gpio_write(1, deca_led_shift_counter & 0x2 ? 1 : 0 );
+      //SerialUSB.println("DECAWAVE COUNTDOWN");
+      dw1000_gpio_write(1, deca_led_shift_counter & 0x1 ? 1 : 0 );
+      dw1000_gpio_write(3, deca_led_shift_counter & 0x2 ? 1 : 0 );
       dw1000_gpio_write(2, deca_led_shift_counter & 0x4 ? 1 : 0 );
-      dw1000_gpio_write(3, deca_led_shift_counter & 0x8 ? 1 : 0 );
+      dw1000_gpio_write(0, deca_led_shift_counter & 0x8 ? 1 : 0 );
       deca_led_shift_counter--;
     } else {
+      //SerialUSB.println("DECAWAVE BLINK");
       dw1000_gpio_write(0, deca_led_shift_counter & 0x1 ? 1 : 0 );
-      dw1000_gpio_write(1, deca_led_shift_counter & 0x1 ? 1 : 0 );
       dw1000_gpio_write(2, deca_led_shift_counter & 0x1 ? 1 : 0 );
       dw1000_gpio_write(3, deca_led_shift_counter & 0x1 ? 1 : 0 );
+      dw1000_gpio_write(1, deca_led_shift_counter & 0x1 ? 1 : 0 );
       deca_led_shift_counter++;
     }    
+#if GPIO_DEBUG
+    SerialUSB.println("");
+#endif
   }
 }
 

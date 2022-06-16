@@ -320,8 +320,13 @@ void dpll_adjust_frequency(uint64_t adjFreq) {
 // and adjusts the DPLL offset only for now 
 
 extern int64_t picosecond_offset; // absolute offset, remote time - local time of a shared event
+// positive value means remote time is ahead of local time
+// negative value means remote time is behind local time
 extern double frequency_ratio; // ratio of (remote frequency / local frequency)
 extern bool update_dpll;  // PTP will return offset and frequency to adjust, 
+
+
+extern void print_int64t(int64_t val);
 
 
 void dpll_discipline_offset() {
@@ -336,7 +341,7 @@ void dpll_discipline_offset() {
   // a small negative value in picosecond_offset is almost a max value in DPLL phase, close to 360
 
 
-  SerialUSB.print("dpll_discipline_offset "); //SerialUSB.println(picosecond_offset);
+  SerialUSB.print("dpll_discipline_offset "); print_int64t(picosecond_offset); SerialUSB.println("");
   // first read back the divide ratio
   int64_t divratio = 0;
   int64_t phasevalue = 0;
@@ -350,17 +355,30 @@ void dpll_discipline_offset() {
     phasevalue += ((int64_t)1)<<32; // bit 32 is 0x111a[6]
   }
   
-  SerialUSB.print("Divratio:0x"); SerialUSB.println((long)divratio, HEX);
-  SerialUSB.print("Initial phasevalue:0x"); SerialUSB.println((long)phasevalue,HEX);
+  SerialUSB.print("Divratio:0x"); print_int64t(divratio); SerialUSB.println("");
+  SerialUSB.print("Initial phasevalue:0x"); print_int64t(phasevalue); SerialUSB.println("");
 
   // convert picosecond_offset to degrees 
   // period is 1Hz , 360 degrees in 1e12 picoseconds, multiply by that ratio 
-  double offset_degrees = 0;
-  offset_degrees = (360 / 1e12) * ((double)picosecond_offset); 
+  double offset_degrees = 0;  
+
+  
+  offset_degrees = ((double)picosecond_offset) * 360.0;
+  SerialUSB.print("Offset degrees after multiply by 360:"); SerialUSB.println(offset_degrees,20);
+
+  offset_degrees = offset_degrees / (1.0 * 1000.0 * 1000.0 * 1000.0 * 1000.0);
+  SerialUSB.print("Offset degrees after divide by 1e12:"); SerialUSB.println(offset_degrees,20);
+
+
+
   if ( offset_degrees < 0.0 ) { // if it's negative, shift it into 0 to 360 range 
     offset_degrees += 360.0;
-  }
-  SerialUSB.print("Offset degrees:"); SerialUSB.println(offset_degrees,5);
+  }  
+  SerialUSB.print("Offset degrees after shifting into 0-360:"); SerialUSB.println(offset_degrees, 5);
+
+  offset_degrees *= PHASE_ADJ_KP; 
+
+  SerialUSB.print("Offset degrees after applying Kp:"); SerialUSB.println(offset_degrees,5);
 
   // convert current phase to degrees
   // 180 degrees per divratio units, multiply current value by that ratio 
@@ -378,6 +396,7 @@ void dpll_discipline_offset() {
   phasevalue = (int64_t) ( ( ((double)divratio) / ((double) 180.0) ) * current_degrees ); 
   
   SerialUSB.print("####################Phasevalue:0x"); SerialUSB.println((long)phasevalue,HEX);
+
   
   // write lower four bytes to register
   for ( int i = 0; i < 4; i++ ) {
@@ -391,22 +410,51 @@ void dpll_discipline_offset() {
   }
 
   dpll_io_update();
+  
 }
 
 void dpll_discipline_freq() {
   // frequency need to read back and do the multiplication
-  double centerfreq = 0;
   uint64_t int_center = 0;
-  for ( int i = 0; i < AUXNCO0_CENTERFREQ_SIZE; i++ ) {
-    centerfreq += (double)(((uint64_t) dpll_read_register( AUXNCO0_CENTERFREQ + i )) << (8*i));
-  }
-  SerialUSB.print("dpll_discipline_freq read frequency value in units of 2^-40 Hz: "); SerialUSB.println(centerfreq,HEX);
-  centerfreq *= frequency_ratio;
+  uint64_t temp_val = 0;
 
-  int_center = (uint64_t) centerfreq;
+  SerialUSB.println("DPLL_DISCIPLINE_FREQ START");
+
+  for ( int i = 0; i < AUXNCO0_CENTERFREQ_SIZE; i++ ) {
+    int_center += (((uint64_t) dpll_read_register( AUXNCO0_CENTERFREQ + i )) << (8*i));
+  }
+  SerialUSB.print("dpll_discipline_freq read frequency value in units of 2^-40 Hz: 0x"); SerialUSB.println( (unsigned long) int_center, HEX);
+
+
+  // do math in integer land, doubles get wierd I think
+  temp_val = INT_PPB(int_center); // get value of 1 PPB
+
+  // if frequency_ratio is > 1 , then remote frequency is faster
+  // if frequency_ratio is < 1 , then remote frequency is slower
+
+  // do this comparison as double, but adjust frequency as integer
+  if (  FREQ_PPB(frequency_ratio) > MAX_FREQ_ADJ_PPB ) {
+    // frequency wants to adjust too much, want to increase it
+    SerialUSB.println("FREQ ADJ INCREASE LIMITED");
+    int_center -= MAX_FREQ_ADJ_PPB_INT * INT_PPB(int_center);
+  } else if (  FREQ_PPB(frequency_ratio) < -1.0*MAX_FREQ_ADJ_PPB ) {
+    // frequency wants to adjust too much, want to decrease it
+    SerialUSB.println("FREQ ADJ DECREASE LIMITED");
+    int_center += MAX_FREQ_ADJ_PPB_INT * INT_PPB(int_center);
+  } else {
+    // frequency in the range I can Adjust it
+    if ( FREQ_PPB(frequency_ratio) > 0 ) {
+      SerialUSB.print("FREQ ADJ to requested amount: "); SerialUSB.println( (unsigned long)(INT_PPB(int_center) * ( (uint64_t)( FREQ_PPB(frequency_ratio) * -1.0))) , HEX);
+      int_center += INT_PPB(int_center) * ( (uint64_t) FREQ_PPB(frequency_ratio) );
+    } else {
+      SerialUSB.print("FREQ ADJ to requested amount: "); SerialUSB.println( (unsigned long)(INT_PPB(int_center) * ( (uint64_t)( FREQ_PPB(frequency_ratio) * -1.0))) , HEX);
+      int_center -= INT_PPB(int_center) * ( (uint64_t)( FREQ_PPB(frequency_ratio) * -1.0));      
+    }
+  }
+  
   
 
-  SerialUSB.print("######################dpll_discipline_freq change to 0x"); SerialUSB.println((long)int_center, HEX);
+  SerialUSB.print("######################dpll_discipline_freq change to 0x"); SerialUSB.println((unsigned long)int_center, HEX);
 
   for ( int i = 0; i < AUXNCO0_CENTERFREQ_SIZE; i++ ) {
     dpll_write_register(  AUXNCO0_CENTERFREQ + i ,
@@ -414,6 +462,8 @@ void dpll_discipline_freq() {
   }
 
   dpll_io_update();
+
+  
 }
 
 // DPLL needs time to adjust to large changes in frequency
@@ -448,18 +498,30 @@ bool dpll_adjust_error() {
 
   SerialUSB.print("FREQ_PPB:"); SerialUSB.println(FREQ_PPB(frequency_ratio));
 
-  if ( (FREQ_PPM(frequency_ratio) >= 1000) || (FREQ_PPM(frequency_ratio) <= -1000) ) { // sanity check, 100ppm is probably math error somewhere or protocol error
+
+  // simple algorithm, adjust frequency, then phase and frequency
+  if ( (FREQ_PPM(frequency_ratio) >= 1000) || (FREQ_PPM(frequency_ratio) <= -1000) ) { // sanity check, 1000ppm is probably math error somewhere or protocol error
     return false;
   }
-  // simple algorithm
-  if ( (FREQ_PPB(frequency_ratio) > 100) || (FREQ_PPB(frequency_ratio) < -100) ) { 
+  if ( (FREQ_PPB(frequency_ratio) > 100) || (FREQ_PPB(frequency_ratio) < -100) ) {
     // adjust frequency first
+    dpll_discipline_freq();
+    //dpll_discipline_offset();
+    return true;
+  } else {
     dpll_discipline_freq();
     dpll_discipline_offset();
     return true;
-  } else if ( (picosecond_offset > MICRO_TO_PICO(1)) || (picosecond_offset < MICRO_TO_PICO(-1) ) )  {
+  }
+  /*
+  if ( (picosecond_offset > MICRO_TO_PICO(1)) || (picosecond_offset < MICRO_TO_PICO(-1) ) )  {
     dpll_discipline_offset();
     return true;
-  }  
+  } else if ( (FREQ_PPB(frequency_ratio) > 100) || (FREQ_PPB(frequency_ratio) < -100) ) { 
+    if ( (FREQ_PPM(frequency_ratio) >= 1000) || (FREQ_PPM(frequency_ratio) <= -1000) ) { // sanity check, 100ppm is probably math error somewhere or protocol error
+      return false;
+    }
+  } 
+  */
   return false;
 }

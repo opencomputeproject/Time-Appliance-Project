@@ -67,7 +67,7 @@
 // Time stick config
 #define TIME_BETWEEN_RANGEFIND_MSEC 10000
 
-
+#define FREQ_RATIO_INVALID 9999999999
 
 
 
@@ -77,8 +77,9 @@
 
 
 #include <Arduino.h>
-#include <DW1000.h>
-#include <DW1000Constants.h>
+#include "DW1000.h"
+#include "DW1000Constants.h"
+#include "SoftSPI.h"
 
 
 
@@ -91,7 +92,11 @@ extern const uint8_t PIN_DW_MOSI; // PA16
 extern const uint8_t PIN_DW_SCK; // PA17
 extern const uint8_t PIN_DW_SS;  // PA18
 extern const uint8_t PIN_DW_MISO; // PA19
-extern SPIClass mySPI;
+extern SoftSPI mySPI;
+
+extern SPIClass myHardSPI;
+
+extern const uint8_t PIN_1PPS_UC_IN; //PB10
 
 
 extern bool is_gug;
@@ -151,11 +156,14 @@ struct uwb_ptp_sync_followup_pkt {
 
 
 
-
+void print_int64t(int64_t val);
 
 
 void decawave_ptp_init();
 void TopLevelFSM();
+void debug_dw_irq();
 
+void BasicReceiver();
+void BasicSender();
 
 #endif
