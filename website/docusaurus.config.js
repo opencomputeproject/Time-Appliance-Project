@@ -32,17 +32,13 @@ const config = {
       ({
         docs: {
           sidebarPath: require.resolve('./sidebars.js'),
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
-          // editUrl:
-          //   'https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/',
+          editUrl:
+            'https://github.com/opencomputeproject/Time-Appliance-Project/tree/master/website/',
         },
         blog: {
           showReadingTime: true,
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
-          // editUrl:
-          //   'https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/',
+          editUrl:
+            'https://github.com/opencomputeproject/Time-Appliance-Project/tree/master/website',
         },
         theme: {
           customCss: require.resolve('./src/css/custom.css'),
@@ -54,6 +50,19 @@ const config = {
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
+        algolia: {
+          appId: 'YOUR_APP_ID',
+          // Public API key: it is safe to commit it
+          apiKey: 'YOUR_SEARCH_API_KEY',
+          indexName: 'YOUR_INDEX_NAME',
+          contextualSearch: true,
+          // Optional: Specify domains where the navigation should occur through window.location instead on history.push. Useful when our Algolia config crawls multiple documentation sites and we want to navigate with window.location.href to them.
+          // externalUrlRegex: 'external\\.com|domain\\.com',
+          // Optional: Algolia search parameters
+          searchParameters: {},
+          // Optional: path for search page that enabled by default (`false` to disable it)
+          searchPagePath: false,
+        },
       navbar: {
         title: 'Time Appliances Project',
         logo: {
