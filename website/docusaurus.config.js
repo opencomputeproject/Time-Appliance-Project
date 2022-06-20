@@ -15,7 +15,7 @@ const config = {
   tagline:
     'Develop an end-to-end hypothetical reference model, network architectures, performance objectives and the methods to distribute, operate, monitor time synchronization within data center and much more.',
   url: 'http://www.timingcard.com/',
-  baseUrl: '/',
+  baseUrl: '/Time-Appliance-Project/',
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
   trailingSlash: false,
