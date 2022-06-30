@@ -40,7 +40,8 @@
 #define MRO50_WRITE_EEPROM_BLOB	_IOW('M', 8, u8 *)
 #define MRO50_READ_EXTENDED_EEPROM_BLOB	_IOR('M', 9, u8 *)
 #define MRO50_WRITE_EXTENDED_EEPROM_BLOB	_IOW('M', 9, u8 *)
-
+#define MRO50_BOARD_CONFIG_READ _IOR('M', 10, u32 *)
+#define MRO50_BOARD_CONFIG_WRITE _IOW('M', 10, u32 *)
 
 #endif /* MRO50_IOCTL_H */
 /*---------------------------------------------------------------------------*/
@@ -244,6 +245,11 @@ struct frequency_reg {
 	u32	ctrl;
 	u32	status;
 };
+
+struct board_config_reg {
+	u32 mro50_serial_activate;
+};
+
 #define FREQ_STATUS_VALID	BIT(31)
 #define FREQ_STATUS_ERROR	BIT(30)
 #define FREQ_STATUS_OVERRUN	BIT(29)
@@ -332,6 +338,7 @@ struct ptp_ocp {
 	struct tod_reg __iomem	*tod;
 	struct pps_reg __iomem	*pps_to_ext;
 	struct pps_reg __iomem	*pps_to_clk;
+	struct board_config_reg __iomem	*board_config;
 	struct gpio_reg __iomem	*pps_select;
 	struct gpio_reg __iomem	*sma_map1;
 	struct gpio_reg __iomem	*sma_map2;
@@ -730,6 +737,7 @@ struct ocp_art_osc_reg {
 	u32	adjust;
 	u32	temp;
 };
+
 #define MRO50_CTRL_ENABLE		BIT(0)
 #define MRO50_CTRL_LOCK			BIT(1)
 #define MRO50_CTRL_READ_CMD		BIT(2)
@@ -859,6 +867,10 @@ static struct ocp_resource ocp_art_resource[] = {
 				},
 			},
 		},
+	},
+	{
+		OCP_MEM_RESOURCE(board_config),
+		.offset = 0x210000, .size = 0x1000,
 	},
 	{
 		.setup = ptp_ocp_art_board_init,
@@ -2377,6 +2389,15 @@ ptp_ocp_mro50_ioctl(struct file *file, unsigned cmd, unsigned long arg)
 	bp = container_of(mro50, struct ptp_ocp, mro50);
 
 	switch (cmd) {
+	case MRO50_BOARD_CONFIG_READ:
+		val = ioread32(&bp->board_config->mro50_serial_activate);
+		err = 0;
+		break;
+	case MRO50_BOARD_CONFIG_WRITE:
+		if (get_user(val, (u32 __user *)arg))
+			return -EFAULT;
+		iowrite32(val, &bp->board_config->mro50_serial_activate);
+		return 0;
 	case MRO50_READ_FINE:
 		err = ptp_ocp_mro50_read(bp, MRO50_OP_READ_FINE, &val);
 		break;
