@@ -1,4 +1,4 @@
-# Special Bitstream Versions
+#  NOT MAINTAINED binaries Special Bitstream Versions for debugging etc.
 
 ## TimeCardDoublePPS.bit
 
