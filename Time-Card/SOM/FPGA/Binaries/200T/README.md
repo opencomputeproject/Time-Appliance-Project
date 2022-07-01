@@ -2,4 +2,4 @@
 
 * TimeCard200T.bit to flash the FPGA (volatile)
 * Factory_TimeCard200T.bin to load the SPI flash via JTAG (Golden Image + Update Image)
-* TimeCard200T.bin to updated the SPI flash via SPI starting @ 0x00800000 (Update Image only)
+* **IMPORTANT**: TimeCard200T.bin to updated the SPI flash via SPI starting @ **0x00800000** (Update Image only)
