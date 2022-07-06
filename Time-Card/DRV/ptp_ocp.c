@@ -463,7 +463,7 @@ static struct ptp_ocp_eeprom_map fb_eeprom_map[] = {
 
 static struct ptp_ocp_eeprom_map art_eeprom_map[] = {
 	{ EEPROM_ENTRY(0x200 + 0x43, board_id) },
-	{ EEPROM_ENTRY(0x200 + 0x66, serial) },
+	{ EEPROM_ENTRY(0x200 + 0x63, serial) },
 	{ }
 };
 
