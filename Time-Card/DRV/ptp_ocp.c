@@ -770,8 +770,8 @@ struct ocp_art_osc_reg {
 #define MRO50_OP_ADJUST_COARSE	(MRO50_CMD_ADJUST | MRO50_CTRL_ADJUST_COARSE)
 #define MRO50_OP_SAVE_COARSE	(MRO50_CTRL_ENABLE | MRO50_CTRL_SAVE_COARSE)
 
-#define OCP_ART_CONFIG_SIZE		128
-#define OCP_ART_TEMP_TABLE_SIZE	384
+#define OCP_ART_CONFIG_SIZE		144
+#define OCP_ART_TEMP_TABLE_SIZE	368
 
 struct ocp_art_gpio_reg {
 	struct {
@@ -4013,7 +4013,7 @@ temperature_table_read(struct file *filp, struct kobject *kobj,
 		count = size - off;
 
 	// the configuration is in the very beginning of the EEPROM
-	err = nvmem_device_read(nvmem, 0x100 + off, count, buf);
+	err = nvmem_device_read(nvmem, 0x90 + off, count, buf);
 	if (err != count) {
 		err = -EFAULT;
 		goto out;
@@ -4043,7 +4043,7 @@ temperature_table_write(struct file *filp, struct kobject *kobj,
 		return PTR_ERR(nvmem);
 
 
-	err = nvmem_device_write(nvmem, 0x100, count, buf);
+	err = nvmem_device_write(nvmem, 0x90, count, buf);
 	if (err != count) {
 		err = -EFAULT;
 	}
