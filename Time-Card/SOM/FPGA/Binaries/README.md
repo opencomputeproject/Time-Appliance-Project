@@ -8,6 +8,7 @@
 * TimeCard.bit to flash the FPGA (volatile)
 * Factory_TimeCard.bin to load the SPI flash via JTAG (Golden Image + Update Image)
 * TimeCard.bin to updated the SPI flash via SPI starting @ 0x00400000 (Update Image only)
+* TimeCard_Gotham.bin is basically the same as TimeCard.bin but the file has additional header information ([See tft tool](https://github.com/opencomputeproject/Time-Appliance-Project/tree/master/Software/tft))
     
 The version for AX7103 will be not longer maintained. 
 
