@@ -26,7 +26,7 @@ local code_val=$(("$lo_val"|$(("$hi_val"<<2))))
 if [ $(( "$hi_val" & 0x80)) -ne 0 ]; then
 	code_val=$(($code_val - 512))
 fi
-printf "Temperature = %.1f C\n" $(echo $code_val / 4 | bc -l)
+printf "Temperature = %.2f C\n" $(echo $code_val / 4 | bc -l)
 }
 
 
