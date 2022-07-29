@@ -96,9 +96,22 @@ const uint8_t PIN_LED_4 = 25; //PB03
 uint32_t led_counter = 0; // just to make it blink without delays
 bool led_val = HIGH;
 
-bool is_gug = 0; // detect if is GUG via a strap GPIO. Strap to GND to make a GUG
+bool is_gug = 1; // detect if is GUG via a strap GPIO. Strap to GND to make a GUG
 #define DEBUG_BASIC_TX_RX 0
 //#define GUG_DETECT_PIN 5
+
+uint64_t health_check_time = 0;
+
+
+
+
+
+int64_t picosecond_offset = 0; // absolute offset
+double frequency_ratio = 0; // ratio of (remote frequency / local frequency) 
+bool update_dpll = false;  // PTP will return offset and frequency to adjust, 
+// other algorithm (servo) determines whether to do a phase jump or frequency adjust
+uint64_t time_last_updated_dpll = 0; // simple millis, estimate 1 second
+
 
 
 void set_uc_led(int val) {
@@ -109,6 +122,10 @@ void set_uc_led(int val) {
 }
 
 
+
+
+
+
 // the setup function runs once when you press reset or power the board
 void setup() {
   char past_pin_val = 0;
@@ -116,6 +133,7 @@ void setup() {
 
 
   bool toggleme = false;
+  
   pinMode(PIN_LED_1, OUTPUT);
   pinMode(PIN_LED_2, OUTPUT);
   pinMode(PIN_LED_3, OUTPUT);
@@ -192,12 +210,29 @@ void setup() {
   }
   */
 
-  pinMode(PIN_1PPS_UC_IN, INPUT);
-  past_pin_val = digitalRead(PIN_1PPS_UC_IN);
-  SerialUSB.println("Waiting for 1PPS pin to toggle on microcontroller");
-  while ( past_pin_val == digitalRead(PIN_1PPS_UC_IN) ) {
-    delay(1);
+
+  if ( is_gug ) { // HACK FOR MY BOARD, I HAVE TWO BOARDS AS OF 6-20-2022, ONLY 1 HAS FULL WORKING PPS TO UC WHICH IS GUG, DISABLE THIS CHECK FOR TimeDrive side
+    pinMode(PIN_1PPS_UC_IN, INPUT);
+    past_pin_val = digitalRead(PIN_1PPS_UC_IN);
+    SerialUSB.println("Waiting for 1PPS pin to toggle on microcontroller");
+    led_counter = millis();
+    bool ucled_isgreen = false;
+    while ( past_pin_val == digitalRead(PIN_1PPS_UC_IN) ) {
+      delay(1);
+      // add a visible indication this is the current state
+      if ( (millis() - led_counter) > LED_BLINK_INTERVAL ) {
+        if ( ucled_isgreen ) {
+          set_uc_led(UC_LED_RED);
+          ucled_isgreen = false;
+        } else {
+          set_uc_led(UC_LED_GREEN);
+          ucled_isgreen = true;
+        }
+        led_counter = millis();
+      }
+    }
   }
+  
   
   
   
@@ -240,24 +275,34 @@ void setup() {
 
   //watchdog_enable(3000, 1); // make it quite long, but still enable it
 
+  if ( is_gug ) {
+    set_uc_led(UC_LED_GREEN);
+  }
+  else {
+    set_uc_led(UC_LED_RED);
+  }
 
+  /* hack code, just adjust the phase of the 1pps over and over, for measuring on oscilloscope
+  while ( 1 ) {
+    SerialUSB.println("========Debug shifting phase 10ms=========");
+    dpll_adjust_phase_picoseconds(50000000000);
+    delay(5000);
+  }
+  */
+
+  time_last_updated_dpll = millis(); // only consider from here
 }
 
 
-
-
-int64_t picosecond_offset = 0; // absolute offset
-double frequency_ratio = 0; // ratio of (remote frequency / local frequency) 
-bool update_dpll = false;  // PTP will return offset and frequency to adjust, 
-// other algorithm (servo) determines whether to do a phase jump or frequency adjust
-uint64_t time_last_updated_dpll = 0; // simple millis, estimate 1 second
+int health_check_reset_deca_counter = 0;
 
 bool health_check() {
-  return true;
+  byte val; 
   char msg[128];
   // check I can still access the DPLL
   debug_dpll_print = false;
-  byte val; 
+  health_check_time = millis();
+  
   val = dpll_read_register(DEVICE_CODE_0);
   if ( val != 0x21 ){
     SerialUSB.print("DPLL health check fail:0x"); SerialUSB.println(val);
@@ -273,6 +318,40 @@ bool health_check() {
       SerialUSB.print("Decawave Health check fail:"); SerialUSB.println(msg);
       return false;
   }
+
+  if ( !is_gug ) {
+    
+    if ((millis() - time_last_updated_dpll) > 30000)  {
+      // haven't gotten enough packets to update the DPLL in a while
+      // maybe decawave got stuck
+      if ( health_check_reset_deca_counter < 4 ) {
+
+        SerialUSB.println("Been over 10 seconds since updated DPLL, try to line up with a GUG, try adjusting the phase");
+        dpll_adjust_phase_picoseconds(-100000000000);
+        delay(2000); // give DPLL some time to adjust
+        
+
+        health_check_reset_deca_counter++;
+      } else {   
+        
+        SerialUSB.println("Shifting phase hasn't helped, try resetting Decawave again");      
+        
+        decawave_ptp_init();
+        deca_setup_gpio(); 
+        
+        if (is_gug) {
+          decawave_led_setmode(DECA_LEDMODE_COUNTUP);
+          SerialUSB.println("Decawave LED mode countup!");
+        }
+        else {
+          decawave_led_setmode(DECA_LEDMODE_COUNTDOWN);
+          SerialUSB.println("Decawave LED mode countdown!");
+        }
+        health_check_reset_deca_counter = 0;
+      }
+      time_last_updated_dpll = millis();
+    }
+  }
   return true;
 }
 
@@ -280,19 +359,26 @@ bool health_check() {
 bool debug_dw_irq_val = 0;
 
 void loop() {
-  /*
- if ( health_check() ) 
-  watchdog_update();
-  */
+  if ( SerialUSB.available() > 0 ) {
+    // user input, for debugging
+
+    // allow millisecond input
+    int64_t val = (int64_t) SerialUSB.parseInt();
+    SerialUSB.println("Handling user input, manual phase shift!");
+  
+    dpll_adjust_phase_picoseconds( val * ((int64_t)1000) * ((int64_t)1000) * ((int64_t)1000));
+    delay(2000); // give DPLL some time to adjust
+  }  
+  if ( (millis() - health_check_time) > 500 ) {
+    health_check();
+  }
  // sanity slow loop
   if ( (millis() - led_counter) >= 1 ) {
     if ( digitalRead(PIN_DW_IRQ) != debug_dw_irq_val ) {
       //SerialUSB.print("DW IRQ changed! Now: "); SerialUSB.println(digitalRead(PIN_DW_IRQ));
       debug_dw_irq_val = digitalRead(PIN_DW_IRQ);
     } 
-  }
-
-  
+  }  
   decawave_led_loop();
   update_dpll = false;
 
@@ -306,15 +392,13 @@ void loop() {
   TopLevelFSM();
 #endif
   
-  if ( update_dpll && ((millis() - time_last_updated_dpll) > 3000) ) {
-    if ( dpll_adjust_error() ) {
-      time_last_updated_dpll = millis();
+  if ( update_dpll && ((millis() - time_last_updated_dpll) > 2000) ) {
+    if ( dpll_adjust_error() ) {      
       delay(500);
       // Maybe Decawave isn't happy after this, re-init decawave after DPLL adjust     
       decawave_ptp_init();
       deca_setup_gpio(); 
+      time_last_updated_dpll = millis();
     }    
-  }
-  
-  
+  }  
 }

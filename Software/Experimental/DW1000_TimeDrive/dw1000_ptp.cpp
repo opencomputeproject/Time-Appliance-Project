@@ -37,13 +37,14 @@ uint8_t fsm_state = TD_IDLE;
 
 
 
-uint32_t time_since_last_sync = 0;
+uint32_t time_last_falling_edge = 0;
+uint32_t time_since_falling_edge = 0;
 uint8_t sync_num = 0;
 DW1000Time PollTXTime;
 DW1000Time PollRXTime;
 DW1000Time FinalRXTime;
 DW1000Time ResponseTXTime;
-DW1000Time CalculatedTOFDelay;
+int64_t CalculatedTOFDelay;
 
 uint32_t last_time_rangefound = 0;
 
@@ -59,6 +60,7 @@ uint8_t num_gugs_found = 0;
 // Use followup info from packet 2 for packet 1
 // The bursts allow me to miss some packets , as long as I see three I'm ok
 // Seeing 3 in a single burst lets me do frequency / time correction for that burst
+// The first packet in a burst has invalid contents , from previous time
 // State machine: 
 #define TIMESTICK_SYNC_STATE_IDLE 0
 #define TIMESTICK_SYNC_STATE_GOTONE 1 
@@ -67,6 +69,9 @@ struct uwb_ptp_sync_followup_pkt timestick_seen_follow_ups[2];
 DW1000Time sync_followup_rx_time[2]; // just need to store first one, second rx time is processed along with the packet incoming
 uint32_t time_last_sync_seen = 0; // simple millis, just to differentiate between bursts, this + sequence number of packet
 uint8_t timestick_sync_state = TIMESTICK_SYNC_STATE_IDLE;
+
+
+unsigned long last_tx_micros = 0;
 
 /* 
 Pseudo single socket supporting retransmit
@@ -77,8 +82,8 @@ uint16_t tx_to_addr = 0;
 uint16_t rx_my_addr = 0;
 uint16_t last_pkt_size = 0;
 bool socket_open = false; 
-const uint32_t retrans_timer = 250; // time in millis between retransmit
-const uint8_t retrans_timeout = 10; // how many times to retransmit
+const uint32_t retrans_timer = 200; // time in millis between retransmit
+const uint8_t retrans_timeout = 3; // how many times to retransmit
 uint8_t retrans_count = 0;
 uint32_t time_sent_req; // just use millis for retransmit
 DW1000Time * last_store_txTS; 
@@ -100,7 +105,7 @@ void print_int64t(int64_t val) {
   SerialUSB.print(buffer); 
 
   if ( val < 0 ) { // don't double print the negative sign
-    sprintf(buffer, "%0ld", (-1*val)%1000000L);
+    sprintf(buffer, "%06ld", (-1*val)%1000000L);
   } else {
     sprintf(buffer, "%06ld", val%1000000L);
   }
@@ -111,33 +116,105 @@ void print_int64t(int64_t val) {
 
 void print_pkt(byte data[], int len) {
 
-
-  if ( len > 10 ) {
+  return;
+  if ( len >= sizeof(struct uwb_ptp_hdr) ) {
     struct uwb_ptp_hdr * ptp_hdr = (struct uwb_ptp_hdr *) data;
   
     // do a little parsing to be smarter
     if ( ptp_hdr->frame_control == 0x4188 ) {
       // ptp packet
-      if ( ptp_hdr->function_code == SYNC_FOLLOWUP ) {
+      if ( ptp_hdr->function_code == POLL_MESSAGE ) {
+        SerialUSB.println("--Poll Message packet--");
+        SerialUSB.print("Sequence Num:"); SerialUSB.println(ptp_hdr->seq_num);
+        SerialUSB.print("PAN ID: 0x"); SerialUSB.println(ptp_hdr->pan_id, HEX);
+        SerialUSB.print("Dest Addr: 0x"); SerialUSB.println(ptp_hdr->dest_addr, HEX);
+        SerialUSB.print("Src Addr: 0x"); SerialUSB.println(ptp_hdr->src_addr, HEX);
+        return;
+      }
+      else if ( ptp_hdr->function_code == RESPONSE_MESSAGE ) {
+        struct uwb_response_pkt * response_pkt = (struct uwb_response_pkt *) data;
+        SerialUSB.println("--Response Message packet--");
+        SerialUSB.print("Sequence Num:"); SerialUSB.println(ptp_hdr->seq_num);
+        SerialUSB.print("PAN ID: 0x"); SerialUSB.println(ptp_hdr->pan_id, HEX);
+        SerialUSB.print("Dest Addr: 0x"); SerialUSB.println(ptp_hdr->dest_addr, HEX);
+        SerialUSB.print("Src Addr: 0x"); SerialUSB.println(ptp_hdr->src_addr, HEX);
+        SerialUSB.print("Calculated TOF: "); SerialUSB.println( response_pkt->calculated_tof );  
+        return;      
+      }
+      else if ( ptp_hdr->function_code == FINAL_MESSAGE ) {
+        struct uwb_final_message_pkt * final_pkt = (struct uwb_final_message_pkt *) data;
+        SerialUSB.println("--Final Message packet--");
+        SerialUSB.print("Sequence Num:"); SerialUSB.println(ptp_hdr->seq_num);
+        SerialUSB.print("PAN ID: 0x"); SerialUSB.println(ptp_hdr->pan_id, HEX);
+        SerialUSB.print("Dest Addr: 0x"); SerialUSB.println(ptp_hdr->dest_addr, HEX);
+        SerialUSB.print("Src Addr: 0x"); SerialUSB.println(ptp_hdr->src_addr, HEX);
+        SerialUSB.print("Response Rx Time - Poll TX Time:"); SerialUSB.println(final_pkt->respRxTimeSubPollTX);
+        SerialUSB.print("Final TX Time - Response RX Time:"); SerialUSB.println(final_pkt->finalTxTimeSubRespRX);
+        return;         
+      }
+      else if ( ptp_hdr->function_code == RANGING_INIT_MESSAGE ) {
+        SerialUSB.println("--Ranging Init Message packet--");
+        SerialUSB.print("Sequence Num:"); SerialUSB.println(ptp_hdr->seq_num);
+        SerialUSB.print("PAN ID: 0x"); SerialUSB.println(ptp_hdr->pan_id, HEX);
+        SerialUSB.print("Dest Addr: 0x"); SerialUSB.println(ptp_hdr->dest_addr, HEX);
+        SerialUSB.print("Src Addr: 0x"); SerialUSB.println(ptp_hdr->src_addr, HEX);     
+        return;   
+      }
+      else if ( ptp_hdr->function_code == DELAY_REQ ) {
+        SerialUSB.println("--Delay request message packet--");
+        SerialUSB.print("Sequence Num:"); SerialUSB.println(ptp_hdr->seq_num);
+        SerialUSB.print("PAN ID: 0x"); SerialUSB.println(ptp_hdr->pan_id, HEX);
+        SerialUSB.print("Dest Addr: 0x"); SerialUSB.println(ptp_hdr->dest_addr, HEX);
+        SerialUSB.print("Src Addr: 0x"); SerialUSB.println(ptp_hdr->src_addr, HEX);     
+        return; 
+      }
+      else if ( ptp_hdr->function_code == DELAY_RESP ) {
+        struct uwb_ptp_delay_response_pkt * resp_pkt = (struct uwb_ptp_delay_response_pkt *) data;
+        SerialUSB.println("--Delay response message packet--");
+        SerialUSB.print("Sequence Num:"); SerialUSB.println(ptp_hdr->seq_num);
+        SerialUSB.print("PAN ID: 0x"); SerialUSB.println(ptp_hdr->pan_id, HEX);
+        SerialUSB.print("Dest Addr: 0x"); SerialUSB.println(ptp_hdr->dest_addr, HEX);
+        SerialUSB.print("Src Addr: 0x"); SerialUSB.println(ptp_hdr->src_addr, HEX);  
+        SerialUSB.print("Received time: 0x");  
+        for ( int i = 5; i >= 1; i-- ) {
+          if (  resp_pkt->receivedTime[i-1] < 0x10 ) SerialUSB.print("0"); // add leading zero
+          SerialUSB.print(resp_pkt->receivedTime[i-1], HEX);
+        }
+        SerialUSB.println("");
+        return; 
+      }
+      else if ( ptp_hdr->function_code == SYNC_FOLLOWUP ) {
         struct uwb_ptp_sync_followup_pkt * sync_pkt = (struct uwb_ptp_sync_followup_pkt *) data;
+        
         SerialUSB.println("--Sync-Followup packet--");
         SerialUSB.print("Sequence Num:"); SerialUSB.println(ptp_hdr->seq_num);
         SerialUSB.print("Sync Num:"); SerialUSB.println(sync_pkt->sync_num);
         SerialUSB.print("Num syncs sending:"); SerialUSB.println(sync_pkt->num_syncs_sending);
         
-        SerialUSB.print("GPS Time Second:0x"); 
+        SerialUSB.print("GPS Time Second: 0x"); 
         for ( int i = 6; i > 0; i-- ) {
           if ( sync_pkt->gps_time_sec[i] < 0x10 )  SerialUSB.print("0"); // add leading zero
           SerialUSB.print(sync_pkt->gps_time_sec[i], HEX);
         }
-        SerialUSB.println("");
+        SerialUSB.println("");   
 
-        for ( int i = 0; i < 5; i++ ) {
+        for ( int i = 0; i < NUM_SYNC_RETRANSMITS-1; i++ ) {
+          unsigned long temp_micros = 0;
           SerialUSB.print("Followup "); SerialUSB.print(i); SerialUSB.print(": 0x");
-          for ( int j = 5; j > 0; j-- ) {
-            if ( sync_pkt->followups[i][j] < 0x10 ) SerialUSB.print("0"); // add leading zero
-            SerialUSB.print(sync_pkt->followups[i][j], HEX);
+          for ( int j = 5; j >= 1; j-- ) {
+            if ( sync_pkt->followups[i][j-1] < 0x10 ) {
+              SerialUSB.print("0"); // add leading zero
+            }
+            SerialUSB.print(sync_pkt->followups[i][j-1], HEX);
           }
+          
+          temp_micros = (unsigned long) sync_pkt->local_micros[i][0];
+          temp_micros += ((unsigned long) sync_pkt->local_micros[i][1]) << 8;
+          temp_micros += ((unsigned long) sync_pkt->local_micros[i][2]) << 16;
+          temp_micros += ((unsigned long) sync_pkt->local_micros[i][3]) << 24;
+          SerialUSB.print(" , LocalMicros: "); SerialUSB.print(temp_micros);
+           
+          
           SerialUSB.println("");
         }
         
@@ -170,6 +247,7 @@ void handleError() {
 void handleSent() {
   // status change on sent success
   sentPkt = true;
+  last_tx_micros = micros();
 }
 
 void receiver() {
@@ -238,8 +316,13 @@ void decawave_ptp_init() {
   DW1000.attachReceivedHandler(handleReceived);
   DW1000.attachErrorHandler(handleError);
 
+
+  
+
   // start reception
   receiver();
+
+  last_pps_pin_val = digitalRead(PIN_1PPS_UC_IN);
 }
 
 
@@ -269,6 +352,7 @@ bool deca_rx_has_data() {
   return (data_len > 0);
 }
 
+
 void deca_loop() {
   //DW1000Class::poll_irq();
   /* Basic receiver */
@@ -285,8 +369,10 @@ void deca_loop() {
       SerialUSB.print("TimeStick ");
 
     SerialUSB.print("RX Timestamp in uS is... "); SerialUSB.print(rxTimeStamp.getAsMicroSeconds()); 
-    SerialUSB.print(" , decawave time is "); rxTimeStamp.printTo(SerialUSB); SerialUSB.println("");  
-    SerialUSB.println("Received Data is ... "); print_pkt(rx_data, data_len);  
+    SerialUSB.print(" , decawave time is "); rxTimeStamp.printTo(SerialUSB); 
+    SerialUSB.print(" , UC PPS val is "); SerialUSB.print(digitalRead(PIN_1PPS_UC_IN)); SerialUSB.println("");  
+    SerialUSB.println("Received Data is ... "); print_pkt(rx_data, data_len); 
+
 
     //SerialUSB.print("FP power is [dBm] ... "); SerialUSB.println(DW1000.getFirstPathPower());
     //SerialUSB.print("RX power is [dBm] ... "); SerialUSB.println(DW1000.getReceivePower());
@@ -310,7 +396,9 @@ void deca_loop() {
     else
       SerialUSB.print("TimeStick ");
 
-    SerialUSB.print("Got TX timestamp "); SerialUSB.println(txTimeStamp.getAsMicroSeconds());
+    SerialUSB.print("Got TX timestamp (uS) "); SerialUSB.print(txTimeStamp.getAsMicroSeconds()); 
+    SerialUSB.print(" , (decawave) "); print_int64t(txTimeStamp.getTimestamp());
+    SerialUSB.print(" at micros "); SerialUSB.println(last_tx_micros);
   }
   if (error) {
     SerialUSB.println("Error receiving a message");
@@ -358,6 +446,7 @@ void psuedo_socket_resend() {
   time_sent_req = millis();
   retrans_count++;
   SerialUSB.print("Pseudo socket resend "); SerialUSB.println(last_pkt_size);
+  print_pkt(tx_data, last_pkt_size);
 }
 
 bool pseudo_socket_need_retx() {
@@ -405,6 +494,15 @@ void Send_Sync_Followup() {
     syncpkt->hdr.dest_addr = 0x2; // time stick, hard code for now
     syncpkt->hdr.src_addr = 0x1; // my GUG address, hard code for now
     syncpkt->hdr.function_code = SYNC_FOLLOWUP;
+
+    for ( int i = 0; i < NUM_SYNC_RETRANSMITS-1; i++ ) {
+      for ( int j = 0; j < LEN_STAMP; j++ ) {
+        syncpkt->followups[i][j] = 0;
+      }
+      for ( int j = 0; j < 4; j++ ) {
+        syncpkt->local_micros[i][j] = 0;
+      }      
+    }
   } 
   syncpkt->sync_num = sync_num;
   
@@ -412,16 +510,28 @@ void Send_Sync_Followup() {
   // ignoring GPS time for now
   
   // filling in follow up information , assuming txTimeStamp is the last packet sent
-  if ( sync_num > 0 ) // store follow-up
+  if ( sync_num > 0 ) { // store follow-up
     txTimeStamp.getTimestamp(syncpkt->followups[sync_num-1]);
+    
+    syncpkt->local_micros[sync_num-1][0] = (uint8_t)(last_tx_micros & 0xff);
+    syncpkt->local_micros[sync_num-1][1] = (uint8_t) ((last_tx_micros >> 8) & 0xff);
+    syncpkt->local_micros[sync_num-1][2] = (uint8_t) ((last_tx_micros >> 16) & 0xff);
+    syncpkt->local_micros[sync_num-1][3] = (uint8_t) ((last_tx_micros >> 24) & 0xff);
+    
+  }
 
   deca_tx( tx_data, SYNCFOLLOWUP_PKTSIZE, 0 );
   SerialUSB.print("Sending sync followup #"); SerialUSB.print(sync_num); 
-  SerialUSB.print(" Followup val: "); SerialUSB.println(txTimeStamp.getAsMicroSeconds());
-  
+  if ( sync_num > 0 ) {
+    SerialUSB.print(" Followup val: "); SerialUSB.print(txTimeStamp.getAsMicroSeconds()); 
+    SerialUSB.print(" at micros: "); SerialUSB.println(last_tx_micros);
+  } else {
+    SerialUSB.println("");
+  }
+  print_pkt(tx_data, SYNCFOLLOWUP_PKTSIZE);
   sync_num++;
   seq_num = ( seq_num + 1 ) % 256;
-  print_pkt(tx_data, SYNCFOLLOWUP_PKTSIZE);
+  
   //SerialUSB.print("Value of IRQ pin after deca tx:"); SerialUSB.println(digitalRead(22));
 }
 
@@ -465,16 +575,35 @@ void Send_Final() {
   print_pkt(tx_data, FINALMSG_PKTSIZE );
 }
 
+void send_delay_response() {
+  struct uwb_ptp_delay_response_pkt * resp_pkt;
+  resp_pkt = (struct uwb_ptp_delay_response_pkt *) &tx_data;
+
+  resp_pkt->hdr.seq_num = seq_num;
+  resp_pkt->hdr.frame_control = 0x4188;
+  resp_pkt->hdr.pan_id = 0xcade;
+  resp_pkt->hdr.dest_addr = 0x2;
+  resp_pkt->hdr.src_addr = 0x1;
+  resp_pkt->hdr.function_code = DELAY_RESP;
+  byte storeTS[5];
+  rxTimeStamp.getTimestamp(storeTS);
+
+  for ( int i = 0; i < 5; i++ ) {
+    resp_pkt->receivedTime[i] = storeTS[i];
+  }
+  deca_tx( tx_data, DELAYRESPONSE_PKTISZE, 0 );
+  seq_num = ( seq_num + 1 ) % 256;
+  SerialUSB.println("GUG Send Delay Response");
+  print_pkt(tx_data, DELAYRESPONSE_PKTISZE );
+}
+
 void gug_respond() {
   struct uwb_ptp_hdr * hdr = (struct uwb_ptp_hdr *) &rx_data;
   if ( hdr->frame_control == 0x4188 && 
     hdr->dest_addr == 0x1 ) { // GUG address, hard code for now 
-    if ( hdr->function_code == RANGING_INIT_MESSAGE ) {
-      // I got ranging init request, send poll
-      Send_Poll();
-    } else if ( hdr->function_code == RESPONSE_MESSAGE ) {
-      // I got response message, send final message
-      Send_Final();
+    if ( hdr->function_code == DELAY_REQ ) {
+      // I got delay request, send response
+      send_delay_response();
     }
   } else {
     SerialUSB.print("GUG respond not proper request: frame_control:0x");
@@ -484,6 +613,7 @@ void gug_respond() {
   }
 }
 
+uint32_t time_since_last_sync = 0;
 
 void GUGFSM() {
   // state machine
@@ -499,20 +629,18 @@ void GUGFSM() {
       SerialUSB.print("GUG in listen state got packet len "); SerialUSB.println(data_len);  
       gug_respond();    
     }
-    if (( millis() - time_since_last_sync ) > TIME_BETWEEN_BURSTS ) {
-      if ( PPS_IN_RISING_EDGE ) {
-        // only go into broadcast after rising edge of PPS in
-
-        fsm_state = BROADCAST;
-        sync_num = 0;
-        SerialUSB.println("#####################GUG LISTEN -> BROADCAST#################################");
-      }
+    if ( (millis() - time_last_falling_edge) > 200 ) {
+      // 200ms of listen after falling edge, then broadcast
+      // don't broadcast near falling edge where sync event is, difficult to align edge then
+      fsm_state = BROADCAST;
+      sync_num = 0;
+      SerialUSB.println("#####################GUG LISTEN -> BROADCAST#################################");
     }
   } else if ( fsm_state == BROADCAST ) {
     //SerialUSB.print( millis() - time_since_last_sync ); SerialUSB.print(" "); 
     //SerialUSB.print((unsigned int) store_tx); SerialUSB.print(" "); SerialUSB.println(deca_tx_done());
     if  ( (( millis() - time_since_last_sync ) > TIME_BETWEEN_SYNCS_MSEC) 
-        && deca_tx_done() && sync_num <= NUM_SYNC_RETRANSMITS ) {
+        && deca_tx_done() && sync_num <= NUM_SYNC_RETRANSMITS-1 ) {
       //SerialUSB.print("Send sync followup debug:");
       //SerialUSB.print("Store_Tx="); SerialUSB.println( (unsigned int) store_tx);
       // send out sync+followup
@@ -520,7 +648,7 @@ void GUGFSM() {
       time_since_last_sync = millis();
     }    
     // sent out last sync+followup, go to listen now
-    if ( sync_num > NUM_SYNC_RETRANSMITS && deca_tx_done()  ) {
+    if ( sync_num > NUM_SYNC_RETRANSMITS-1 && deca_tx_done()  ) {
       receiver(); // enable RX mode 
       fsm_state = LISTEN;  
       SerialUSB.println("######################GUG BROADCAST -> LISTEN################################");
@@ -538,7 +666,6 @@ Range-find -> Try to range find with any GUGs found during listening
     Doesn't need to be done often, maybe every 10 seconds or something
     Only matters if devices are moving around 
     Time stick does retransmits after a timeout as needed
-*/
 
 
 void Send_Ranging_Init() {
@@ -572,29 +699,44 @@ void Send_Response() {
   print_pkt(tx_data, RESPONSE_PKTSIZE);
 }
 
+*/
+
+void send_delay_request() {
+  struct uwb_ptp_delay_request_pkt * reqpkt = (struct uwb_ptp_delay_request_pkt *) &tx_data;
+  reqpkt->hdr.frame_control = 0x4188;
+  reqpkt->hdr.seq_num = seq_num;
+  reqpkt->hdr.pan_id = 0xcade;
+  reqpkt->hdr.dest_addr = tx_to_addr;
+  reqpkt->hdr.src_addr = rx_my_addr;
+  reqpkt->hdr.function_code = DELAY_REQ;
+  pseudo_socket_send( DELAYRESPONSE_PKTISZE , &txTimeStamp );
+  seq_num = ( seq_num + 1 ) % 256;  
+  SerialUSB.println("Time stick send delay request"); 
+  print_pkt(tx_data, DELAYRESPONSE_PKTISZE); 
+}
+
 void calculate_delay() {
   SerialUSB.println("Time stick calculate delay:");
   SerialUSB.print("ResponseTXTime:"); SerialUSB.println(ResponseTXTime.getAsMicroSeconds());
 
   // look at received packet contents , final message
   
-  struct uwb_final_message_pkt * finalpkt = (struct uwb_final_message_pkt *) &rx_data;
-  byte finaltime[5];
-  DW1000Time GotResponseTime; 
-  finaltime[0] = finalpkt->respRxTimeSubPollTX & 0xff;
-  finaltime[1] = (finalpkt->respRxTimeSubPollTX >> 8) & 0xff;
-  finaltime[2] = (finalpkt->respRxTimeSubPollTX >> 16) & 0xff;
-  finaltime[3] = (finalpkt->respRxTimeSubPollTX >> 24) & 0xff;
-  finaltime[4] = finalpkt->finalTxTimeSubRespRX & 0xff;
-  CalculatedTOFDelay.setTimestamp(finaltime);
+  struct uwb_ptp_delay_response_pkt * resppkt = (struct uwb_ptp_delay_response_pkt *) &rx_data;
 
-  SerialUSB.print("GUG GotResponseTime:"); SerialUSB.println(CalculatedTOFDelay.getAsMicroSeconds());
-  for ( int i = 0; i < 5; i++ ) {
-    SerialUSB.print(" 0x"); SerialUSB.print(finaltime[i], HEX);
+  int64_t tx_time = 0;
+  int64_t rx_time = 0;
+  
+  tx_time = txTimeStamp.getTimestamp();
+  for ( int i = 4; i >= 0; i-- ) {
+    rx_time += ((int64_t)(resppkt->receivedTime[i])) << (8 * (i));
+    SerialUSB.print("rx_time:"); print_int64t(rx_time); SerialUSB.println("");
   }
-  SerialUSB.println("");
-  CalculatedTOFDelay = CalculatedTOFDelay - ResponseTXTime;
-  SerialUSB.print("Calculated delay:"); SerialUSB.println(CalculatedTOFDelay.getAsMicroSeconds());
+
+  SerialUSB.print("Sent delay request at time "); print_int64t(tx_time); SerialUSB.println("");
+  SerialUSB.print("GUG saw delay request at time "); print_int64t(rx_time); SerialUSB.println("");
+
+  CalculatedTOFDelay = (rx_time - tx_time); // this is in decawave units
+  SerialUSB.print("Calculated delay (T4 - T3) (Decawave units):"); print_int64t(CalculatedTOFDelay); SerialUSB.println("");
 }
 
 void TimeStickStoreFirstSync() {
@@ -620,7 +762,7 @@ bool isRxInSameBurst() {
   }
   
   // has it been too long since last sync seen 
-  if ( (millis() - time_last_sync_seen) > TIME_BETWEEN_BURSTS/2) return false;
+  //if ( (millis() - time_last_sync_seen) > TIME_BETWEEN_BURSTS/2) return false;
   
   // check if this incoming packet is in the same burst 
   // compute the sequence number I expect based on previously seen sync 
@@ -662,97 +804,101 @@ void ComputeThreePointCorrection() {
   // figure out which follow-up to look at in the follow-up list
   // just look at current RX_data for the follow-ups 
 
-  SerialUSB.println("////////////ComputeThreePointCorrection");
-  SerialUSB.print("NEED TO ADD IN CalculatedTOF:"); SerialUSB.println(CalculatedTOFDelay.getAsMicroSeconds());
+  SerialUSB.println("-------------------ComputeThreePointCorrection--------------------------");
+  SerialUSB.print("NEED TO ADD IN CalculatedTOF (ps):"); print_int64t( (CalculatedTOFDelay * 1565) / 100 ); SerialUSB.println("");
   
   // compute offset first, easier. Just need info from one packet 
   SerialUSB.print("Sync_num using:"); SerialUSB.println(timestick_seen_follow_ups[0].sync_num);
 
 
-
+  // The time GUG transmitted a packet
   SerialUSB.print("Followup raw value: 0x"); 
-  for ( int i = 5; i > 0; i-- ) {
-    if ( rx_sync_followup->followups[ timestick_seen_follow_ups[0].sync_num ][i] < 0x10 ) SerialUSB.print("0");
+  for ( int i = 4; i >= 0; i-- ) {
+    if ( rx_sync_followup->followups[ timestick_seen_follow_ups[0].sync_num ][i] < 0x10 ) {
+      SerialUSB.print("0");
+    }
     SerialUSB.print( rx_sync_followup->followups[ timestick_seen_follow_ups[0].sync_num ][i], HEX);
   }
   SerialUSB.println("");
 
-  // The time GUG transmitted a packet
-
-  for ( int i = 5; i > 0; i-- ) {
-    time1 += (rx_sync_followup->followups[ timestick_seen_follow_ups[0].sync_num ][i]) << (8 * (i-1));
-  }
-
-
-  SerialUSB.print("First followup value decawave time:"); print_int64t(time1); SerialUSB.println("");
-
-
-  
+  for ( int i = 4; i >= 0; i-- ) {
+    // T1 time, in decawave time
+    time1 += ((int64_t)(rx_sync_followup->followups[ timestick_seen_follow_ups[0].sync_num ][i])) << (8 * (i));
+  }  
 
   // The time I received that packet
-  time2 = sync_followup_rx_time[0].getTimestamp();
-  
+  // T2 time , in decawave time
+  time2 = sync_followup_rx_time[0].getTimestamp();  
 
+  SerialUSB.print("First followup value decawave time:"); print_int64t(time1); SerialUSB.println("");
+  SerialUSB.print("RX time in decawave time: "); print_int64t(time2);  SerialUSB.println( "" );
+  SerialUSB.print("Calculated TOF Delay in decawave time: "); print_int64t(CalculatedTOFDelay); SerialUSB.println("");
 
-  SerialUSB.print("RX time in decawave time: "); sync_followup_rx_time[0].printTo(SerialUSB); SerialUSB.println( "" );
-
+  picosecond_offset = ( ( time2 - time1 ) - CalculatedTOFDelay ) / 2; 
+  SerialUSB.print("Picosecond offset calculated (Decawave time): "); print_int64t(picosecond_offset); SerialUSB.println("");
+  picosecond_offset = picosecond_offset * ((int64_t)1565);
+  SerialUSB.print("After mult: "); print_int64t(picosecond_offset); SerialUSB.println("");
+  picosecond_offset = picosecond_offset / ((int64_t)100);
+  SerialUSB.print("After div: "); print_int64t(picosecond_offset); SerialUSB.println(""); 
+  /*
   if ( time1 > time2 ) {
     // GUG transmitted a packet from a time in the future
     // my local time needs to adjust forward
     picosecond_offset = time1 - time2;
     SerialUSB.print("Time1 > Time2 , Difference: "); print_int64t(picosecond_offset); SerialUSB.println("");
-    picosecond_offset = picosecond_offset * 1565;
+    picosecond_offset = picosecond_offset * ((int64_t)-1565);
     SerialUSB.print("After mult: "); print_int64t(picosecond_offset); SerialUSB.println("");
-    picosecond_offset = picosecond_offset / 100;
+    picosecond_offset = picosecond_offset / ((int64_t)100);
     SerialUSB.print("After div: "); print_int64t(picosecond_offset); SerialUSB.println("");
   } else {
-    // GUG transmitted packet from time in the past
+    // GUG transmitted packet from time in the past*1565
     // my local time is needs to adjust backwards
 
     picosecond_offset = time2 - time1;
     SerialUSB.print("Time1 < Time2 , Difference: "); print_int64t(picosecond_offset); SerialUSB.println("");
-    picosecond_offset = picosecond_offset * -1565;
+    picosecond_offset = picosecond_offset * ((int64_t)1565);
     SerialUSB.print("After mult: "); print_int64t(picosecond_offset); SerialUSB.println("");
-    picosecond_offset = picosecond_offset / 100;
-    SerialUSB.print("After div: "); print_int64t(picosecond_offset); SerialUSB.println("");
-    
- 
+    picosecond_offset = picosecond_offset / ((int64_t)100);
+    SerialUSB.print("After div: "); print_int64t(picosecond_offset); SerialUSB.println(""); 
   }
+  */
 
   SerialUSB.print("picosecond_offset "); print_int64t(picosecond_offset); SerialUSB.println("");
 
-
-  
   time1 = 0;
   time2 = 0;
   time3 = 0;
   // compute frequency ratio of local clock versus remote clock
   SerialUSB.print("Freq calc, first sync_num:"); SerialUSB.println(timestick_seen_follow_ups[0].sync_num);
   SerialUSB.print("Freq calc, second sync_num:"); SerialUSB.println(timestick_seen_follow_ups[1].sync_num);
-  for ( int i = 5; i > 0; i-- ) {
-    time1 += rx_sync_followup->followups[ timestick_seen_follow_ups[0].sync_num ][i] << (8*(i-1));
-    time2 += rx_sync_followup->followups[ timestick_seen_follow_ups[1].sync_num ][i] << (8*(i-1));
+  for ( int i = 4; i >= 0; i-- ) {
+    time1 += ((int64_t)(rx_sync_followup->followups[ timestick_seen_follow_ups[0].sync_num ][i])) << (8*(i));
+    //SerialUSB.print(" Time1 = "); SerialUSB.println((unsigned long) time1);
+    time2 += ((int64_t)(rx_sync_followup->followups[ timestick_seen_follow_ups[1].sync_num ][i])) << (8*(i));
+    //SerialUSB.print(" Time2 = "); SerialUSB.println((unsigned long) time2);
   }
 
-  SerialUSB.print("Remote time1 in decawave time:"); SerialUSB.println((double)time1);
-  SerialUSB.print("Remote time2 in decawave time:"); SerialUSB.println((double)time2);
+  SerialUSB.print("Remote time1 in decawave time:"); print_int64t(time1); SerialUSB.println("");
+  SerialUSB.print("Remote time2 in decawave time:"); print_int64t(time2); SerialUSB.println("");
 
   // remote time difference calculation
   // ONLY VALID IF TIME2 > TIME1
   // If decawave counter gets reset in the middle of a burst, can't consider it
-  
+
   if ( time1 > time2 ) {
     frequency_ratio = FREQ_RATIO_INVALID; 
-    SerialUSB.println("!!Time1 > time2, invalid!!");
+    SerialUSB.println("!!!!!!For freq calc, Time1 > time2, invalid!!!!!!!!");
+    SerialUSB.println("------------------- End ComputeThreePointCorrection--------------------------");
     return;
   }
   time1 = time2 - time1;
-  SerialUSB.print("Remote time difference in decawave time:"); SerialUSB.println((long)time1);
+  SerialUSB.print("Remote time difference in decawave time:"); print_int64t(time1); SerialUSB.println("");
 
 
   if ( sync_followup_rx_time[0].getTimestamp() > sync_followup_rx_time[1].getTimestamp() ) {
     frequency_ratio = FREQ_RATIO_INVALID;
     SerialUSB.println("Local time difference invalid!");
+    SerialUSB.println("------------------- End ComputeThreePointCorrection--------------------------");
     return;
   }
   time3 = sync_followup_rx_time[1].getTimestamp() - sync_followup_rx_time[0].getTimestamp(); // local time difference 
@@ -764,6 +910,7 @@ void ComputeThreePointCorrection() {
   frequency_ratio = ( (double) time1 ) / ( (double) time3 );
   
   SerialUSB.print("////////////ComputeThreePointCorrection frequency_ratio:"); SerialUSB.println(frequency_ratio, 15);
+  SerialUSB.println("------------------- End ComputeThreePointCorrection--------------------------");
 }
 
 void TimeStickHandleSyncFollowup() {
@@ -870,7 +1017,6 @@ void TimeStickFSM() {
     fsm_state = LISTEN;
     SerialUSB.println("###################Time stick TD_IDLE -> LISTEN############################");
   } else if ( fsm_state == LISTEN ) {
-
     if ( deca_rx_has_data() ) {
       //SerialUSB.println("Time stick LISTEN got packet");
       TimeStickListenGotPkt();
@@ -884,7 +1030,7 @@ void TimeStickFSM() {
     if ( !pseudo_socket_is_open() ) {
       open_pseudo_socket( 0x1, 0x2 ); // hard code , in future should be dynamic
       // actually send the range finding request!
-      Send_Ranging_Init();
+      send_delay_request();
     }
     // check receive path first
     if ( deca_rx_has_data() ) {
@@ -892,17 +1038,10 @@ void TimeStickFSM() {
         // got a response back , parse it and send a reply 
         struct uwb_ptp_hdr * hdr = (struct uwb_ptp_hdr *) &rx_data;
         struct uwb_ptp_hdr * senthdr = (struct uwb_ptp_hdr *) &tx_data;
-        if ( hdr->function_code == POLL_MESSAGE &&
-            senthdr->function_code == RANGING_INIT_MESSAGE ) {
-          // got a poll message, need to send response message 
-          SerialUSB.println("Time stick range find got poll");
-          PollRXTime = rxTimeStamp; 
-          Send_Response();
-        } else if ( hdr->function_code == FINAL_MESSAGE &&
-            senthdr->function_code == RESPONSE_MESSAGE ) {
+        if ( hdr->function_code == DELAY_RESP &&
+            senthdr->function_code == DELAY_REQ ) {
           // got final message, done
-          SerialUSB.println("Time stick range find got final");
-          FinalRXTime = rxTimeStamp;
+          SerialUSB.println("Time stick range find got response");
           close_pseudo_socket(); 
           calculate_delay();
           fsm_state = LISTEN;
@@ -977,20 +1116,22 @@ void BasicSender()
 
 
 // called every loop 
-void TopLevelFSM() {
-
-  
+void TopLevelFSM() {  
   if ( digitalRead(PIN_1PPS_UC_IN) && !last_pps_pin_val ) {
     PPS_IN_RISING_EDGE = 1;
     PPS_IN_FALLING_EDGE = 0;
+    last_pps_pin_val = 1;
+    SerialUSB.print("UC SAW 1PPS IN RISING EDGE AT MICROS "); SerialUSB.println(micros());
   } else if ( !digitalRead(PIN_1PPS_UC_IN) && last_pps_pin_val ) {
     PPS_IN_RISING_EDGE = 0;
     PPS_IN_FALLING_EDGE = 1;
+    time_last_falling_edge = millis();
+    last_pps_pin_val = 0;
+    SerialUSB.print("UC SAW 1PPS IN FALLING EDGE AT MICROS "); SerialUSB.println(micros());
   } else {
     PPS_IN_RISING_EDGE = 0;
     PPS_IN_FALLING_EDGE = 0;
-  }
-  last_pps_pin_val = digitalRead(PIN_1PPS_UC_IN);
+  }  
   
   deca_loop(); // handle basic TX and RX 
   if ( is_gug ) {

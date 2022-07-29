@@ -29,11 +29,14 @@
 // BE CAREFUL WITH THIS MAX VALUE, Decawave or DPLL (probably DPLL) gets unstable if you adjust too quickly
 // ideally the delay after adjusting the DPLL should be proportional to the amount adjusted
 // or should be read back by a status register in the DPLL
-#define MAX_FREQ_ADJ_PPB 500.0
+#define MAX_FREQ_ADJ_PPB 1000.0
 #define MAX_FREQ_ADJ_PPB_INT ((uint64_t)MAX_FREQ_ADJ_PPB)
 
-#define FREQ_ADJ_KP 0.05
-#define PHASE_ADJ_KP 0.6
+#define MAX_PHASE_ADJ_MS ((int64_t)200)
+#define MAX_PHASE_ADJ_PS ((int64_t)(MAX_PHASE_ADJ_MS * ((int64_t)1000) * ((int64_t)1000) * ((int64_t)1000)))
+
+#define FREQ_ADJ_KP 0.7
+#define PHASE_ADJ_KP 0.7
 
 #define SERIAL_PORT_CONFIG_0 0x0
 #define SERIAL_PORT_CONFIG_1 0x1
@@ -146,6 +149,8 @@ void pinStr( uint32_t ulPin, unsigned strength);
 void dpll_init(const PROGMEM uint16_t regcount, const PROGMEM uint16_t regs[],const PROGMEM uint8_t vals[] );
 
 byte dpll_read_register(int addr);
+
+void dpll_adjust_phase_picoseconds(int64_t picoseconds);
 
 void dpll_io_update();
 bool dpll_adjust_error();

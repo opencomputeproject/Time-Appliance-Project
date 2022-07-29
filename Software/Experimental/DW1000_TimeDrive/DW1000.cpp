@@ -1432,6 +1432,11 @@ void DW1000Class::getData(String& data) {
 void DW1000Class::getTransmitTimestamp(DW1000Time& time) {
 	byte txTimeBytes[LEN_TX_STAMP];
 	readBytes(TX_TIME, TX_STAMP_SUB, txTimeBytes, LEN_TX_STAMP);
+  SerialUSB.print("DW1000 getTransmitTimestamp bytes:");
+  for ( int i = 0; i < LEN_TX_STAMP; i++ ) {
+    SerialUSB.print(" 0x"); SerialUSB.print(txTimeBytes[i], HEX);
+  }
+  SerialUSB.println("");
 	time.setTimestamp(txTimeBytes);
 }
 

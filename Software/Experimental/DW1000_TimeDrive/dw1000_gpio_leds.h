@@ -25,7 +25,7 @@ uint64_t dw1000_read_reg(uint16_t reg, uint16_t subaddress, uint8_t nbytes) {
   uint64_t to_return = 0;
 #if GPIO_DEBUG
   SerialUSB.print("DW1000 read reg 0x"); SerialUSB.print(reg, HEX);
-  SerialUSB.print(" Subaddr 0x"); SerialUSB.println(subaddress, HEX);
+  SerialUSB.print(" Subaddr 0x"); SerialUSB.print(subaddress, HEX);
 #endif
   if ( nbytes > 8 ) return 0;
   DW1000.readBytes(reg, subaddress, buf, nbytes);
@@ -42,7 +42,7 @@ void dw1000_write_reg(uint16_t reg, uint16_t subaddress, uint64_t data, uint8_t 
 
 #if GPIO_DEBUG 
   SerialUSB.print("DW1000 write reg 0x"); SerialUSB.print(reg, HEX);
-  SerialUSB.print(" Subaddr 0x"); SerialUSB.println(subaddress, HEX);
+  SerialUSB.print(" Subaddr 0x"); SerialUSB.print(subaddress, HEX);
 #endif
   if ( nbytes > 8 ) return;
   memcpy(buf, &data, nbytes);
@@ -261,7 +261,8 @@ void deca_setup_gpio() {
   dw1000_gpio_init_out(3, 0); 
 
 
-  /* Wait for sync pin to get exercised */
+  /* Wait for sync pin to get exercised
+   *  Old method, instead verify the OSTR mode works and time is getting reset
   SerialUSB.println("Waiting for decawave sync pin to toggle");
   dw1000_gpio_init_in(7); 
   dw1000_gpio_set_mode(7, 0x1);
@@ -285,14 +286,52 @@ void deca_setup_gpio() {
     sync_toggle_count++;
   }
   SerialUSB.println("Saw sync pin toggle!");
+   */
 
   SerialUSB.println("Setting sync pin to external reset mode (OSTR)");
   SerialUSB.print("Value of IRQ pin:"); SerialUSB.println(digitalRead(22));
+  dw1000_gpio_init_in(7); 
   dw1000_gpio_set_mode(7, 0x0); // set it to mode zero, sync mode 
+  dw1000_gpio_init_in(7); 
   dw1000_phy_external_sync(33, true); // 33 recommended by user guide
   // wait is 8 bits, and modulo 4 should give 1 
+  delay(1000);
 
+  int saw_deca_time_roll_correct = 0;
 
+  DW1000Time curDecaTime;
+  DW1000Time lastDecaTime;
+  bool lastPinVal = false;
+  SerialUSB.println("Verifying Decawave Time is resetting at ~1Hz");
+  // SYNC PIN RESETS SYSTEM TIME WHILE ITS HIGH
+  // SO SYSTEM TIME WILL CONSTANTLY BE A VERY SMALL NUMBER FOR A LONG TIME
+  while ( true ) {
+    lastDecaTime = curDecaTime;
+    DW1000.getSystemTimestamp(curDecaTime); 
+    //SerialUSB.print("DW1000 system time:"); SerialUSB.println(curDecaTime.getAsMicroSeconds());
+    if (( curDecaTime.getAsMicroSeconds() < lastDecaTime.getAsMicroSeconds() ) && 
+          (lastDecaTime.getAsMicroSeconds() < 600000) && 
+          (lastDecaTime.getAsMicroSeconds() > 300000) ) {
+      saw_deca_time_roll_correct++; 
+      SerialUSB.print("Saw deca time roll once:");
+      SerialUSB.print("curDecaTime: "); SerialUSB.print(curDecaTime.getAsMicroSeconds());
+      SerialUSB.print(" , lastDecaTime: "); SerialUSB.println(lastDecaTime.getAsMicroSeconds() );
+    }
+
+    if ( (millis() - deca_led_counter) >= DECA_SETUP_BLINK_INTERVAL ) {
+      deca_led_counter = millis();
+      dw1000_gpio_write(0, blink ? 1 : 0 );
+      dw1000_gpio_write(1, blink ? 0 : 1 );
+      dw1000_gpio_write(2, blink ? 0 : 1 );
+      dw1000_gpio_write(3, blink ? 1 : 0 );
+      blink = !blink;
+    }
+    if ( saw_deca_time_roll_correct > 2 ) {
+      SerialUSB.println("Saw decawave timer get reset 5 times correctly, health check good!");
+      break;
+    }
+    delay(10);
+  }
 }
 
 void decawave_led_setmode(uint8_t dw_led_mode) {

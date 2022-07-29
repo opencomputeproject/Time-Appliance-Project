@@ -49,6 +49,8 @@
 
 // Custom UWB Packet types!
 #define SYNC_FOLLOWUP 0x23
+#define DELAY_REQ 0x24
+#define DELAY_RESP 0x25
 
 
 
@@ -61,8 +63,8 @@
 
 // GUGs will broadcast this many sync+followups in order
 #define NUM_SYNC_RETRANSMITS 5
-#define TIME_BETWEEN_SYNCS_MSEC 20 
-#define TIME_BETWEEN_BURSTS 1000
+#define TIME_BETWEEN_SYNCS_MSEC 50 
+
 
 // Time stick config
 #define TIME_BETWEEN_RANGEFIND_MSEC 10000
@@ -145,11 +147,24 @@ struct uwb_ptp_sync_followup_pkt {
   uint8_t sync_num; // from 0 to NUM_SYNC_RETRANSMITS, also tells how many valid followups are present
   uint8_t num_syncs_sending; // constant, NUM_SYNC_RETRANSMITS
   uint8_t gps_time_sec[6]; // the 48 bit gross time from GPS
-  uint8_t followups[NUM_SYNC_RETRANSMITS-1][5]; // 40-bit timestamps of previous syncs sent  
+  uint8_t followups[NUM_SYNC_RETRANSMITS-1][LEN_STAMP]; // 40-bit timestamps of previous syncs sent  
+  uint8_t local_micros[NUM_SYNC_RETRANSMITS-1][4]; // 32-bit micros from GUG , micros that the TX timestamp was read, just for reference 
 }__attribute__((packed));
 
 #define SYNCFOLLOWUP_PKTSIZE (sizeof(struct uwb_ptp_hdr) + sizeof(uwb_ptp_sync_followup_pkt))
 
+// delay request packet, to GUG
+struct uwb_ptp_delay_request_pkt {
+  struct uwb_ptp_hdr hdr;
+}__attribute__((packed));
+#define DELAYREQUEST_PKTSIZE (sizeof(struct uwb_ptp_hdr))
+
+// delay response packet, from GUG
+struct uwb_ptp_delay_response_pkt {
+  struct uwb_ptp_hdr hdr;
+  uint8_t receivedTime[LEN_STAMP]; // 40-bit timestamp received delay request
+}__attribute__((packed));
+#define DELAYRESPONSE_PKTISZE (sizeof(struct uwb_ptp_hdr) + LEN_STAMP)
 
 
 

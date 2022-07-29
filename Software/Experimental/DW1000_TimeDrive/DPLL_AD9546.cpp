@@ -235,6 +235,7 @@ void dpll_init(const PROGMEM uint16_t regcount, const PROGMEM uint16_t regs[],co
 
   SerialUSB.println("JULIAN HACK MAKE SURE 0x111a[2:0] = 6");
   dpll_write_register( 0x111a, (dpll_read_register(0x111a) & 0x7) + 6 );
+
   
   
   // Calibrate all VCOs by setting bit 1 to 1 in register 0x2000
@@ -275,7 +276,7 @@ void dpll_io_update() {
 
 
 
-void dpll_set_phase(int64_t picoseconds) {
+void dpll_adjust_nco_phase(int64_t picoseconds) {
   // THIS FUNCTION DOES NOT ALLOW LARGE JUMPS, and DPLL tracking takes times
   // better to use distribution offsets
   // for purposes of aligning the PHC inside the DPLL
@@ -283,18 +284,18 @@ void dpll_set_phase(int64_t picoseconds) {
   // register AUXNCO0_PHASEOFFSET , AUXNCO0_PHASEOFFSET_SIZE
   // basically just write picoseconds to the register
 
-  dpll_read_register( 0x280f );
-  dpll_read_register( 0x2810 );
-  dpll_read_register( 0x2811 );
-  dpll_read_register( 0x2812 );
-  dpll_read_register( 0x2813 );
+  int64_t cur_val = 0;
 
-  byte data[5];
+  for ( int i = 0; i < AUXNCO0_PHASEOFFSET_SIZE; i++ ) {
+    cur_val += ((int64_t)dpll_read_register( AUXNCO0_PHASEOFFSET + i )) << (8*i);
+  }
 
-  convert_to_40bit(picoseconds, data);
+  // have current value, add in amount passed straight, it's in the same units
+
+  cur_val += picoseconds;  
   
   for ( int i = 0; i < AUXNCO0_PHASEOFFSET_SIZE; i++ ) {
-    dpll_write_register( AUXNCO0_PHASEOFFSET + i , data[i] ); 
+    dpll_write_register( AUXNCO0_PHASEOFFSET + i , (cur_val >> (8*i)) & 0xff ); 
   }
   dpll_io_update();
 }
@@ -329,8 +330,10 @@ extern bool update_dpll;  // PTP will return offset and frequency to adjust,
 extern void print_int64t(int64_t val);
 
 
-void dpll_discipline_offset() {
 
+
+void dpll_adjust_phase_picoseconds(int64_t picoseconds) {
+  
   // The DPLL distribution outputs are phase based
   // I can set the output phase from 0 to 360 degree with finite resolution
   // I need to determine what phase value to write to the DPLL based on offset I find
@@ -341,10 +344,13 @@ void dpll_discipline_offset() {
   // a small negative value in picosecond_offset is almost a max value in DPLL phase, close to 360
 
 
-  SerialUSB.print("dpll_discipline_offset "); print_int64t(picosecond_offset); SerialUSB.println("");
+
+  
   // first read back the divide ratio
   int64_t divratio = 0;
   int64_t phasevalue = 0;
+  double offset_degrees = 0; 
+  
   for ( int i = 0; i < 4; i++ ) {
     divratio += ((int64_t)dpll_read_register(0x1112 + i)) << (8*i);    
   }
@@ -354,16 +360,13 @@ void dpll_discipline_offset() {
   if ( dpll_read_register(0x111a) & (1<<6) ) {
     phasevalue += ((int64_t)1)<<32; // bit 32 is 0x111a[6]
   }
-  
-  SerialUSB.print("Divratio:0x"); print_int64t(divratio); SerialUSB.println("");
-  SerialUSB.print("Initial phasevalue:0x"); print_int64t(phasevalue); SerialUSB.println("");
+  SerialUSB.print("Shift by "); print_int64t(picoseconds); SerialUSB.print(" picoseconds"); SerialUSB.println("");
+  SerialUSB.print("Divratio:"); print_int64t(divratio); SerialUSB.println("");
+  SerialUSB.print("Initial phasevalue:"); print_int64t(phasevalue); SerialUSB.println("");
 
   // convert picosecond_offset to degrees 
-  // period is 1Hz , 360 degrees in 1e12 picoseconds, multiply by that ratio 
-  double offset_degrees = 0;  
-
-  
-  offset_degrees = ((double)picosecond_offset) * 360.0;
+  // period is 1Hz , 360 degrees in 1e12 picoseconds, multiply by that ratio
+  offset_degrees = ((double)picoseconds) * 360.0;
   SerialUSB.print("Offset degrees after multiply by 360:"); SerialUSB.println(offset_degrees,20);
 
   offset_degrees = offset_degrees / (1.0 * 1000.0 * 1000.0 * 1000.0 * 1000.0);
@@ -376,15 +379,20 @@ void dpll_discipline_offset() {
   }  
   SerialUSB.print("Offset degrees after shifting into 0-360:"); SerialUSB.println(offset_degrees, 5);
 
-  offset_degrees *= PHASE_ADJ_KP; 
-
-  SerialUSB.print("Offset degrees after applying Kp:"); SerialUSB.println(offset_degrees,5);
 
   // convert current phase to degrees
   // 180 degrees per divratio units, multiply current value by that ratio 
   double current_degrees = 0;
   current_degrees = (((double) 180.0 ) / ((double) divratio)) * ((double)phasevalue);
   SerialUSB.print("Current degrees:"); SerialUSB.println(current_degrees,5);
+  
+  // shift offset degrees 180
+  // NEED TO ACTUALLY ALIGN THE FALLING EDGE BUT CAN ONLY CONTROL RISING EDGE
+  // THE DECAWAVE TIMER ONLY STARTS COUNTING UP WHEN PPS IS LOW
+  // BUT AD9546 OUTPUT IS ADJUSTING THE PHASE OF THE RISING EDGE
+
+  //current_degrees += 180.0; 
+  //SerialUSB.print("Current degrees after shifting for negative edge:"); SerialUSB.println(current_degrees,5);
 
   current_degrees += offset_degrees;
   if ( current_degrees >= 360.0 ) { // if it's outside the range, shift it back into range
@@ -392,6 +400,8 @@ void dpll_discipline_offset() {
   }
   SerialUSB.print("Current degrees after offset:"); SerialUSB.println(current_degrees,5);
 
+
+  
   // convert degrees into register value
   phasevalue = (int64_t) ( ( ((double)divratio) / ((double) 180.0) ) * current_degrees ); 
   
@@ -400,17 +410,42 @@ void dpll_discipline_offset() {
   
   // write lower four bytes to register
   for ( int i = 0; i < 4; i++ ) {
-    dpll_write_register( 0x1116 + i, (phasevalue >> (8*i)) & 0xff );
+    dpll_write_register( 0x1116 + i, (phasevalue >> (8*i)) & 0xff ); // OUT0B
+    dpll_write_register( 0x1504 + i, (phasevalue >> (8*i)) & 0xff ); // OUT1A
   }
   // set bit 33 in register 0x111a
   if ( phasevalue & (0x100000000) ) {
-    dpll_write_register( 0x111a, dpll_read_register(0x111a) | (1<<6));
+    dpll_write_register( 0x111a, dpll_read_register(0x111a) | (1<<6)); // OUT0B
+    dpll_write_register( 0x1508, dpll_read_register(0x1508) | (1<<6)); // OUT1A
   } else {
-    dpll_write_register( 0x111a, dpll_read_register(0x111a) & ~(1<<6));
+    dpll_write_register( 0x111a, dpll_read_register(0x111a) & ~(1<<6)); // OUT0B
+    dpll_write_register( 0x1508, dpll_read_register(0x1508) & ~(1<<6)); // OUT1A
   }
 
   dpll_io_update();
-  
+
+
+
+}
+
+
+
+
+void dpll_discipline_offset() {
+
+  SerialUSB.print("dpll_discipline_offset "); print_int64t(picosecond_offset); SerialUSB.println("");
+
+
+  if ( picosecond_offset > MAX_PHASE_ADJ_PS ) {
+    picosecond_offset = MAX_PHASE_ADJ_PS;
+  } else if ( picosecond_offset < (((int64_t)-1) * MAX_PHASE_ADJ_PS)) {
+    picosecond_offset = (((int64_t)-1) * MAX_PHASE_ADJ_PS);
+  }
+
+  picosecond_offset = ((int64_t) (( (double)picosecond_offset ) * PHASE_ADJ_KP) );
+
+  //dpll_adjust_phase_picoseconds(picosecond_offset);  
+  dpll_adjust_nco_phase(picosecond_offset);
 }
 
 void dpll_discipline_freq() {
@@ -444,11 +479,11 @@ void dpll_discipline_freq() {
   } else {
     // frequency in the range I can Adjust it
     if ( FREQ_PPB(frequency_ratio) > 0 ) {
-      SerialUSB.print("FREQ ADJ to requested amount: "); SerialUSB.println( (unsigned long)(INT_PPB(int_center) * ( (uint64_t)( FREQ_PPB(frequency_ratio) * -1.0))) , HEX);
-      int_center += INT_PPB(int_center) * ( (uint64_t) FREQ_PPB(frequency_ratio) );
+      SerialUSB.print("FREQ ADJ to requested amount: 0x"); SerialUSB.println( (unsigned long)(INT_PPB(int_center) * ( (uint64_t)( FREQ_PPB(frequency_ratio) * -1.0))) , HEX);
+      int_center -= INT_PPB(int_center) * ( (uint64_t) FREQ_PPB(frequency_ratio) );
     } else {
-      SerialUSB.print("FREQ ADJ to requested amount: "); SerialUSB.println( (unsigned long)(INT_PPB(int_center) * ( (uint64_t)( FREQ_PPB(frequency_ratio) * -1.0))) , HEX);
-      int_center -= INT_PPB(int_center) * ( (uint64_t)( FREQ_PPB(frequency_ratio) * -1.0));      
+      SerialUSB.print("FREQ ADJ to requested amount: 0x"); SerialUSB.println( (unsigned long)(INT_PPB(int_center) * ( (uint64_t)( FREQ_PPB(frequency_ratio) * -1.0))) , HEX);
+      int_center += INT_PPB(int_center) * ( (uint64_t)( FREQ_PPB(frequency_ratio) * -1.0));      
     }
   }
   
@@ -477,8 +512,10 @@ bool is_dpll_still_adjusting() {
 
 //int64_t debug_picoseconds = MILLI_TO_PICO(-1);
 bool dpll_adjust_error() {
+  return true;
   SerialUSB.print("DPLL Adjust error:");
-  SerialUSB.print((long)picosecond_offset); SerialUSB.print(" ");
+  print_int64t(picosecond_offset);
+  SerialUSB.print(" ");
   SerialUSB.print(frequency_ratio, 12); SerialUSB.println(" ");
 
 
@@ -503,10 +540,10 @@ bool dpll_adjust_error() {
   if ( (FREQ_PPM(frequency_ratio) >= 1000) || (FREQ_PPM(frequency_ratio) <= -1000) ) { // sanity check, 1000ppm is probably math error somewhere or protocol error
     return false;
   }
-  if ( (FREQ_PPB(frequency_ratio) > 100) || (FREQ_PPB(frequency_ratio) < -100) ) {
+  if ( (FREQ_PPB(frequency_ratio) > 500) || (FREQ_PPB(frequency_ratio) < -500) ) {
     // adjust frequency first
     dpll_discipline_freq();
-    //dpll_discipline_offset();
+    dpll_discipline_offset();
     return true;
   } else {
     dpll_discipline_freq();
