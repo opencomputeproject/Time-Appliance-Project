@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 
 	h "github.com/opencomputeproject/Time-Appliance-Project/Software/tft/header"
 	log "github.com/sirupsen/logrus"
@@ -27,6 +28,19 @@ func main() {
 	}
 	defer h.CloseFiles(c)
 
+	oldHdr, err := h.ReadHeader(c)
+	if err == nil {
+		fmt.Println("Input file has header:")
+		fmt.Printf("PCI Vendor ID: 0x%04x\n", oldHdr.VendorId)
+		fmt.Printf("PCI Device ID: 0x%04x\n", oldHdr.DeviceId)
+		fmt.Printf("PCI HW Revision ID: 0x%04x\n", oldHdr.HardwareRevision)
+		fmt.Printf("Image CRC16: 0x%04x\n", oldHdr.CRC)
+		fmt.Printf("Image size: %d\n", oldHdr.ImageSize)
+		if c.Apply {
+			fmt.Println("Image header will be overwritten with new values")
+		}
+	}
+
 	hdr, err := h.PrepareHeader(c)
 	if err != nil {
 		log.Fatal(err)
@@ -41,6 +55,7 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// we have to rewrite header as CRC is calculated
 	if err := h.WriteHeader(c, hdr); err != nil {
 		log.Fatal(err)
 	}

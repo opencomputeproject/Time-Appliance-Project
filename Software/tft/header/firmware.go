@@ -3,10 +3,18 @@ package header
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"io"
 
 	crc "github.com/sigurn/crc16"
 )
+
+// hdrMagic is array of 4 constant bytes
+var hdrMagic = [4]byte{'O', 'C', 'P', 'C'}
+// ErrNoHeader is what returned when there is no header in the file
+var ErrNoHeader = errors.New("No header found")
+
+const hdrSize = 16
 
 type Header struct {
 	Magic            [4]byte
@@ -25,6 +33,24 @@ func firmwareImageSize(c *Config) (uint32, error) {
 
 	return uint32(stat.Size()), nil
 
+}
+
+// ReadHeader tries to read header from input file
+func ReadHeader(c *Config) (*Header, error) {
+	buf := make([]byte, hdrSize)
+	n, err := c.InputFile.Read(buf)
+	if err != nil {
+		return nil, err
+	}
+	if n == hdrSize {
+		hdr := &Header{};
+		binary.Read(bytes.NewReader(buf), binary.BigEndian, hdr);
+		if hdr.Magic == hdrMagic {
+			return hdr, nil
+		}
+	}
+	c.InputFile.Seek(0, 0)
+	return nil, ErrNoHeader
 }
 
 // PrepareHeader creates header structure from Config values
