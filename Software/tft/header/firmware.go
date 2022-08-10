@@ -31,8 +31,12 @@ func firmwareImageSize(c *Config) (uint32, error) {
 		return 0, err
 	}
 
-	return uint32(stat.Size()), nil
+	pos, err := c.InputFile.Seek(0, 1)
+	if err != nil {
+		return 0, err
+	}
 
+	return uint32(stat.Size() - pos), nil
 }
 
 // ReadHeader tries to read header from input file
