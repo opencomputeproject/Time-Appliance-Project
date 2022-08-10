@@ -3980,9 +3980,8 @@ disciplining_config_write(struct file *filp, struct kobject *kobj,
 
 
 	err = nvmem_device_write(nvmem, 0x00, count, buf);
-	if (err != count) {
+	if (err != count)
 		err = -EFAULT;
-	}
 
 	ptp_ocp_nvmem_device_put(&nvmem);
 
@@ -4044,9 +4043,8 @@ temperature_table_write(struct file *filp, struct kobject *kobj,
 
 
 	err = nvmem_device_write(nvmem, 0x90, count, buf);
-	if (err != count) {
+	if (err != count)
 		err = -EFAULT;
-	}
 
 	ptp_ocp_nvmem_device_put(&nvmem);
 
@@ -4116,9 +4114,9 @@ static struct attribute *art_timecard_attrs[] = {
 };
 
 static struct bin_attribute *bin_art_timecard_attrs[] = {
-        &bin_attr_disciplining_config,
-        &bin_attr_temperature_table,
-        NULL,
+		&bin_attr_disciplining_config,
+		&bin_attr_temperature_table,
+		NULL,
 };
 
 static const struct attribute_group art_timecard_group = {
