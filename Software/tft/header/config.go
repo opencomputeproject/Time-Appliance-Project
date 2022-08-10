@@ -28,15 +28,15 @@ func CheckConfig(c *Config) error {
 		return errors.New("No output file provided")
 	}
 
-	if c.VendorId <= 0 || c.VendorId > 65535 {
+	if c.Apply && (c.VendorId <= 0 || c.VendorId > 65535) {
 		return errors.New("Empty or incorrect PCI Vendor ID specified")
 	}
 
-	if c.DeviceId <= 0 || c.DeviceId > 65535 {
+	if c.Apply && (c.DeviceId <= 0 || c.DeviceId > 65535) {
 		return errors.New("Empty or incorrect PCI Device ID specified")
 	}
 
-	if c.HardwareRevision < 0 || c.HardwareRevision > 65535 {
+	if c.Apply && (c.HardwareRevision < 0 || c.HardwareRevision > 65535) {
 		return errors.New("Incorrect PCI Device Revision ID specified")
 	}
 
