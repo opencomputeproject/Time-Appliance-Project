@@ -8,6 +8,15 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func printHeader(hdr *h.Header) {
+	fmt.Println("Input file has header:")
+	fmt.Printf("PCI Vendor ID: 0x%04x\n", hdr.VendorId)
+	fmt.Printf("PCI Device ID: 0x%04x\n", hdr.DeviceId)
+	fmt.Printf("PCI HW Revision ID: 0x%04x\n", hdr.HardwareRevision)
+	fmt.Printf("Image CRC16: 0x%04x\n", hdr.CRC)
+	fmt.Printf("Image size: %d\n", hdr.ImageSize)
+}
+
 func main() {
 	c := &h.Config{}
 
@@ -31,11 +40,7 @@ func main() {
 	oldHdr, err := h.ReadHeader(c)
 	if err == nil {
 		fmt.Println("Input file has header:")
-		fmt.Printf("PCI Vendor ID: 0x%04x\n", oldHdr.VendorId)
-		fmt.Printf("PCI Device ID: 0x%04x\n", oldHdr.DeviceId)
-		fmt.Printf("PCI HW Revision ID: 0x%04x\n", oldHdr.HardwareRevision)
-		fmt.Printf("Image CRC16: 0x%04x\n", oldHdr.CRC)
-		fmt.Printf("Image size: %d\n", oldHdr.ImageSize)
+		printHeader(oldHdr)
 		if c.Apply {
 			fmt.Println("Image header will be overwritten with new values")
 		}
@@ -59,5 +64,8 @@ func main() {
 	if err := h.WriteHeader(c, hdr); err != nil {
 		log.Fatal(err)
 	}
+
+	fmt.Println("New header:")
+	printHeader(hdr)
 
 }
