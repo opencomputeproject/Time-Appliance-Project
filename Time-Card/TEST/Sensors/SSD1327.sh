@@ -127,10 +127,17 @@ done
 
 function drawPixel(){
 local pix_addr=$(( $(( $1 >> 1 )) + $(( $2 << 6 )) ))
+local pix_val=0
 if [ $(( $1 % 2 )) -eq 0 ]; then
-frameBuffer[$pix_addr]=$(( $(( ${frameBuffer[$pix_addr]} & 0x0F )) | $(( $3 << 4 )) ))
+  pix_val=$(( $(( ${frameBuffer[$pix_addr]} & 0x0F )) | $(( $3 << 4 )) ))
+frameBuffer[$pix_addr]=$pix_val
 else
-frameBuffer[$pix_addr]=$(( $(( ${frameBuffer[$pix_addr]} & 0xF0 )) | $3 ))
+  pix_val=$(( $(( ${frameBuffer[$pix_addr]} & 0xF0 )) | $3 ))
+frameBuffer[$pix_addr]=$pix_val
+fi
+if [ $4 -eq 1 ]; then
+set_cursor $1 $2
+i2cset -y $I2CBUS $DEVADDR 0x40 $pix_val i
 fi
 }
 
@@ -143,11 +150,30 @@ local yMin=$(( $2 > $4 ? $4 : $2 ))
 
 for ((i=yMin;i<yMax;i++)) do
     for ((j=xMin;j<xMax;j++)) do
-	drawPixel $i $j $5
+	     drawPixel $j $i $5 $6
     done
 done
+}
 
+function drawLine(){
 
+local xMax=$(( $1 > $3 ? $1 : $3 ))
+local xMin=$(( $1 > $3 ? $3 : $1 ))
+local yMax=$(( $2 > $4 ? $2 : $4 ))
+local yMin=$(( $2 > $4 ? $4 : $2 ))
+
+local xDelta=$(( $xMax - $xMin ))
+local yDelta=$(( $yMax - $yMin ))
+
+if [ $xDelta -gt $yDelta ];then
+  for ((i=xMin;i<xMax;i++)) do
+     drawPixel $(( $(( $i * $xDelta )) / $yDelta )) $i $5 $6
+  done
+else
+  for ((j=xMin;j<xMax;j++)) do
+     drawPixel $j $(( $(( $j * $xDelta )) / $yDelta )) $5 $6
+  done
+fi
 }
 
 
@@ -156,23 +182,8 @@ init_display
 display_on
 
 blankBuffer
-
-drawRect 10 10 118 118 10
-
-drawRect 20 20 108 108 8
-
-drawRect 30 30 98 98 6
-
-drawRect 40 40 88 88 4
-
-drawRect 50 50 78 78 2
-
-drawRect 60 60 68 68 1
-
-
 loadBuffer
 
-
-
+drawLine 10 10 50 100 10 1
 
 
