@@ -126,17 +126,18 @@ done
 }
 
 function drawPixel(){
-local pix_addr=$(( $(( $1 >> 1 )) + $(( $2 << 6 )) ))
+local pix_addr=$(( $(( $2 >> 1 )) + $(( $1 << 6 )) ))
 local pix_val=0
-if [ $(( $1 % 2 )) -eq 0 ]; then
-  pix_val=$(( $(( ${frameBuffer[$pix_addr]} & 0x0F )) | $(( $3 << 4 )) ))
+local input=$(($3 & 0xFF))
+if [ $(( $2 % 2 )) -eq 0 ]; then
+  pix_val=$(( $(( ${frameBuffer[$pix_addr]} & 0x0F )) | $(( $input << 4 )) ))
 frameBuffer[$pix_addr]=$pix_val
 else
-  pix_val=$(( $(( ${frameBuffer[$pix_addr]} & 0xF0 )) | $3 ))
+  pix_val=$(( $(( ${frameBuffer[$pix_addr]} & 0xF0 )) | $input ))
 frameBuffer[$pix_addr]=$pix_val
 fi
 if [ $4 -eq 1 ]; then
-set_cursor $1 $2
+set_cursor $2 $1
 i2cset -y $I2CBUS $DEVADDR 0x40 $pix_val i
 fi
 }
@@ -148,9 +149,9 @@ local xMin=$(( $1 > $3 ? $3 : $1 ))
 local yMax=$(( $2 > $4 ? $2 : $4 ))
 local yMin=$(( $2 > $4 ? $4 : $2 ))
 
-for ((i=yMin;i<yMax;i++)) do
-    for ((j=xMin;j<xMax;j++)) do
-	     drawPixel $j $i $5 $6
+for ((j=yMin;j<yMax;j++)) do
+    for ((i=xMin;i<xMax;i++)) do
+	     drawPixel $i $j $5 $6
     done
 done
 }
@@ -165,13 +166,24 @@ local yMin=$(( $2 > $4 ? $4 : $2 ))
 local xDelta=$(( $xMax - $xMin ))
 local yDelta=$(( $yMax - $yMin ))
 
+local xSign=$(( $1 > $3 ? -1 : 1 ))
+local ySign=$(( $2 > $4 ? -1 : 1 ))
+
 if [ $xDelta -gt $yDelta ];then
-  for ((i=xMin;i<xMax;i++)) do
-     drawPixel $(( $(( $i * $xDelta )) / $yDelta )) $i $5 $6
+  for ((t=0;t<xDelta;t++)) do
+     if [ $xDelta -ne 0 ]; then 
+        drawPixel $(( $1 + $(( $t * $xSign )) )) $(( $2 + $(( $(( $(( $(( $t * $ySign )) *  $yDelta )) / $xDelta  )) )) )) $5 $6
+     else
+        drawPixel $(( $1 + $(( $t * $xSign )) )) $2 $5 $6
+     fi   
   done
 else
-  for ((j=xMin;j<xMax;j++)) do
-     drawPixel $j $(( $(( $j * $xDelta )) / $yDelta )) $5 $6
+  for ((t=0;t<yDelta;t++)) do
+     if [ $yDelta -ne 0 ]; then 
+        drawPixel $(( $1 + $(( $(( $(( $(( $t * $xSign )) *  $xDelta )) / $yDelta  )) )) )) $(( $2 + $(( $t * $ySign )) )) $5 $6
+     else
+        drawPixel $1 $(( $2 + $(( $t * $ySign )) )) $5 $6
+     fi
   done
 fi
 }
@@ -184,6 +196,15 @@ display_on
 blankBuffer
 loadBuffer
 
-drawLine 10 10 50 100 10 1
+#drawRect 10 10 20 100 10 1
+
+drawLine 10 10 100 100 10 1
+drawLine 10 10 100 95 10 1
+drawLine 10 10 100 90 10 1
+drawLine 10 10 100 10 10 1
+drawLine 10 10 10 100 10 1
+drawLine 100 10 10 100 10 1
+drawLine 10 10 95 100 10 1
+drawLine 10 10 90 100 10 1
 
 
