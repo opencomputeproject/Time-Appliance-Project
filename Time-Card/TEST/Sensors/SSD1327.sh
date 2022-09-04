@@ -321,19 +321,7 @@ drawByteAsCol(){ #startX startY byte color instant
   done
 }
 
-
-# Debug function
-function dbug() {
-  if [ "${debug}" = "true" ]; then
-    echo "${1}"                   # output debug text
-    if [ ! -e ${debugfile} ]; then          # log file not (!) exists (-e) create it
-      echo "- OLED Debuglog -" > ${debugfile}
-    fi 
-    echo "${1}" >> ${debugfile}           # output debug text
-  fi
-}
-
-function showtext() { #startX startY string color instant
+function drawText() { #startX startY string color instant
   local a=0; local b=0; local achar=0; local charp=0; local charout="";
   local text=${3}
   local textlen=${#text}
@@ -362,13 +350,13 @@ loadBuffer
 
 #drawLine 10 10 10 100 10 1
 
-showtext 10 10 "Hello" 15 1
+drawText 10 10 "Hello" 15 1
 
-showtext 10 20 "Hello" 12 1
+drawText 10 20 "Hello" 12 1
 
-showtext 10 30 "Hello" 8 1
+drawText 10 30 "Hello" 8 1
 
-showtext 10 40 "Hello" 4 1
+drawText 10 40 "Hello" 4 1
 
 
 
