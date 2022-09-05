@@ -5,6 +5,24 @@
 I2CBUS=2
 DEVADDR=0x3D
 
+#set default configuration
+function init_temp_sensor_default_config(){
+i2cset -y $I2CBUS $TEMP_DEVADDR $AD7414_CONF $AD7414_DEF_CONF
+}
+
+#read temperature value register 
+function read_temperature(){
+local raw_val=$(($(i2cget -y $I2CBUS $TEMP_DEVADDR $AD7414_VAL w)))
+local lo_val=$(("$raw_val">>14))
+local hi_val=$(("$raw_val"&0xff))
+local code_val=$(("$lo_val"|$(("$hi_val"<<2))))
+if [ $(( "$hi_val" & 0x80)) -ne 0 ]; then
+  code_val=$(($code_val - 512))
+fi
+printf "%.2f C" $(echo $code_val / 4 | bc -l)
+}
+
+
 declare -A frameBuffer
 
 declare -A tempBuff
@@ -159,15 +177,15 @@ function reset_cursor() {
 }
 
 function set_cursor() {
-	i2cset -y $I2CBUS $DEVADDR 0x00 0x15 $(( ${1} >> 1 ))  0x3F 0x75 ${2} 0x7F i 
+  i2cset -y $I2CBUS $DEVADDR 0x00 0x15 $(( ${1} >> 1 ))  0x3F 0x75 ${2} 0x7F i 
 }
 
 function set_WriteZone() {
-	i2cset -y $I2CBUS $DEVADDR 0x00 0x15 ${1} ${2} 0x75 ${3} ${4} i 
+  i2cset -y $I2CBUS $DEVADDR 0x00 0x15 ${1} ${2} 0x75 ${3} ${4} i 
 }
 
 function frameToOLED(){
-	echo $(( $(( {$1}/2 )) + $(( {$2}*64 )) ))
+  echo $(( $(( {$1}/2 )) + $(( {$2}*64 )) ))
 }
 
 
@@ -200,10 +218,10 @@ function showtext() {
 function loadBuffer(){
 i2cset -y $I2CBUS $DEVADDR 0x00 0x15 0x00 0x3F 0x75 0x00 0x7F i 
 for ((i=0;i<256;i++)) do
-	for ((j=0;j<32;j++)) do
-		local pointer=$(( $j+(($i<<5)) ))
-		tempBuff[$j]=${frameBuffer[$pointer]}
-	done
+  for ((j=0;j<32;j++)) do
+    local pointer=$(( $j+(($i<<5)) ))
+    tempBuff[$j]=${frameBuffer[$pointer]}
+  done
    i2cset -y $I2CBUS $DEVADDR 0x40 ${tempBuff[0]} ${tempBuff[1]} ${tempBuff[2]} ${tempBuff[3]} ${tempBuff[4]} ${tempBuff[5]} ${tempBuff[6]} ${tempBuff[7]} ${tempBuff[8]} ${tempBuff[9]} ${tempBuff[10]} ${tempBuff[11]} ${tempBuff[12]} ${tempBuff[13]} ${tempBuff[14]} ${tempBuff[15]} ${tempBuff[16]} ${tempBuff[17]} ${tempBuff[18]} ${tempBuff[19]} ${tempBuff[20]} ${tempBuff[21]} ${tempBuff[22]} ${tempBuff[23]} ${tempBuff[24]} ${tempBuff[25]} ${tempBuff[26]} ${tempBuff[27]} ${tempBuff[28]} ${tempBuff[29]} ${tempBuff[30]} ${tempBuff[31]} i
 
 done
@@ -212,7 +230,7 @@ done
 function blankBuffer(){
 for ((i=0;i<64;i++)) do
     for ((j=0;j<128;j++)) do
-	local pointer=$(( $i+(($j<<6)) ))
+  local pointer=$(( $i+(($j<<6)) ))
         frameBuffer[$pointer]=0x00
     done
 done
@@ -222,7 +240,7 @@ done
 function fillBuffer(){
 for ((i=0;i<64;i++)) do
     for ((j=0;j<128;j++)) do
-	local pointer=$(( $i+(($j<<6)) ))
+  local pointer=$(( $i+(($j<<6)) ))
         frameBuffer[$pointer]=0xFF
     done
 done
@@ -254,7 +272,7 @@ local yMin=$(( $2 > $4 ? $4 : $2 ))
 
 for ((j=yMin;j<yMax;j++)) do
     for ((i=xMin;i<xMax;i++)) do
-	     drawPixel $i $j $5 $6
+       drawPixel $i $j $5 $6
     done
 done
 }
@@ -321,6 +339,16 @@ drawByteAsCol(){ #startX startY byte color instant
   done
 }
 
+drawUpdateByteAsCol(){ #startX startY byte color instant
+  for ((i=0;i<8;i++)) do
+    if [ $(( $3 & $(( 0x01 << $i )) )) -ne 0 ]; then
+      drawPixel $1 $(( $2 + $i )) $4 $5
+    else
+      drawPixel $1 $(( $2 + $i )) 0 $5
+    fi
+  done
+}
+
 function drawText() { #startX startY string color instant
   local a=0; local b=0; local achar=0; local charp=0; local charout="";
   local text=${3}
@@ -336,6 +364,21 @@ function drawText() { #startX startY string color instant
   done
 }
 
+function drawUpdateText() { #startX startY string color instant
+  local a=0; local b=0; local achar=0; local charp=0; local charout="";
+  local text=${3}
+  local textlen=${#text}
+  for (( a=0; a<${textlen}; a++ )); do
+    achar="`ord ${text:${a}:1}`"               # get the ASCII Code
+    let charp=(achar-32)*${font_width}         # calculate first byte in font array
+    charout=""
+    for (( b=0; b<${font_width}; b++ )); do    # character loop
+      charout="${charout} ${font[charp+b]}"    # build character out of single values
+      drawUpdateByteAsCol $(( $1 + $b + $(( $a << 3 )) )) $2 ${font[charp+b]} $4 $5
+    done 
+  done
+}
+
 
 display_off
 init_display
@@ -344,19 +387,11 @@ display_on
 blankBuffer
 loadBuffer
 
-#drawKite
+drawKite
 
-#drawRect 10 10 100 20 10 1
 
-#drawLine 10 10 10 100 10 1
 
-drawText 10 10 "Hello" 15 1
 
-drawText 10 20 "Hello" 12 1
-
-drawText 10 30 "Hello" 8 1
-
-drawText 10 40 "Hello" 4 1
 
 
 
