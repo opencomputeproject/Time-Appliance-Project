@@ -389,10 +389,6 @@ loadBuffer
 
 drawKite
 
+drawRect 30 30 45 45 1 1 
 
-
-
-
-
-
-
+drawText 10 120 "Time Card" 15 1
