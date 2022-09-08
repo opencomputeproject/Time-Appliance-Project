@@ -1,4 +1,4 @@
-# Time Card (The Heart of Open Source Grandmaster) 
+# Time Card (The Heart of Open Time Server) 
 
 ![GitHub Logo](https://github.com/opencomputeproject/Time-Appliance-Project/blob/master/Time-Card/images/OCP%20logo.jpg?raw=true)
 
