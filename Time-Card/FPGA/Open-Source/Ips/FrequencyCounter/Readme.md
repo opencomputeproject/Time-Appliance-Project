@@ -12,7 +12,7 @@
 ## 1. Context Overview
 The Frequency Counter is a full hardware (FPGA) only implementation that measures the frequency of an input signal. 
 The counter calculates non-fractional frequencies of range [0 Hz - 10'000'000 Hz] and it is aligned to the local clock's new second. 
-The core can be configured by an AXI4Light-Slave Register interface.
+The core can be configured by an AXI4Lite-Slave Register interface.
 ## 2. Interface Description
 ### 2.1 Frequency Counter IP
 The interface of the Frequency Counter  is:
@@ -45,7 +45,7 @@ The tables below describe the registers of the Frequency Counter.
 
 ## 4 Design Description
 The Frequency Counter receives a (synchronized) time input and a signal/frequency input and measures the frequency of the signal over a specified number of seconds. 
-The core contains an AXI4Light slave for configuration and status supervision from a CPU. 
+The core contains an AXI4Lite slave for configuration and status supervision from a CPU. 
 The component consists of 2 main operations:
 - Measure the frequency of the input signal    
 - Interface with the CPU (AXI master) via the AXI slave

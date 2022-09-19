@@ -118,7 +118,7 @@ architecture SignalGenerator_Arch of SignalGenerator is
     --     - the configurable output delay compensation(generic input), due to output registers
     --     - the cable delay compensation, provided by AXI reg, if enabled by the generic input
     --     - the internal register delay compensation for the clock domain crossing
-    constant OutputDelaySum_Con                     : integer := (OutputDelay_Gen + ClockPeriod_Gen + RegOutputDelay_Con);
+    constant OutputDelaySum_Con                     : integer := (OutputDelay_Gen + (ClockPeriod_Gen/2) + RegOutputDelay_Con);
     
     -- Signal Generator version
     constant SigGenMajorVersion_Con                 : std_logic_vector(7 downto 0) := std_logic_vector(to_unsigned(0, 8));

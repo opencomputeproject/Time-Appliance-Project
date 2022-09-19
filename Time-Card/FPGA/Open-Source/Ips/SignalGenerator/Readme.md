@@ -10,7 +10,7 @@
 [4. Design Description](#4-design-description)
 
 ## 1. Context Overview
-The Signal Generator is a full hardware (FPGA) only implementation that allows to generate pulse width modulated (PWM) signals of configurable polarity aligned with the local clock. The Signal Generator takes a start time, a pulse width and period as well as a repeat count as input and generates the signal accordingly. The settings are configurable by an AXI4Light-Slave Register interface.
+The Signal Generator is a full hardware (FPGA) only implementation that allows to generate pulse width modulated (PWM) signals of configurable polarity aligned with the local clock. The Signal Generator takes a start time, a pulse width and period as well as a repeat count as input and generates the signal accordingly. The settings are configurable by an AXI4Lite-Slave Register interface.
 ## 2. Interface Description
 ### 2.1 Signal Generator IP
 The interface of the Signal Generator  is:
@@ -52,7 +52,7 @@ The tables below describes the registers of the Signal Generator.
 ![PeriodH](Additional%20Files/Regset13_PeriodH.png)
 ![Repeat](Additional%20Files/Regset14_Repeat.png)
 ## 4 Design Description
-The Signal Generator takes a (synchronized) time input as reference and generates the PWM signal aligned with this clock (start time, pulse width and period) compensating the output delay. The Signal Generator contains an AXI4Light slave for configuration and status supervision from a CPU. The component consists of 3 main operations:
+The Signal Generator takes a (synchronized) time input as reference and generates the PWM signal aligned with this clock (start time, pulse width and period) compensating the output delay. The Signal Generator contains an AXI4Lite slave for configuration and status supervision from a CPU. The component consists of 3 main operations:
 - Periodically generate the signal, aligned to the local time
 - Fine-tune the rising and falling edge of the signal with a high resolution clock   
 - Interface with the CPU (AXI master) via the AXI slave

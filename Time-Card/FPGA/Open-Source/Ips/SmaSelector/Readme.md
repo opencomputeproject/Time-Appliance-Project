@@ -100,7 +100,7 @@ The tables below describe the registers of the SMA Selector's mapping 2. The ver
 ![Version2](Additional%20Files/Regset2_3_Version.png)
 ## 4 Design Description
 The SMA Selector multiplexes the input and output options, according to the configuration mappings. 
-The core contains 2 AXI4Light slaves for configuration and status supervision from a CPU. 
+The core contains 2 AXI4Lite slaves for configuration and status supervision from a CPU. 
 
 The component consists of 2 main operations:
 - Map the SMA inputs and outputs     

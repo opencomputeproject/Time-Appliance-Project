@@ -492,10 +492,10 @@ begin
             Axi_Init_Proc(SmaOutputSelect1_Reg_Con, SmaOutputSelect1_DatReg);
             Axi_Init_Proc(SmaSelectorVersion1_Reg_Con, SmaSelectorVersion1_DatReg);
 
-            SmaInput1SourceSelect_DatReg <= (others=>'0');
-            SmaInput2SourceSelect_DatReg <= (others=>'0');
-            SmaOutput3SourceSelect_DatReg <= (others=>'0');
-            SmaOutput4SourceSelect_DatReg <= (others=>'0');
+            SmaInput1SourceSelect_DatReg <= (others => '0');
+            SmaInput2SourceSelect_DatReg <= (others => '0');
+            SmaOutput3SourceSelect_DatReg <= (others => '0');
+            SmaOutput4SourceSelect_DatReg <= (others => '0');
         elsif ((SysClk_ClkIn'event) and (SysClk_ClkIn = '1')) then
             if ((Axi1WriteAddrValid_ValIn = '1') and (Axi1WriteAddrReady_RdyReg = '1')) then
                 Axi1WriteAddrReady_RdyReg <= '0';
@@ -594,10 +594,10 @@ begin
             Axi_Init_Proc(SmaOutputSelect2_Reg_Con, SmaOutputSelect2_DatReg);
             Axi_Init_Proc(SmaSelectorVersion2_Reg_Con, SmaSelectorVersion2_DatReg);
 
-            SmaInput3SourceSelect_DatReg <= (others=>'0');
-            SmaInput4SourceSelect_DatReg <= (others=>'0');
-            SmaOutput1SourceSelect_DatReg <= (others=>'0');
-            SmaOutput2SourceSelect_DatReg <= (others=>'0');
+            SmaInput3SourceSelect_DatReg <= (others => '0');
+            SmaInput4SourceSelect_DatReg <= (others => '0');
+            SmaOutput1SourceSelect_DatReg <= (others => '0');
+            SmaOutput2SourceSelect_DatReg <= (others => '0');
         elsif ((SysClk_ClkIn'event) and (SysClk_ClkIn = '1')) then
             if ((Axi2WriteAddrValid_ValIn = '1') and (Axi2WriteAddrReady_RdyReg = '1')) then
                 Axi2WriteAddrReady_RdyReg <= '0';

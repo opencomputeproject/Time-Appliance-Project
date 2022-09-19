@@ -274,7 +274,7 @@ current_run -implementation [get_runs impl_1]
 
 puts "INFO: Project created:${_xil_proj_name_}"
 
-# --! to create the BD tcl: write_bd_tcl C:/NetTimeLogic/Customers/Facebook/GitRepo4/TIMECARD/Implementation/Xilinx/TimeCard/Bd/TimeCardBd.tcl -force 
+# --! to create the BD tcl: write_bd_tcl [LOCAL_PATH]/Implementation/Xilinx/TimeCard/Bd/TimeCardBd.tcl -force 
 source "$origin_dir/Bd/TimeCardBd.tcl"
 update_compile_order -fileset sources_1
 make_wrapper -files [get_files $origin_dir/TimeCard/TimeCard.srcs/sources_1/bd/TimeCard/TimeCard.bd] -top

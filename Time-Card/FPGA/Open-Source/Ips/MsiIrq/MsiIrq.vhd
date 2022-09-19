@@ -210,12 +210,8 @@ begin
             
                 IrqIn_DatReg <= IrqIn_Dat;
                 IrqIn_Dat_ff <= IrqIn_DatReg;
-                for i in 0 to NumberOfInterrupts_Gen-1 loop 
-                    if(((IrqIn_Dat_ff(i) = '0') and (IrqIn_DatReg(i) = '1')) or ((IrqIn_Dat_ff(i) = '1') and (LevelInterrupt_Gen(i) = '1'))) then
-                        IrqDetected_Reg(i) <= '1';
-                    end if;
-                end loop;
-            
+
+                -- provide the next interrupt
                 case (Msi_State_StReg) is
                     when Idle_St =>
                         if (unsigned(IrqDetected_Reg) /= 0) then
@@ -246,7 +242,7 @@ begin
                         MsiReq_ValReg <= '0';
                         if(MsiGrant_ValIn = '1') then 
                             -- Clear IrqEdge if no edge in this cycle
-                            IrqDetected_Reg(IrqNumber) <= '0' or (IrqIn_DatReg(IrqNumber) xor IrqIn_Dat(IrqNumber));
+                            IrqDetected_Reg(IrqNumber) <= '0';
                             Msi_State_StReg <= End_St;
                         end if; 
 
@@ -263,6 +259,13 @@ begin
                         
                 end case;
                 
+                -- scan for a new interrupt
+                for i in 0 to NumberOfInterrupts_Gen-1 loop 
+                    if(((IrqIn_Dat_ff(i) = '0') and (IrqIn_DatReg(i) = '1')) or ((IrqIn_Dat_ff(i) = '1') and (LevelInterrupt_Gen(i) = '1'))) then
+                        IrqDetected_Reg(i) <= '1';
+                    end if;
+                end loop;
+            
             else
                 Msi_State_StReg <= Idle_St;
                 IrqIn_DatReg <= (others => '0');

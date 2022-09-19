@@ -973,7 +973,7 @@
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>viewChecksum</spirit:name>
-            <spirit:value>7c0fffd3</spirit:value>
+            <spirit:value>1db933bf</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -1002,7 +1002,7 @@
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>viewChecksum</spirit:name>
-            <spirit:value>7c0fffd3</spirit:value>
+            <spirit:value>1db933bf</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -2221,6 +2221,19 @@
         </spirit:wire>
       </spirit:port>
       <spirit:port>
+        <spirit:name>ServoFactorsValid_ValOut</spirit:name>
+        <spirit:wire>
+          <spirit:direction>out</spirit:direction>
+          <spirit:wireTypeDefs>
+            <spirit:wireTypeDef>
+              <spirit:typeName>std_logic</spirit:typeName>
+              <spirit:viewNameRef>xilinx_anylanguagesynthesis</spirit:viewNameRef>
+              <spirit:viewNameRef>xilinx_anylanguagebehavioralsimulation</spirit:viewNameRef>
+            </spirit:wireTypeDef>
+          </spirit:wireTypeDefs>
+        </spirit:wire>
+      </spirit:port>
+      <spirit:port>
         <spirit:name>ServoOffsetFactorP_DatOut</spirit:name>
         <spirit:wire>
           <spirit:direction>out</spirit:direction>
@@ -2602,7 +2615,7 @@
       <spirit:file>
         <spirit:name>../AdjustableClock.vhd</spirit:name>
         <spirit:fileType>vhdlSource</spirit:fileType>
-        <spirit:userFileType>CHECKSUM_97e54189</spirit:userFileType>
+        <spirit:userFileType>CHECKSUM_03f46118</spirit:userFileType>
         <spirit:userFileType>USED_IN_ipstatic</spirit:userFileType>
         <spirit:logicalName>TimeCardLib</spirit:logicalName>
       </spirit:file>
@@ -2687,18 +2700,18 @@
       <xilinx:definitionSource>package_project</xilinx:definitionSource>
       <xilinx:vendorDisplayName>NetTimeLogic</xilinx:vendorDisplayName>
       <xilinx:vendorURL>https://www.nettimelogic.com</xilinx:vendorURL>
-      <xilinx:coreRevision>8</xilinx:coreRevision>
+      <xilinx:coreRevision>9</xilinx:coreRevision>
       <xilinx:upgrades>
         <xilinx:canUpgradeFrom>xilinx.com:user:AdjustableClock:1.0</xilinx:canUpgradeFrom>
       </xilinx:upgrades>
-      <xilinx:coreCreationDateTime>2022-04-29T11:56:24Z</xilinx:coreCreationDateTime>
+      <xilinx:coreCreationDateTime>2022-06-13T13:48:03Z</xilinx:coreCreationDateTime>
     </xilinx:coreExtensions>
     <xilinx:packagingInfo>
       <xilinx:xilinxVersion>2019.1</xilinx:xilinxVersion>
       <xilinx:checksum xilinx:scope="busInterfaces" xilinx:value="2661788f"/>
       <xilinx:checksum xilinx:scope="memoryMaps" xilinx:value="91893e63"/>
-      <xilinx:checksum xilinx:scope="fileGroups" xilinx:value="ab853d9d"/>
-      <xilinx:checksum xilinx:scope="ports" xilinx:value="1bb46dca"/>
+      <xilinx:checksum xilinx:scope="fileGroups" xilinx:value="aa37764a"/>
+      <xilinx:checksum xilinx:scope="ports" xilinx:value="02b4daee"/>
       <xilinx:checksum xilinx:scope="hdlParameters" xilinx:value="27aa05de"/>
       <xilinx:checksum xilinx:scope="parameters" xilinx:value="55d7e0c4"/>
     </xilinx:packagingInfo>

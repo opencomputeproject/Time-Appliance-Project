@@ -153,6 +153,7 @@ entity AdjustableClock is
         InHoldover_DatOut                           : out   std_logic;
     
         -- Servo Output 
+        ServoFactorsValid_ValOut                    : out   std_logic;
         ServoOffsetFactorP_DatOut                   : out   std_logic_vector(31 downto 0);
         ServoOffsetFactorI_DatOut                   : out   std_logic_vector(31 downto 0);
         ServoDriftFactorP_DatOut                    : out   std_logic_vector(31 downto 0);
@@ -396,6 +397,7 @@ begin
     InSync_DatOut                                   <= InSync_DatReg;
     InHoldover_DatOut                               <= InHoldover_DatReg;
     
+    ServoFactorsValid_ValOut                        <= ClockControl_DatReg(ClockControl_ServoValBit_Con);
     ServoOffsetFactorP_DatOut                       <= ClockServoOffsetFactorP_DatReg;
     ServoOffsetFactorI_DatOut                       <= ClockServoOffsetFactorI_DatReg;
     ServoDriftFactorP_DatOut                        <= ClockServoDriftFactorP_DatReg;

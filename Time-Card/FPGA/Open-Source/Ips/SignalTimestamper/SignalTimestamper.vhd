@@ -230,7 +230,7 @@ begin
     -- Mark an input event at the shift register of the high resolution clock domain
     SysClkNxReg_Prc : process(SysClkNx_ClkIn) is
     begin
-        if (SysClkNx_ClkIn'event and SysClkNx_ClkIn='1') then 
+        if ((SysClkNx_ClkIn'event) and (SysClkNx_ClkIn = '1')) then 
             TimestampSysClkNx1_EvtReg <= SignalTimestamper_Evt;
             TimestampSysClkNx2_EvtReg <= TimestampSysClkNx1_EvtReg;
             TimestampSysClkNx_EvtShiftReg <= TimestampSysClkNx_EvtShiftReg((HighResFreqMultiply_Gen*2-2) downto 0) & TimestampSysClkNx2_EvtReg;
@@ -240,7 +240,7 @@ begin
     -- Copy the event shift register of the high resolution clock domain to the system clock domain
     SysClkReg_Prc : process(SysClk_ClkIn) is
     begin
-        if (SysClk_ClkIn'event and SysClk_ClkIn = '1') then 
+        if ((SysClk_ClkIn'event) and (SysClk_ClkIn = '1')) then 
             TimestampSysClk1_EvtReg <= SignalTimestamper_Evt;
             TimestampSysClk2_EvtReg <= TimestampSysClk1_EvtReg;
             TimestampSysClk3_EvtReg <= TimestampSysClk2_EvtReg;
@@ -257,14 +257,14 @@ begin
     begin
         if (SysRstN_RstIn = '0') then 
             Timestamp_ValReg <= '0';           
-            Timestamp_Second_DatReg <= (others=>'0');               
-            Timestamp_Nanosecond_DatReg <= (others=>'0');
+            Timestamp_Second_DatReg <= (others => '0');               
+            Timestamp_Nanosecond_DatReg <= (others => '0');
             RegisterDelay_DatReg <= 0;
-            Count_CntReg <= (others=>'0');
-            ClockTime_Second_DatReg <= (others=>'0');
-            ClockTime_Nanosecond_DatReg <= (others=>'0');
+            Count_CntReg <= (others => '0');
+            ClockTime_Second_DatReg <= (others => '0');
+            ClockTime_Nanosecond_DatReg <= (others => '0');
             ClockTime_ValReg <= '0';
-        elsif (SysClk_ClkIn'event and SysClk_ClkIn = '1') then
+        elsif ((SysClk_ClkIn'event) and (SysClk_ClkIn = '1')) then
             -- single pulse
             Timestamp_ValReg <= '0';
             -- calculate the delay of the high resolution timestamping which consists of 
@@ -298,8 +298,8 @@ begin
                 Timestamp_ValReg <= '1';
                 if (ClockTime_ValReg = '0') then 
                     Timestamp_ValReg <= '0';           
-                    Timestamp_Second_DatReg <= (others=>'0');               
-                    Timestamp_Nanosecond_DatReg <= (others=>'0');
+                    Timestamp_Second_DatReg <= (others => '0');               
+                    Timestamp_Nanosecond_DatReg <= (others => '0');
                 else
                     if (to_integer(unsigned(ClockTime_Nanosecond_DatReg)) < InputDelay_Gen + RegisterDelay_DatReg + to_integer(unsigned(SignalCableDelay_Dat))) then -- smaller than 0
                         Timestamp_Nanosecond_DatReg <= std_logic_vector(to_unsigned((SecondNanoseconds_Con + 
@@ -316,9 +316,9 @@ begin
             
             if (Enable_Ena = '0') then 
                 Timestamp_ValReg <= '0';           
-                Timestamp_Second_DatReg <= (others=>'0');               
-                Timestamp_Nanosecond_DatReg <= (others=>'0');
-                Count_CntReg <= (others=>'0');
+                Timestamp_Second_DatReg <= (others => '0');               
+                Timestamp_Nanosecond_DatReg <= (others => '0');
+                Count_CntReg <= (others => '0');
             end if;
         end if;
     end process Timestamp_Prc;

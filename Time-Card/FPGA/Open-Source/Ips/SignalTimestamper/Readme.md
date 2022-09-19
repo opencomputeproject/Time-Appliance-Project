@@ -10,7 +10,7 @@
 [4. Design Description](#4-design-description)
 
 ## 1. Context Overview
-The Signal Timestamper is a full hardware (FPGA) only implementation. It allows to timestamp an event signal of configurable polarity. Timestamps are taken on the configured edge of the signal and interrupts are generated. The Signal Timestamper is intended to be connected to a CPU or any other AXI master that can read out the timestamps. The settings are configured by an AXI4Light-Slave Register interface.  
+The Signal Timestamper is a full hardware (FPGA) only implementation. It allows to timestamp an event signal of configurable polarity. Timestamps are taken on the configured edge of the signal and interrupts are generated. The Signal Timestamper is intended to be connected to a CPU or any other AXI master that can read out the timestamps. The settings are configured by an AXI4Lite-Slave Register interface.  
 
 ## 2. Interface Description
 ### 2.1 Signal Timestamper IP
@@ -52,7 +52,7 @@ The tables below describes the registers of the Signal Timestamper.
 ![TsDataWdth](Additional%20Files/Regset12_DataWdth.png)
 ![TsData](Additional%20Files/Regset13_Data.png)
 ## 4 Design Description
-The Signal Timestamper takes a (synchronized) time input as reference, an event signal and generates reference clock timestamps on the configurable edge (polarity) of the event signal, compensating the input delay. A timestamp event will also cause an interrupt to signal to the CPU that an event occurred and a timestamp is ready to be read. Whenever an edge is detected it will increase an internal counter which allows to detect missed events, since the timestamper disables itself until the CPU has cleared the interrupt. It contains an AXI4Light slave for configuration, status supervision and timestamp readout from a CPU. The component is divided in 3 main operations:
+The Signal Timestamper takes a (synchronized) time input as reference, an event signal and generates reference clock timestamps on the configurable edge (polarity) of the event signal, compensating the input delay. A timestamp event will also cause an interrupt to signal to the CPU that an event occurred and a timestamp is ready to be read. Whenever an edge is detected it will increase an internal counter which allows to detect missed events, since the timestamper disables itself until the CPU has cleared the interrupt. It contains an AXI4Lite slave for configuration, status supervision and timestamp readout from a CPU. The component is divided in 3 main operations:
 - Taking the timestamp of the input event with the high resolution clock
 - Computing the exact time of the timestamp
 - Interfacing with the CPU (AXI master) via the AXI slave

@@ -4,7 +4,6 @@ set_property IOSTANDARD LVCMOS33 [get_ports Mhz10ClkDcxo1_ClkIn]
 set_property PULLDOWN true [get_ports Mhz10ClkDcxo1_ClkIn]
 
 set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets Mhz10ClkDcxo1_ClkIn_IBUF]
-set_property CLOCK_DEDICATED_ROUTE FALSE [get_nets Mhz10ClkDcxo2_ClkIn_IBUF]
 
 #MAC RF Out
 set_property PACKAGE_PIN V13 [get_ports Mhz10Clk0_ClkIn]

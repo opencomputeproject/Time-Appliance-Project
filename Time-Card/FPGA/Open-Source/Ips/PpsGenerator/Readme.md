@@ -10,7 +10,7 @@
 [4. Design Description](#4-design-description)
 
 ## 1. Context Overview
-The PPS Generator is a full hardware (FPGA) only implementation that generates a Pulse Per Second (PPS) aligned to the local clock's new second. The core can be configured by an AXI4Light-Slave Register interface.
+The PPS Generator is a full hardware (FPGA) only implementation that generates a Pulse Per Second (PPS) aligned to the local clock's new second. The core can be configured by an AXI4Lite-Slave Register interface.
 ## 2. Interface Description
 ### 2.1 PPS Generator IP
 The interface of the PPS Generator  is:
@@ -44,7 +44,7 @@ The tables below describes the registers of the PPS Generator.
 ![Width](Additional%20Files/Regset5_Width.png)
 ![Cable](Additional%20Files/Regset6_Cable.png)
 ## 4 Design Description
-The PPS Generator takes a (synchronized) time input as reference and generates the Pulse Per Second aligned with this clock (start time and period) compensating the output delay. The PPS Generator contains an AXI4Light slave for configuration and status supervision from a CPU. The component consists of 3 main operations:
+The PPS Generator takes a (synchronized) time input as reference and generates the Pulse Per Second aligned with this clock (start time and period) compensating the output delay. The PPS Generator contains an AXI4Lite slave for configuration and status supervision from a CPU. The component consists of 3 main operations:
 - Periodically generate the pulse, aligned to the local time
 - Fine-tune the activation of the puse with a high resolution clock   
 - Interface with the CPU (AXI master) via the AXI slave

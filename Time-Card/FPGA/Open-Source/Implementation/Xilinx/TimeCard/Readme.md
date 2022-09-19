@@ -39,6 +39,8 @@ The following cores are used in the Open Source Timecard design.
 |[TC Signal Timestamper](../../../Ips/SignalTimestamper)|NetTimeLogic|Timestamping of an event signal of configurable polarity and generate interrupts|
 |[TC PPS Generator](../../../Ips/PpsGenerator)|NetTimeLogic|Generation of a Pulse Per Second (PPS) of configurable polarity and aligned to the local clock's new second|
 |[TC Signal Generator](../../../Ips/SignalGenerator)|NetTimeLogic|Generation of pulse width modulated (PWM) signals of configurable polarity and aligned to the local clock|
+|[TC PPS Slave](../../../Ips/PpsSlave)|NetTimeLogic|Calculation of the offset and drift corrections to be applied to the Adjustable Clock, in order to synchronize to a PPS input|
+|[TC ToD Slave](../../../Ips/TodSlave)|NetTimeLogic|Reception of GNSS receiver's messages over UART and synchronization to the Time of Day|
 |[TC Frequency Counter](../../../Ips/FrequencyCounter)| NetTimeLogic|Measuring of the frequency of an input signal of range 1 - 10'000'000 Hz|
 |[TC CoreList](../../../Ips/CoreList)|NetTimeLogic|A list of the current FPGA core instantiations which are accessible by an AXI4-Lite interface|
 |[TC Conf Master](../../../Ips/ConfMaster)|NetTimeLogic|A default configuration which is provided to the AXI4-Lite slaves during startup, without the support of a CPU|
@@ -46,7 +48,8 @@ The following cores are used in the Open Source Timecard design.
 |[TC Clock Detector](../../../Ips/ClockDetector)|NetTimeLogic|Detection of the available clock sources and selection of the clocks to be used, according to a priority scheme and a configuration|
 |[TC SMA Selector](../../../Ips/SmaSelector)|NetTimeLogic|Select the mapping of the inputs and the outputs of the 4 SMA connectors of the [Timecard](https://github.com/opencomputeproject/Time-Appliance-Project/tree/master/Time-Card)|
 |[TC PPS Selector](../../../Ips/PpsSourceSelector)|NetTimeLogic|Detection of the available PPS sources and selection of the PPS source to be used, according to a priority scheme and a configuration|
-|[TC FPGA Version](../../../Ips/FpgaVersion)|NetTimeLogic|AXI register that store the design's version numbers|
+|[TC Dummy Axi Slave](../../../Ips/DummyAxiSlave)|NetTimeLogic|AXI4L slave that is used as a placeholder of an address range|
+|[TC FPGA Version](../../../Ips/FpgaVersion)|NetTimeLogic|AXI register that stores the design's version numbers|
 
 The top-level design description is shown below.
 
@@ -85,7 +88,14 @@ The AXI Slave interfaces have the following addresses:
 |TC Signal TS GNSS1 PPS|axi4l_slave|0x0101_0000|0x0101_FFFF|
 |TC Signal TS1|axi4l_slave|0x0102_0000|0x0102_FFFF|
 |TC PPS Generator|axi4l_slave|0x0103_0000|0x0103_FFFF|
+|TC PPS Slave|axi4l_slave|0x0104_0000|0x0104_FFFF|
+|TC ToD Slave|axi4l_slave|0x0105_0000|0x0105_FFFF|
 |TC Signal TS2|axi4l_slave|0x0106_0000|0x0106_FFFF|
+|TC Dummy Axi Slave1|axi4l_slave|0x0107_0000|0x0107_FFFF|
+|TC Dummy Axi Slave2|axi4l_slave|0x0108_0000|0x0108_FFFF|
+|TC Dummy Axi Slave3|axi4l_slave|0x0109_0000|0x0109_FFFF|
+|TC Dummy Axi Slave4|axi4l_slave|0x010A_0000|0x010A_FFFF|
+|TC Dummy Axi Slave5|axi4l_slave|0x010B_0000|0x010B_FFFF|
 |TC Signal TS FPGA PPS|axi4l_slave|0x010C_0000|0x010C_FFFF|
 |TC Signal Generator1|axi4l_slave|0x010D_0000|0x010D_FFFF|
 |TC Signal Generator2|axi4l_slave|0x010E_0000|0x010E_FFFF|
@@ -144,7 +154,7 @@ Level interrupts (e.g. AXI UART 16550) are taking at least one round for the nex
 The [Timecard](https://github.com/opencomputeproject/Time-Appliance-Project/tree/master/Time-Card) has currently 4 SMA Connectors of configurable input/output and an additional GNSS Antenna SMA input.
 The default configuration of the SMA connectors is shown below.
 
-![SmaConnectors](Additional%20Files/SmaConnectors.png) 
+<p align="left"> <img src="Additional%20Files/SmaConnectors.png" alt="Sublime's custom image"/> </p>
 
 This default mapping and the direction can be changed via the 2 AXI slaves of the [TC SMA Selector](../../../Ips/SmaSelector) IP core. 
 
@@ -163,9 +173,12 @@ Currently, the following cores are configured at startup by the default configur
 
 |Core Instance|Configuration|
 |-------------|-------------|
-|Adjustable Clock|Enable with synchronization source "None"|
-|PPS Generator|Enable with high polarity|
-|Signal Timestamper GNSS PPS|Enable with interrupt and high polarity|
+|Adjustable Clock|Enable with synchronization source 1 (ToD+PPS)|
+|PPS Generator|Enable with high polarity of the output pulse|
+|PPS Slave|Enable with high polarity of the input pulse|
+|ToD Slave|Enable with high polarity of the UART input|
+|SMA Selector|Set the FPGA PPS and GNSS PPS as SMA outputs|
+
 
 ## 7. Core List 
 The list of the configurable cores (via AXI) is provided by the [TC CoreList](../../../Ips/CoreList) and can be edited by updating the [CoreListFile.txt](CoreListFile.txt).
@@ -185,12 +198,12 @@ Run this from the Vivado TCL console:
 The script will add all necessary files to the project as well as the constraints so everything is ready to generate a bitstream for the FPGA.
 The project will be generated in the following folder:
 
-*/[YOUR_PATH]/Implementation/Xilinx/Timecard/Timecard*
+*/[YOUR_PATH]/Implementation/Xilinx/TimeCard/TimeCard*
 ### 8.2 Synthesis, Implementation and Bitstream generation
 A bitstream generation script runs synthesis and implementation and generates the bitstreams for the specified design runs:
 - The script */[YOUR_PATH]/Implementation/Xilinx/TimeCard/CreateBinaries.tcl* runs the synthesis/implementation of the TimeCardOS design, it generates the  bitstreams and it updates correspondingly the Factory_TimeCardOS.bin
 - The script */[YOUR_PATH]/Implementation/Xilinx/TimeCard/CreateBinariesGolden.tcl* runs the synthesis/implementation of the Golden_TimeCardOS design, it generates the bitstreams and it updates correspondingly the Factory_TimeCardOS.bin
-- The script */[YOUR_PATH]/Implementation/Xilinx/TimeCard/CreateBinariesGolden.tcl* runs the synthesis/implementation of both designs, it generates the corresponding bitstreams and it updates correspondingly the Factory_TimeCardOS.bin
+- The script */[YOUR_PATH]/Implementation/Xilinx/TimeCard/CreateBinariesAll.tcl* runs the synthesis/implementation of both designs, it generates the corresponding bitstreams and it updates correspondingly the Factory_TimeCardOS.bin
 
 The binaries are copied to the folder */[YOUR_PATH]/Implementation/Xilinx/TimeCard/Binaries/*. 
 The existing bitstreams in the Binaries folder are overwritten and also a copy of the files is created in a subfolder of the Binaries folder with a timestamp. This way, the latest implementation run is always found at the same position, but backups of the previous (and current) runs are still available.
@@ -220,10 +233,10 @@ The design is implemented at the FPGA [Artix-7 XC7A100T-FGG484-1](https://docs.x
 A resource utilization summary is shown below.
 |Resource|Used|Available|Util%|
 |--------|:--:|:-------:|:---:|
-|LUTs|29994|63400|47.31|
-|Flip Flops|26802|126800|21.14|
-|BRAMs|17.5|135|12.96|
-|DSPs|1|240|0.42|
+|LUTs|34777|63400|54.85|
+|Flip Flops|29128|126800|22.97|
+|BRAMs|22.5|135|22.90|
+|DSPs|23|240|9.58|
 
 
 ## 9. Program FPGA and SPI Flash
@@ -257,8 +270,8 @@ This combined image has following structure:
 
 |Addr1         |Addr2         |File(s)              |
 |:------------:|:------------:|---------------------|
-|0x00000000    |0x002856FF    |Golden_TimeCardOS.bit|
-|0x00400000    |0x0069B5AB    |TimeCardOS.bit       |
+|0x00000000    |0x002C93D7    |Golden_TimeCardOS.bit|
+|0x00400000    |0x006C634B    |TimeCardOS.bit       |
 
 The image *TimeCardOS.bin* is the update/regular image and it shall be used for the field update via SPI.
 For the update, this bitstream must be placed at 0x00400000 in the SPI flash.
