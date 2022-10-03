@@ -145,7 +145,7 @@ We've tested and proved setup is working with the following platform spec:
 Please detailed [software description](https://github.com/opencomputeproject/Time-Appliance-Project/tree/master/Software) document
 * Linux operating system with the [ocp_ptp driver](https://github.com/opencomputeproject/Time-Appliance-Project/tree/master/Time-Card/DRV) (included in Linux kernel 5.12 and newer). Driver may require vt-d CPU flag enabled in BIOS
 * NTP server - [Chrony](https://github.com/mlichvar/chrony)/NTPd reading `/dev/ptpX` of the Time Card 
-* PTP server - [ptp4u](https://github.com/time/ptp) or [ptp4l](https://github.com/richardcochran/linuxptp) reading `/dev/ptpX` of the NIC
+* PTP server - [ptp4u](https://github.com/facebook/time) or [ptp4l](https://github.com/richardcochran/linuxptp) reading `/dev/ptpX` of the NIC
   * [phc2sys](https://github.com/richardcochran/linuxptp)/[ts2phc](https://github.com/richardcochran/linuxptp) to copy clock values from the Time Card to the NIC
 ## NIC
 Most of the general purpose hardware can be used.  
