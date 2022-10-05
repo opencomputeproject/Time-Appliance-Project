@@ -137,3 +137,5 @@ Using a Calnex Sentinel device are comparing various things. Here we are compari
 ## Where can I get one?
 
 You have all necessary source code, BOM, Gerber files and binaries to build it yourself. However, we are currently working with several suppliers and will have their contact info soon available to allow you to purchase an out-of-the-box ready Time Card.
+
+If you don't want to build your own then they are commercially available via Timebeat. For ordering go to https://store.timebeat.app/products/ocp-tap-timecard
