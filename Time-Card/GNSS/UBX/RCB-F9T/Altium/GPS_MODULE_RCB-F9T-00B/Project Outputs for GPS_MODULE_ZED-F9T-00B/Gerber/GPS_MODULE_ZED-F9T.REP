@@ -1,0 +1,275 @@
+*************************************************************
+FileName = GPS_MODULE_ZED-F9T.GBR
+AutoAperture = True
+*************************************************************
+Generating : Bottom Tenting
+      File : GPS_MODULE_ZED-F9T.GM4
+
+    Adding Layer      : Bottom Tenting
+
+
+Used DCodes :
+    D59
+*************************************************************
+
+*************************************************************
+Generating : Top Tenting
+      File : GPS_MODULE_ZED-F9T.GM3
+
+    Adding Layer      : Top Tenting
+
+
+Used DCodes :
+    D59
+*************************************************************
+
+*************************************************************
+Generating : Top Component Center
+      File : GPS_MODULE_ZED-F9T.GM2
+
+    Adding Layer      : Top Component Center
+
+
+Used DCodes :
+    D15
+*************************************************************
+
+*************************************************************
+Generating : Mechanical 1
+      File : GPS_MODULE_ZED-F9T.GM1
+
+    Adding Layer      : Mechanical 1
+
+
+Used DCodes :
+    D14
+    D52
+    D61
+    D62
+*************************************************************
+
+*************************************************************
+Generating : Keep-Out Layer
+      File : GPS_MODULE_ZED-F9T.GKO
+
+    Adding Layer      : Keep-Out Layer
+
+
+Used DCodes :
+    D52
+*************************************************************
+
+*************************************************************
+Generating : Bottom Overlay
+      File : GPS_MODULE_ZED-F9T.GBO
+
+    Adding Layer      : Bottom Overlay
+
+
+Used DCodes :
+    D60
+*************************************************************
+
+*************************************************************
+Generating : Bottom Paste
+      File : GPS_MODULE_ZED-F9T.GBP
+
+    Adding Layer      : Bottom Paste
+
+    Adding Layer      : Bottom Layer
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+*************************************************************
+
+*************************************************************
+Generating : Top Solder
+      File : GPS_MODULE_ZED-F9T.GTS
+
+    Adding Layer      : Top Solder
+
+    Adding Layer      : Top Layer
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D18
+    D19
+    D21
+    D23
+    D28
+    D29
+    D32
+    D33
+    D34
+    D35
+    D39
+    D40
+    D41
+    D42
+    D43
+    D44
+    D45
+    D46
+    D47
+    D48
+    D49
+    D50
+    D51
+*************************************************************
+
+*************************************************************
+Generating : Bottom Solder
+      File : GPS_MODULE_ZED-F9T.GBS
+
+    Adding Layer      : Bottom Solder
+
+    Adding Layer      : Bottom Layer
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D51
+*************************************************************
+
+*************************************************************
+Generating : Top Paste
+      File : GPS_MODULE_ZED-F9T.GTP
+
+    Adding Layer      : Top Paste
+
+    Adding Layer      : Top Layer
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D18
+    D19
+    D20
+    D21
+    D22
+    D23
+    D24
+    D25
+    D26
+    D27
+    D28
+    D29
+    D30
+    D31
+    D32
+    D33
+    D34
+    D35
+    D36
+    D37
+    D38
+*************************************************************
+
+*************************************************************
+Generating : Top Overlay
+      File : GPS_MODULE_ZED-F9T.GTO
+
+    Adding Layer      : Top Overlay
+
+
+Used DCodes :
+    D10
+    D11
+    D12
+    D13
+    D14
+    D15
+    D16
+    D17
+*************************************************************
+
+*************************************************************
+Generating : Bottom Layer
+      File : GPS_MODULE_ZED-F9T.GBL
+
+    Adding Layer      : Bottom Layer
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D59
+*************************************************************
+
+*************************************************************
+Generating : Int2 (GND)
+      File : GPS_MODULE_ZED-F9T.G2
+
+    Adding Layer      : Int2 (GND)
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D13
+    D54
+    D59
+*************************************************************
+
+*************************************************************
+Generating : Int1 (GND)
+      File : GPS_MODULE_ZED-F9T.G1
+
+    Adding Layer      : Int1 (GND)
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D59
+*************************************************************
+
+*************************************************************
+Generating : Top Layer
+      File : GPS_MODULE_ZED-F9T.GTL
+
+    Adding Layer      : Top Layer
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D13
+    D14
+    D18
+    D19
+    D20
+    D21
+    D22
+    D23
+    D24
+    D25
+    D26
+    D27
+    D28
+    D29
+    D30
+    D31
+    D32
+    D33
+    D34
+    D35
+    D36
+    D37
+    D38
+    D52
+    D53
+    D54
+    D55
+    D56
+    D57
+    D58
+    D59
+*************************************************************
+
