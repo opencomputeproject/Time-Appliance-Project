@@ -33,7 +33,7 @@ FSMCodingStyle=eFMSDropDownList_OneProcess
 FSMEncodingStyle=eFMSDropDownList_OneHot
 IsProjectConflictPreventionWarningsEnabled=0
 IsVirtualBomDocumentRemoved=0
-OutputPath=Project Outputs for GPS_MODULE_ZED-F9T-00B
+OutputPath=
 LogFolderPath=
 ManagedProjectGUID=
 IncludeDesignInRelease=0
@@ -135,23 +135,6 @@ GenerateClassCluster=0
 DocumentUniqueId=
 
 [Document6]
-DocumentPath=GPS_MODULE_ZED-F9T-00B.SCHLIB
-AnnotationEnabled=1
-AnnotateStartValue=1
-AnnotationIndexControlEnabled=0
-AnnotateSuffix=
-AnnotateScope=All
-AnnotateOrder=-1
-DoLibraryUpdate=1
-DoDatabaseUpdate=1
-ClassGenCCAutoEnabled=1
-ClassGenCCAutoRoomEnabled=1
-ClassGenNCAutoScope=None
-DItemRevisionGUID=
-GenerateClassCluster=0
-DocumentUniqueId=KYAMXYVD
-
-[Document7]
 DocumentPath=GPS_MODULE_ZED-F9T-00B.IntLib
 AnnotationEnabled=1
 AnnotateStartValue=1
@@ -173,8 +156,9 @@ UniqueID=08E19AE1-CCEB-4989-94F4-FCCB3A441073
 Description=V1I1
 AllowFabrication=0
 ParameterCount=0
-VariationCount=1
-Variation1=Designator=U2|UniqueId=\AYAJIBOF|Kind=1|AlternatePart= 
+VariationCount=2
+Variation1=Designator=R5|UniqueId=\RMURIEFP|Kind=1|AlternatePart= 
+Variation2=Designator=R6|UniqueId=\LWEGSZJQ|Kind=1|AlternatePart= 
 ParamVariationCount=0
 
 [GeneratedDocument1]
@@ -182,90 +166,86 @@ DocumentPath=Project Outputs for GPS_MODULE_ZED-F9T-00B\BOM\Bill of Materials-GP
 DItemRevisionGUID=
 
 [GeneratedDocument2]
-DocumentPath=Project Outputs for GPS_MODULE_ZED-F9T-00B\NC Drill\GPS_MODULE_ZED-F9T.DRR
+DocumentPath=Project Outputs for GPS_MODULE_ZED-F9T-00B\Design Rule Check - GPS_MODULE_ZED-F9T.html
 DItemRevisionGUID=
 
 [GeneratedDocument3]
-DocumentPath=Project Outputs for GPS_MODULE_ZED-F9T-00B\Gerber\GPS_MODULE_ZED-F9T.EXTREP
+DocumentPath=Project Outputs for GPS_MODULE_ZED-F9T-00B\NC Drill\GPS_MODULE_ZED-F9T.DRR
 DItemRevisionGUID=
 
 [GeneratedDocument4]
-DocumentPath=Project Outputs for GPS_MODULE_ZED-F9T-00B\Gerber\GPS_MODULE_ZED-F9T.G1
+DocumentPath=Project Outputs for GPS_MODULE_ZED-F9T-00B\Gerber\GPS_MODULE_ZED-F9T.EXTREP
 DItemRevisionGUID=
 
 [GeneratedDocument5]
-DocumentPath=Project Outputs for GPS_MODULE_ZED-F9T-00B\Gerber\GPS_MODULE_ZED-F9T.G2
+DocumentPath=Project Outputs for GPS_MODULE_ZED-F9T-00B\Gerber\GPS_MODULE_ZED-F9T.G1
 DItemRevisionGUID=
 
 [GeneratedDocument6]
-DocumentPath=Project Outputs for GPS_MODULE_ZED-F9T-00B\Gerber\GPS_MODULE_ZED-F9T.GBL
+DocumentPath=Project Outputs for GPS_MODULE_ZED-F9T-00B\Gerber\GPS_MODULE_ZED-F9T.G2
 DItemRevisionGUID=
 
 [GeneratedDocument7]
-DocumentPath=Project Outputs for GPS_MODULE_ZED-F9T-00B\Gerber\GPS_MODULE_ZED-F9T.GBO
+DocumentPath=Project Outputs for GPS_MODULE_ZED-F9T-00B\Gerber\GPS_MODULE_ZED-F9T.GBL
 DItemRevisionGUID=
 
 [GeneratedDocument8]
-DocumentPath=Project Outputs for GPS_MODULE_ZED-F9T-00B\Gerber\GPS_MODULE_ZED-F9T.GBP
+DocumentPath=Project Outputs for GPS_MODULE_ZED-F9T-00B\Gerber\GPS_MODULE_ZED-F9T.GBO
 DItemRevisionGUID=
 
 [GeneratedDocument9]
-DocumentPath=Project Outputs for GPS_MODULE_ZED-F9T-00B\Gerber\GPS_MODULE_ZED-F9T.GBS
+DocumentPath=Project Outputs for GPS_MODULE_ZED-F9T-00B\Gerber\GPS_MODULE_ZED-F9T.GBP
 DItemRevisionGUID=
 
 [GeneratedDocument10]
-DocumentPath=Project Outputs for GPS_MODULE_ZED-F9T-00B\Gerber\GPS_MODULE_ZED-F9T.GKO
+DocumentPath=Project Outputs for GPS_MODULE_ZED-F9T-00B\Gerber\GPS_MODULE_ZED-F9T.GBS
 DItemRevisionGUID=
 
 [GeneratedDocument11]
-DocumentPath=Project Outputs for GPS_MODULE_ZED-F9T-00B\Gerber\GPS_MODULE_ZED-F9T.GM1
+DocumentPath=Project Outputs for GPS_MODULE_ZED-F9T-00B\Gerber\GPS_MODULE_ZED-F9T.GKO
 DItemRevisionGUID=
 
 [GeneratedDocument12]
-DocumentPath=Project Outputs for GPS_MODULE_ZED-F9T-00B\Gerber\GPS_MODULE_ZED-F9T.GM2
+DocumentPath=Project Outputs for GPS_MODULE_ZED-F9T-00B\Gerber\GPS_MODULE_ZED-F9T.GM1
 DItemRevisionGUID=
 
 [GeneratedDocument13]
-DocumentPath=Project Outputs for GPS_MODULE_ZED-F9T-00B\Gerber\GPS_MODULE_ZED-F9T.GM3
+DocumentPath=Project Outputs for GPS_MODULE_ZED-F9T-00B\Gerber\GPS_MODULE_ZED-F9T.GM2
 DItemRevisionGUID=
 
 [GeneratedDocument14]
-DocumentPath=Project Outputs for GPS_MODULE_ZED-F9T-00B\Gerber\GPS_MODULE_ZED-F9T.GM4
-DItemRevisionGUID=
-
-[GeneratedDocument15]
 DocumentPath=Project Outputs for GPS_MODULE_ZED-F9T-00B\Gerber\GPS_MODULE_ZED-F9T.GTL
 DItemRevisionGUID=
 
-[GeneratedDocument16]
+[GeneratedDocument15]
 DocumentPath=Project Outputs for GPS_MODULE_ZED-F9T-00B\Gerber\GPS_MODULE_ZED-F9T.GTO
 DItemRevisionGUID=
 
-[GeneratedDocument17]
+[GeneratedDocument16]
 DocumentPath=Project Outputs for GPS_MODULE_ZED-F9T-00B\Gerber\GPS_MODULE_ZED-F9T.GTP
 DItemRevisionGUID=
 
-[GeneratedDocument18]
+[GeneratedDocument17]
 DocumentPath=Project Outputs for GPS_MODULE_ZED-F9T-00B\Gerber\GPS_MODULE_ZED-F9T.GTS
 DItemRevisionGUID=
 
-[GeneratedDocument19]
+[GeneratedDocument18]
 DocumentPath=Project Outputs for GPS_MODULE_ZED-F9T-00B\NC Drill\GPS_MODULE_ZED-F9T.LDP
 DItemRevisionGUID=
 
-[GeneratedDocument20]
+[GeneratedDocument19]
 DocumentPath=Project Outputs for GPS_MODULE_ZED-F9T-00B\Gerber\GPS_MODULE_ZED-F9T.REP
 DItemRevisionGUID=
 
-[GeneratedDocument21]
+[GeneratedDocument20]
 DocumentPath=Project Outputs for GPS_MODULE_ZED-F9T-00B\Gerber\GPS_MODULE_ZED-F9T.RUL
 DItemRevisionGUID=
 
-[GeneratedDocument22]
+[GeneratedDocument21]
 DocumentPath=Project Outputs for GPS_MODULE_ZED-F9T-00B\NC Drill\GPS_MODULE_ZED-F9T.TXT
 DItemRevisionGUID=
 
-[GeneratedDocument23]
+[GeneratedDocument22]
 DocumentPath=Project Outputs for GPS_MODULE_ZED-F9T-00B\Pick Place\Pick Place for GPS_MODULE_ZED-F9T(V1I1).csv
 DItemRevisionGUID=
 
@@ -304,8 +284,8 @@ ContentTypeGUID=CB6F2064-E317-11DF-B822-12313F0024A2
 ConfigurationType=Source
 
 [Generic_SmartPDF]
-AutoOpenFile=-1
-AutoOpenOutJob=-1
+AutoOpenFile=0
+AutoOpenOutJob=0
 
 [Generic_SmartPDFSettings]
 ProjectMode=-1
@@ -316,7 +296,7 @@ AddNetNetLabels=-1
 AddNetPorts=-1
 ShowComponentParameters=-1
 GlobalBookmarks=0
-ExportBOM=-1
+ExportBOM=0
 TemplateFilename=Board Stack Report.XLT
 TemplateStoreRelative=-1
 PCB_PrintColor=1
@@ -330,7 +310,7 @@ SCH_NoERCSymbolsToShow="Thin Cross","Thick Cross","Small Cross",Checkbox,Triangl
 SCH_ShowNote=-1
 SCH_ShowNoteCollapsed=-1
 SCH_ExpandLogicalToPhysical=0
-SCH_VariantName=[No Variations]
+SCH_VariantName=V1I1
 SCH_ExpandComponentDesignators=-1
 SCH_ExpandNetlabels=0
 SCH_ExpandPorts=0
@@ -340,7 +320,7 @@ SCH_HasExpandLogicalToPhysicalSheets=-1
 SaveSettingsToOutJob=-1
 
 [Generic_EDE]
-OutputDir=Project Outputs for GPS_MODULE_ZED-F9T-00B
+OutputDir=
 
 [OutputGroup1]
 Name=Netlist Outputs
@@ -1318,29 +1298,29 @@ ComparisonOptions5=Kind=Structure Class|MinPercent=75|MinMatch=3|ShowMatch=0|Use
 [SmartPDF]
 PageOptions=Record=PageOptions|CenterHorizontal=True|CenterVertical=True|PrintScale=1.00|XCorrection=1.00|YCorrection=1.00|PrintKind=1|BorderSize=5000000|LeftOffset=0|BottomOffset=0|Orientation=2|PaperLength=1000|PaperWidth=1000|Scale=100|PaperSource=7|PrintQuality=-3|MediaType=1|DitherType=10|PrintScaleMode=1|PaperKind=Letter|PaperIndex=1
 Configuration_Name1=OutputConfigurationParameter1
-Configuration_Item1=DesignatorDisplayMode=Physical|PrintArea=DesignExtent|PrintAreaLowerLeftCornerX=0|PrintAreaLowerLeftCornerY=0|PrintAreaUpperRightCornerX=0|PrintAreaUpperRightCornerY=0|Record=PcbPrintView|DocumentPath=X:\My Drive\Boards\GNSS Receiver Module\Altium\GNSS_Receiver\GNSS_Receiver_PCB.PcbDoc
+Configuration_Item1=DesignatorDisplayMode=Physical|PrintArea=DesignExtent|PrintAreaLowerLeftCornerX=0|PrintAreaLowerLeftCornerY=0|PrintAreaUpperRightCornerX=0|PrintAreaUpperRightCornerY=0|Record=PcbPrintView|DocumentPath=C:\Users\apinales\github\Time-Appliance-Project\Time-Card\GNSS\UBlox\RCB-F9T\Altium\GPS_MODULE_RCB-F9T-00B\GPS_MODULE_ZED-F9T.PcbDoc
 Configuration_Name2=OutputConfigurationParameter2
-Configuration_Item2=IncludeBoardCutouts=False|IncludeBottomLayerComponents=True|IncludeMultiLayerComponents=True|IncludeTopLayerComponents=True|IncludeViewports=True|Index=0|Mirror=False|Name=Multilayer Composite Print|PadNumberFontSize=14|Record=PcbPrintOut|ShowHoles=False|ShowPadNets=False|ShowPadNumbers=False|SubstituteFonts=False|DocumentPath=X:\My Drive\Boards\GNSS Receiver Module\Altium\GNSS_Receiver\GNSS_Receiver_PCB.PcbDoc
+Configuration_Item2=IncludeBoardCutouts=False|IncludeBottomLayerComponents=True|IncludeMultiLayerComponents=True|IncludeTopLayerComponents=True|IncludeViewports=True|Index=0|Mirror=False|Name=Multilayer Composite Print|PadNumberFontSize=14|Record=PcbPrintOut|ShowHoles=False|ShowPadNets=False|ShowPadNumbers=False|SubstituteFonts=False|DocumentPath=C:\Users\apinales\github\Time-Appliance-Project\Time-Card\GNSS\UBlox\RCB-F9T\Altium\GPS_MODULE_RCB-F9T-00B\GPS_MODULE_ZED-F9T.PcbDoc
 Configuration_Name3=OutputConfigurationParameter3
-Configuration_Item3=CArc=Full|CFill=Full|Comment=Full|Coordinate=Full|CPad=Full|CRegion=Full|CText=Full|CTrack=Full|CVia=Full|Designator=Full|Dimension=Full|DLayer1=TopLayer|DLayer2=BottomLayer|DrillType=Regular|FArc=Full|FFill=Full|FPad=Full|FRegion=Full|FText=Full|FTrack=Full|FVia=Full|Layer=TopOverlay|Polygon=Full|PrintOutIndex=0|Record=PcbPrintLayer|DocumentPath=X:\My Drive\Boards\GNSS Receiver Module\Altium\GNSS_Receiver\GNSS_Receiver_PCB.PcbDoc
+Configuration_Item3=CArc=Full|CFill=Full|Comment=Full|Coordinate=Full|CPad=Full|CRegion=Full|CText=Full|CTrack=Full|CVia=Full|Designator=Full|Dimension=Full|DLayer1=TopLayer|DLayer2=BottomLayer|DrillType=Regular|FArc=Full|FFill=Full|FPad=Full|FRegion=Full|FText=Full|FTrack=Full|FVia=Full|Layer=TopOverlay|Polygon=Full|PrintOutIndex=0|Record=PcbPrintLayer|DocumentPath=C:\Users\apinales\github\Time-Appliance-Project\Time-Card\GNSS\UBlox\RCB-F9T\Altium\GPS_MODULE_RCB-F9T-00B\GPS_MODULE_ZED-F9T.PcbDoc
 Configuration_Name4=OutputConfigurationParameter4
-Configuration_Item4=CArc=Full|CFill=Full|Comment=Full|Coordinate=Full|CPad=Full|CRegion=Full|CText=Full|CTrack=Full|CVia=Full|Designator=Full|Dimension=Full|DLayer1=TopLayer|DLayer2=BottomLayer|DrillType=Regular|FArc=Full|FFill=Full|FPad=Full|FRegion=Full|FText=Full|FTrack=Full|FVia=Full|Layer=TopLayer|Polygon=Full|PrintOutIndex=0|Record=PcbPrintLayer|DocumentPath=X:\My Drive\Boards\GNSS Receiver Module\Altium\GNSS_Receiver\GNSS_Receiver_PCB.PcbDoc
+Configuration_Item4=CArc=Full|CFill=Full|Comment=Full|Coordinate=Full|CPad=Full|CRegion=Full|CText=Full|CTrack=Full|CVia=Full|Designator=Full|Dimension=Full|DLayer1=TopLayer|DLayer2=BottomLayer|DrillType=Regular|FArc=Full|FFill=Full|FPad=Full|FRegion=Full|FText=Full|FTrack=Full|FVia=Full|Layer=TopLayer|Polygon=Full|PrintOutIndex=0|Record=PcbPrintLayer|DocumentPath=C:\Users\apinales\github\Time-Appliance-Project\Time-Card\GNSS\UBlox\RCB-F9T\Altium\GPS_MODULE_RCB-F9T-00B\GPS_MODULE_ZED-F9T.PcbDoc
 Configuration_Name5=OutputConfigurationParameter5
-Configuration_Item5=CArc=Full|CFill=Full|Comment=Full|Coordinate=Full|CPad=Full|CRegion=Full|CText=Full|CTrack=Full|CVia=Full|Designator=Full|Dimension=Full|DLayer1=TopLayer|DLayer2=BottomLayer|DrillType=Regular|FArc=Full|FFill=Full|FPad=Full|FRegion=Full|FText=Full|FTrack=Full|FVia=Full|Layer=BottomLayer|Polygon=Full|PrintOutIndex=0|Record=PcbPrintLayer|DocumentPath=X:\My Drive\Boards\GNSS Receiver Module\Altium\GNSS_Receiver\GNSS_Receiver_PCB.PcbDoc
+Configuration_Item5=CArc=Full|CFill=Full|Comment=Full|Coordinate=Full|CPad=Full|CRegion=Full|CText=Full|CTrack=Full|CVia=Full|Designator=Full|Dimension=Full|DLayer1=TopLayer|DLayer2=BottomLayer|DrillType=Regular|FArc=Full|FFill=Full|FPad=Full|FRegion=Full|FText=Full|FTrack=Full|FVia=Full|Layer=BottomLayer|Polygon=Full|PrintOutIndex=0|Record=PcbPrintLayer|DocumentPath=C:\Users\apinales\github\Time-Appliance-Project\Time-Card\GNSS\UBlox\RCB-F9T\Altium\GPS_MODULE_RCB-F9T-00B\GPS_MODULE_ZED-F9T.PcbDoc
 Configuration_Name6=OutputConfigurationParameter6
-Configuration_Item6=CArc=Full|CFill=Full|Comment=Full|Coordinate=Full|CPad=Full|CRegion=Full|CText=Full|CTrack=Full|CVia=Full|Designator=Full|Dimension=Full|DLayer1=TopLayer|DLayer2=BottomLayer|DrillType=Regular|FArc=Full|FFill=Full|FPad=Full|FRegion=Full|FText=Full|FTrack=Full|FVia=Full|Layer=MultiLayer|Polygon=Full|PrintOutIndex=0|Record=PcbPrintLayer|DocumentPath=X:\My Drive\Boards\GNSS Receiver Module\Altium\GNSS_Receiver\GNSS_Receiver_PCB.PcbDoc
+Configuration_Item6=CArc=Full|CFill=Full|Comment=Full|Coordinate=Full|CPad=Full|CRegion=Full|CText=Full|CTrack=Full|CVia=Full|Designator=Full|Dimension=Full|DLayer1=TopLayer|DLayer2=BottomLayer|DrillType=Regular|FArc=Full|FFill=Full|FPad=Full|FRegion=Full|FText=Full|FTrack=Full|FVia=Full|Layer=MultiLayer|Polygon=Full|PrintOutIndex=0|Record=PcbPrintLayer|DocumentPath=C:\Users\apinales\github\Time-Appliance-Project\Time-Card\GNSS\UBlox\RCB-F9T\Altium\GPS_MODULE_RCB-F9T-00B\GPS_MODULE_ZED-F9T.PcbDoc
 Configuration_Name7=OutputConfigurationParameter7
-Configuration_Item7=CArc=Full|CFill=Full|Comment=Full|Coordinate=Full|CPad=Full|CRegion=Full|CText=Full|CTrack=Full|CVia=Full|Designator=Full|Dimension=Full|DLayer1=TopLayer|DLayer2=BottomLayer|DrillType=Regular|FArc=Full|FFill=Full|FPad=Full|FRegion=Full|FText=Full|FTrack=Full|FVia=Full|Layer=Mechanical1|Polygon=Full|PrintOutIndex=0|Record=PcbPrintLayer|DocumentPath=X:\My Drive\Boards\GNSS Receiver Module\Altium\GNSS_Receiver\GNSS_Receiver_PCB.PcbDoc
+Configuration_Item7=CArc=Full|CFill=Full|Comment=Full|Coordinate=Full|CPad=Full|CRegion=Full|CText=Full|CTrack=Full|CVia=Full|Designator=Full|Dimension=Full|DLayer1=TopLayer|DLayer2=BottomLayer|DrillType=Regular|FArc=Full|FFill=Full|FPad=Full|FRegion=Full|FText=Full|FTrack=Full|FVia=Full|Layer=Mechanical1|Polygon=Full|PrintOutIndex=0|Record=PcbPrintLayer|DocumentPath=C:\Users\apinales\github\Time-Appliance-Project\Time-Card\GNSS\UBlox\RCB-F9T\Altium\GPS_MODULE_RCB-F9T-00B\GPS_MODULE_ZED-F9T.PcbDoc
 Configuration_Name8=OutputConfigurationParameter8
-Configuration_Item8=CArc=Full|CFill=Full|Comment=Full|Coordinate=Full|CPad=Full|CRegion=Full|CText=Full|CTrack=Full|CVia=Full|Designator=Full|Dimension=Full|DLayer1=TopLayer|DLayer2=BottomLayer|DrillType=Regular|FArc=Full|FFill=Full|FPad=Full|FRegion=Full|FText=Full|FTrack=Full|FVia=Full|Layer=Mechanical2|Polygon=Full|PrintOutIndex=0|Record=PcbPrintLayer|DocumentPath=X:\My Drive\Boards\GNSS Receiver Module\Altium\GNSS_Receiver\GNSS_Receiver_PCB.PcbDoc
+Configuration_Item8=CArc=Full|CFill=Full|Comment=Full|Coordinate=Full|CPad=Full|CRegion=Full|CText=Full|CTrack=Full|CVia=Full|Designator=Full|Dimension=Full|DLayer1=TopLayer|DLayer2=BottomLayer|DrillType=Regular|FArc=Full|FFill=Full|FPad=Full|FRegion=Full|FText=Full|FTrack=Full|FVia=Full|Layer=Mechanical2|Polygon=Full|PrintOutIndex=0|Record=PcbPrintLayer|DocumentPath=C:\Users\apinales\github\Time-Appliance-Project\Time-Card\GNSS\UBlox\RCB-F9T\Altium\GPS_MODULE_RCB-F9T-00B\GPS_MODULE_ZED-F9T.PcbDoc
 Configuration_Name9=OutputConfigurationParameter9
-Configuration_Item9=CArc=Full|CFill=Full|Comment=Full|Coordinate=Full|CPad=Full|CRegion=Full|CText=Full|CTrack=Full|CVia=Full|Designator=Full|Dimension=Full|DLayer1=TopLayer|DLayer2=BottomLayer|DrillType=Regular|FArc=Full|FFill=Full|FPad=Full|FRegion=Full|FText=Full|FTrack=Full|FVia=Full|Layer=Mechanical5|Polygon=Full|PrintOutIndex=0|Record=PcbPrintLayer|DocumentPath=X:\My Drive\Boards\GNSS Receiver Module\Altium\GNSS_Receiver\GNSS_Receiver_PCB.PcbDoc
+Configuration_Item9=CArc=Full|CFill=Full|Comment=Full|Coordinate=Full|CPad=Full|CRegion=Full|CText=Full|CTrack=Full|CVia=Full|Designator=Full|Dimension=Full|DLayer1=TopLayer|DLayer2=BottomLayer|DrillType=Regular|FArc=Full|FFill=Full|FPad=Full|FRegion=Full|FText=Full|FTrack=Full|FVia=Full|Layer=Mechanical5|Polygon=Full|PrintOutIndex=0|Record=PcbPrintLayer|DocumentPath=C:\Users\apinales\github\Time-Appliance-Project\Time-Card\GNSS\UBlox\RCB-F9T\Altium\GPS_MODULE_RCB-F9T-00B\GPS_MODULE_ZED-F9T.PcbDoc
 Configuration_Name10=OutputConfigurationParameter10
-Configuration_Item10=CArc=Full|CFill=Full|Comment=Full|Coordinate=Full|CPad=Full|CRegion=Full|CText=Full|CTrack=Full|CVia=Full|Designator=Full|Dimension=Full|DLayer1=TopLayer|DLayer2=BottomLayer|DrillType=Regular|FArc=Full|FFill=Full|FPad=Full|FRegion=Full|FText=Full|FTrack=Full|FVia=Full|Layer=Mechanical8|Polygon=Full|PrintOutIndex=0|Record=PcbPrintLayer|DocumentPath=X:\My Drive\Boards\GNSS Receiver Module\Altium\GNSS_Receiver\GNSS_Receiver_PCB.PcbDoc
+Configuration_Item10=CArc=Full|CFill=Full|Comment=Full|Coordinate=Full|CPad=Full|CRegion=Full|CText=Full|CTrack=Full|CVia=Full|Designator=Full|Dimension=Full|DLayer1=TopLayer|DLayer2=BottomLayer|DrillType=Regular|FArc=Full|FFill=Full|FPad=Full|FRegion=Full|FText=Full|FTrack=Full|FVia=Full|Layer=Mechanical8|Polygon=Full|PrintOutIndex=0|Record=PcbPrintLayer|DocumentPath=C:\Users\apinales\github\Time-Appliance-Project\Time-Card\GNSS\UBlox\RCB-F9T\Altium\GPS_MODULE_RCB-F9T-00B\GPS_MODULE_ZED-F9T.PcbDoc
 Configuration_Name11=OutputConfigurationParameter11
-Configuration_Item11=CArc=Full|CFill=Full|Comment=Full|Coordinate=Full|CPad=Full|CRegion=Full|CText=Full|CTrack=Full|CVia=Full|Designator=Full|Dimension=Full|DLayer1=TopLayer|DLayer2=BottomLayer|DrillType=Regular|FArc=Full|FFill=Full|FPad=Full|FRegion=Full|FText=Full|FTrack=Full|FVia=Full|Layer=Mechanical13|Polygon=Full|PrintOutIndex=0|Record=PcbPrintLayer|DocumentPath=X:\My Drive\Boards\GNSS Receiver Module\Altium\GNSS_Receiver\GNSS_Receiver_PCB.PcbDoc
+Configuration_Item11=CArc=Full|CFill=Full|Comment=Full|Coordinate=Full|CPad=Full|CRegion=Full|CText=Full|CTrack=Full|CVia=Full|Designator=Full|Dimension=Full|DLayer1=TopLayer|DLayer2=BottomLayer|DrillType=Regular|FArc=Full|FFill=Full|FPad=Full|FRegion=Full|FText=Full|FTrack=Full|FVia=Full|Layer=Mechanical13|Polygon=Full|PrintOutIndex=0|Record=PcbPrintLayer|DocumentPath=C:\Users\apinales\github\Time-Appliance-Project\Time-Card\GNSS\UBlox\RCB-F9T\Altium\GPS_MODULE_RCB-F9T-00B\GPS_MODULE_ZED-F9T.PcbDoc
 Configuration_Name12=OutputConfigurationParameter12
-Configuration_Item12=CArc=Full|CFill=Full|Comment=Full|Coordinate=Full|CPad=Full|CRegion=Full|CText=Full|CTrack=Full|CVia=Full|Designator=Full|Dimension=Full|DLayer1=TopLayer|DLayer2=BottomLayer|DrillType=Regular|FArc=Full|FFill=Full|FPad=Full|FRegion=Full|FText=Full|FTrack=Full|FVia=Full|Layer=Mechanical15|Polygon=Full|PrintOutIndex=0|Record=PcbPrintLayer|DocumentPath=X:\My Drive\Boards\GNSS Receiver Module\Altium\GNSS_Receiver\GNSS_Receiver_PCB.PcbDoc
+Configuration_Item12=CArc=Full|CFill=Full|Comment=Full|Coordinate=Full|CPad=Full|CRegion=Full|CText=Full|CTrack=Full|CVia=Full|Designator=Full|Dimension=Full|DLayer1=TopLayer|DLayer2=BottomLayer|DrillType=Regular|FArc=Full|FFill=Full|FPad=Full|FRegion=Full|FText=Full|FTrack=Full|FVia=Full|Layer=Mechanical15|Polygon=Full|PrintOutIndex=0|Record=PcbPrintLayer|DocumentPath=C:\Users\apinales\github\Time-Appliance-Project\Time-Card\GNSS\UBlox\RCB-F9T\Altium\GPS_MODULE_RCB-F9T-00B\GPS_MODULE_ZED-F9T.PcbDoc
 Configuration_Name13=OutputConfigurationParameter13
-Configuration_Item13=CArc=Full|CFill=Full|Comment=Full|Coordinate=Full|CPad=Full|CRegion=Full|CText=Full|CTrack=Full|CVia=Full|Designator=Full|Dimension=Full|DLayer1=TopLayer|DLayer2=BottomLayer|DrillType=Regular|FArc=Full|FFill=Full|FPad=Full|FRegion=Full|FText=Full|FTrack=Full|FVia=Full|Layer=Mechanical28|Polygon=Full|PrintOutIndex=0|Record=PcbPrintLayer|DocumentPath=X:\My Drive\Boards\GNSS Receiver Module\Altium\GNSS_Receiver\GNSS_Receiver_PCB.PcbDoc
+Configuration_Item13=CArc=Full|CFill=Full|Comment=Full|Coordinate=Full|CPad=Full|CRegion=Full|CText=Full|CTrack=Full|CVia=Full|Designator=Full|Dimension=Full|DLayer1=TopLayer|DLayer2=BottomLayer|DrillType=Regular|FArc=Full|FFill=Full|FPad=Full|FRegion=Full|FText=Full|FTrack=Full|FVia=Full|Layer=Mechanical28|Polygon=Full|PrintOutIndex=0|Record=PcbPrintLayer|DocumentPath=C:\Users\apinales\github\Time-Appliance-Project\Time-Card\GNSS\UBlox\RCB-F9T\Altium\GPS_MODULE_RCB-F9T-00B\GPS_MODULE_ZED-F9T.PcbDoc
 

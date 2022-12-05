@@ -21,7 +21,7 @@ TargetOutputMedium=Folder Structure
 VariantName=V1I1
 VariantScope=1
 CurrentConfigurationName=
-TargetPrinter=\\printer.thefacebook.com\MPK16-02-I-Friends
+TargetPrinter=\\printer.thefacebook.com\MPK15-01-J-Elevation_Partners
 PrinterOptions=Record=PrinterOptions|Copies=1|Duplex=1|TrueTypeOptions=3|Collate=1|PrintJobKind=1|PrintWhat=1
 OutputMedium1=Print Job
 OutputMedium1_Type=Printer
@@ -36,7 +36,7 @@ OutputMedium4_Type=Multimedia
 OutputType1=Schematic Print
 OutputName1=Schematic Prints
 OutputCategory1=Documentation
-OutputDocumentPath1=[Project Physical Documents]
+OutputDocumentPath1=
 OutputVariantName1=
 OutputEnabled1=0
 OutputEnabled1_OutputMedium1=0
@@ -44,7 +44,7 @@ OutputEnabled1_OutputMedium2=1
 OutputEnabled1_OutputMedium3=0
 OutputEnabled1_OutputMedium4=0
 OutputDefault1=0
-PageOptions1=Record=PageOptions|CenterHorizontal=True|CenterVertical=True|PrintScale=1.02|XCorrection=1.00|YCorrection=1.00|PrintKind=0|BorderSize=5000000|LeftOffset=0|BottomOffset=0|Orientation=2|PaperLength=1000|PaperWidth=1000|Scale=100|PaperSource=7|PrintQuality=-3|MediaType=1|DitherType=10|PrintScaleMode=0|PaperKind=Letter|PaperIndex=1
+PageOptions1=Record=PageOptions|CenterHorizontal=True|CenterVertical=True|PrintScale=0.50|XCorrection=1.00|YCorrection=1.00|PrintKind=0|BorderSize=5000000|LeftOffset=0|BottomOffset=0|Orientation=2|PaperLength=1000|PaperWidth=1000|Scale=100|PaperSource=7|PrintQuality=-3|MediaType=1|DitherType=10|PrintScaleMode=1|PrintScaleName=PrintFitPageWidth|PaperKind=A0
 Configuration1_Name1=OutputConfigurationParameter1
 Configuration1_Item1=Record=SchPrintView|ShowNoERC=False|ShowParamSet=True|ShowProbe=True|ShowBlanket=True|NoERCSymbolsToShow="Thin Cross","Thick Cross","Small Cross",Checkbox,Triangle|ShowNote=True|ShowNoteCollapsed=True|ShowOpenEnds=True|ExpandDesignator=True|ExpandNetLabel=False|ExpandPort=False|ExpandSheetNum=False|ExpandDocNum=False|PrintArea=0|PrintAreaRect.X1=0|PrintAreaRect.Y1=0|PrintAreaRect.X2=0|PrintAreaRect.Y2=0|DocumentPath=All SCH Documents
 OutputType2=Gerber
@@ -78,10 +78,10 @@ OutputName4=Bill of Materials
 OutputCategory4=Report
 OutputDocumentPath4=
 OutputVariantName4=
-OutputEnabled4=1
+OutputEnabled4=0
 OutputEnabled4_OutputMedium1=0
 OutputEnabled4_OutputMedium2=0
-OutputEnabled4_OutputMedium3=3
+OutputEnabled4_OutputMedium3=0
 OutputEnabled4_OutputMedium4=0
 OutputDefault4=0
 PageOptions4=Record=PageOptions|CenterHorizontal=True|CenterVertical=True|PrintScale=1.00|XCorrection=1.00|YCorrection=1.00|PrintKind=1|BorderSize=5000000|LeftOffset=0|BottomOffset=0|Orientation=2|PaperLength=1000|PaperWidth=1000|Scale=100|PaperSource=7|PrintQuality=-3|MediaType=1|DitherType=10|PrintScaleMode=1|PaperKind=Letter|PaperIndex=1
@@ -105,7 +105,7 @@ OutputVariantName5=
 OutputEnabled5=1
 OutputEnabled5_OutputMedium1=0
 OutputEnabled5_OutputMedium2=0
-OutputEnabled5_OutputMedium3=4
+OutputEnabled5_OutputMedium3=3
 OutputEnabled5_OutputMedium4=0
 OutputDefault5=0
 Configuration5_Name1=OutputConfigurationParameter1
@@ -139,7 +139,7 @@ ShowComponentParameters2=1
 GlobalBookmarks2=0
 PDFACompliance2=Disabled
 PDFVersion2=Default
-OutputFilePath3=C:\Users\apinales\Desktop\pcb\Project Outputs for GPS_MODULE_ZED-F9T-00B\
+OutputFilePath3=C:\Users\apinales\github\Time-Appliance-Project\Time-Card\GNSS\UBlox\RCB-F9T\Altium\GPS_MODULE_RCB-F9T-00B\Project Outputs for GPS_MODULE_ZED-F9T-00B\
 ReleaseManaged3=1
 OutputBasePath3=Project Outputs for GPS_MODULE_ZED-F9T-00B
 OutputPathMedia3=
@@ -193,7 +193,7 @@ WmvQuality4=80
 [GeneratedFilesSettings]
 RelativeOutputPath2=
 OpenOutputs2=1
-RelativeOutputPath3=C:\Users\apinales\Desktop\pcb\Project Outputs for GPS_MODULE_ZED-F9T-00B\
+RelativeOutputPath3=C:\Users\apinales\github\Time-Appliance-Project\Time-Card\GNSS\UBlox\RCB-F9T\Altium\GPS_MODULE_RCB-F9T-00B\Project Outputs for GPS_MODULE_ZED-F9T-00B\
 OpenOutputs3=1
 AddToProject3=1
 TimestampFolder3=0
