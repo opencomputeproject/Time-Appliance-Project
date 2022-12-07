@@ -1,0 +1,12 @@
+===================================
+Configuration Memory information
+===================================
+File Format        BIN
+Interface          SPIX4
+Size               16M
+Start Address      0x00000000
+End Address        0x00FFFFFF
+
+Addr1         Addr2         Date                    File(s)
+0x00000000    0x002C8B2F    Oct 28 17:43:50 2022    [LOCAL_PATH]/Implementation/Xilinx/TimeCard_Production/Binaries/Golden_TimeCardOS_Production.bit
+0x00400000    0x006C535B    Dec  6 14:17:43 2022    [LOCAL_PATH]/Implementation/Xilinx/TimeCard_Production/Binaries/TimeCardOS_Production.bit
