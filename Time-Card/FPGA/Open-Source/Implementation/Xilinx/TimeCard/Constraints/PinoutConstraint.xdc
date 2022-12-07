@@ -194,10 +194,10 @@ set_property PACKAGE_PIN G15 [get_ports Gnss2RstN_RstOut]
 set_property IOSTANDARD LVCMOS33 [get_ports Gnss2RstN_RstOut]
 
 #MAC
-set_property PACKAGE_PIN AA18 [get_ports MacTxDat_DatOut]
-set_property IOSTANDARD LVCMOS33 [get_ports MacTxDat_DatOut]
-set_property PACKAGE_PIN AB18 [get_ports MacRxDat_DatIn]
-set_property IOSTANDARD LVCMOS33 [get_ports MacRxDat_DatIn]
+set_property PACKAGE_PIN AA18 [get_ports MacTxDat_DatInOut]
+set_property IOSTANDARD LVCMOS33 [get_ports MacTxDat_DatInOut]
+set_property PACKAGE_PIN AB18 [get_ports MacRxDat_DatInOut]
+set_property IOSTANDARD LVCMOS33 [get_ports MacRxDat_DatInOut]
 
 set_property PACKAGE_PIN AA10 [get_ports MacFreqControl_DatOut]
 set_property IOSTANDARD LVCMOS33 [get_ports MacFreqControl_DatOut]

@@ -21,7 +21,7 @@
 
 ## 1. Design Overview
 
-The original Open Source Timicard design includes open-source IP cores from [NetTimeLogic](https://www.nettimelogic.com/) and free-to-use IP cores from [Xilinx](https://www.xilinx.com/).
+The original Open Source Timecard design includes open-source IP cores from [NetTimeLogic](https://www.nettimelogic.com/) and free-to-use IP cores from [Xilinx](https://www.xilinx.com/).
 The following cores are used in the Open Source Timecard design.
 
 |Core|Vendor|Description|
@@ -48,6 +48,7 @@ The following cores are used in the Open Source Timecard design.
 |[TC Clock Detector](../../../Ips/ClockDetector)|NetTimeLogic|Detection of the available clock sources and selection of the clocks to be used, according to a priority scheme and a configuration|
 |[TC SMA Selector](../../../Ips/SmaSelector)|NetTimeLogic|Select the mapping of the inputs and the outputs of the 4 SMA connectors of the [Timecard](https://github.com/opencomputeproject/Time-Appliance-Project/tree/master/Time-Card)|
 |[TC PPS Selector](../../../Ips/PpsSourceSelector)|NetTimeLogic|Detection of the available PPS sources and selection of the PPS source to be used, according to a priority scheme and a configuration|
+|[TC Communication Selector](../../../Ips/CommunicationSelector)|NetTimeLogic|Selection of the clock's communication interface (UART or I<sup>2</sup>C)|
 |[TC Dummy Axi Slave](../../../Ips/DummyAxiSlave)|NetTimeLogic|AXI4L slave that is used as a placeholder of an address range|
 |[TC FPGA Version](../../../Ips/FpgaVersion)|NetTimeLogic|AXI register that stores the design's version numbers|
 
@@ -73,15 +74,17 @@ The AXI Slave interfaces have the following addresses:
 |-----|-------------------|--------------|------------|
 |AXI PCIe Control|S_AXI_CTL|0x0001_0000|0x0001_0FFF|
 |TC FPGA Version|axi4l_slave|0x0002_0000|0x0002_0FFF|
-|AXI GPIO Ext|S_AXI|0x0010_0000|0x0010_FFFF|
-|AXI GPIO GNSS/MAC|S_AXI|0x0011_0000|0x0011_FFFF|
-|TC Clock Detector|axi4l_slave|0x0013_0000|0x0013_FFFF|
-|TC SMA Selector|axi4l_slave1|0x0014_0000|0x0014_FFFF|
+|AXI GPIO Ext|S_AXI|0x0010_0000|0x0010_0FFF|
+|AXI GPIO GNSS/MAC|S_AXI|0x0011_0000|0x0011_0FFF|
+|TC Clock Detector|axi4l_slave|0x0013_0000|0x0013_0FFF|
+|TC SMA Selector|axi4l_slave1|0x0014_0000|0x0014_3FFF|
 |AXI I2C|S_AXI|0x0015_0000|0x0015_FFFF|
 |AXI UART 16550 GNSS1|S_AXI|0x0016_0000|0x0016_FFFF|
 |AXI UART 16550 GNSS2|S_AXI|0x0017_0000|0x0017_FFFF|
 |AXI UART 16550 MAC|S_AXI|0x0018_0000|0x0018_FFFF|
-|TC SMA Selector|axi4l_slave2|0x0022_0000|0x0022_FFFF|
+|AXI UART 16550 ΕΧΤ|S_AXI|0x001Α_0000|0x001Α_FFFF|
+|AXI I2C Clock|S_AXI|0x0020_0000|0x0020_FFFF|
+|TC SMA Selector|axi4l_slave2|0x0022_0000|0x0022_3FFF|
 |AXI HWICAP|S_AXI_LITE|0x0030_0000|0x0030_FFFF|
 |AXI Quad SPI Flash|AXI_LITE|0x0031_0000|0x0031_FFFF|
 |TC Adj. Clock|axi4l_slave|0x0100_0000|0x0100_FFFF|
@@ -111,7 +114,9 @@ The AXI Slave interfaces have the following addresses:
 
 The detailed register description of each instance is available at the corresponding core description document (see links at [Chapter 1](#1-design-overview)). 
 
-*NOTE:* The Version Slave has one single 32-Bit Register. 
+### 2.1 FPGA Version Register
+
+The Version Slave has one single 32-Bit Register. 
 The upper 16 Bits show the version number of the golden image and the lower 16 Bits the version number of the regular image.
 E.g.:
 
@@ -119,6 +124,18 @@ E.g.:
 - Register 0x0200_0000 of the Regular image shows: 0x0000_0003
 
 If the lower 16 Bits are 0x0000 the Golden image has booted.
+
+### 2.2 AXI GPIO Registers
+
+The implementation uses two instantiations of the [AXI GPIO](https://www.xilinx.com/products/intellectual-property/axi_gpio.html) IP. 
+
+The mapping of the AXI GPIO Ext is as below
+
+![AXI_GPIO_Ext](Additional%20Files/AXI_GPIO_Ext.png)
+
+The mapping of the AXI GPIO GNSS/MAC is as below
+
+![AXI_GPIO_GNSS_MAC](Additional%20Files/AXI_GPIO_GNSS_MAC.png)
 
 ## 3. Interrupt Mapping
 The interrupts in the design are connected to the MSI Vector of the AXI Memory Mapped to PCI Express Core via a MSI controller. 
@@ -134,7 +151,7 @@ Level interrupts (e.g. AXI UART 16550) are taking at least one round for the nex
 |2|TC Signal TS1|
 |3|AXI UART 16550 GNSS1|
 |4|AXI UART 16550 GNSS2|
-|5|AXI UART 16550 MAC|
+|5|AXI UART 16550 MAC or AXI I<sup>2</sup>C OSC|
 |6|TC Signal TS2|
 |7|AXI I2C|
 |8|AXI HWICAP|
@@ -203,7 +220,7 @@ The project will be generated in the following folder:
 A bitstream generation script runs synthesis and implementation and generates the bitstreams for the specified design runs:
 - The script */[YOUR_PATH]/Implementation/Xilinx/TimeCard/CreateBinaries.tcl* runs the synthesis/implementation of the TimeCardOS design, it generates the  bitstreams and it updates correspondingly the Factory_TimeCardOS.bin
 - The script */[YOUR_PATH]/Implementation/Xilinx/TimeCard/CreateBinariesGolden.tcl* runs the synthesis/implementation of the Golden_TimeCardOS design, it generates the bitstreams and it updates correspondingly the Factory_TimeCardOS.bin
-- The script */[YOUR_PATH]/Implementation/Xilinx/TimeCard/CreateBinariesAll.tcl* runs the synthesis/implementation of both designs, it generates the corresponding bitstreams and it updates correspondingly the Factory_TimeCardOS.bin
+- The script */[YOUR_PATH]/Implementation/Xilinx/TimeCard/CreateBinariesAll.tcl* runs the synthesis/implementation of both designs, it generates the corresponding bitstreams and it updates correspondingly the Factory_TimeCardOS.bin. It also create the file TimeCardOS_Gotham.bin which is based on the TimeCardOS.bin and it has an additional 16-byte header with the PCIe ID. 
 
 The binaries are copied to the folder */[YOUR_PATH]/Implementation/Xilinx/TimeCard/Binaries/*. 
 The existing bitstreams in the Binaries folder are overwritten and also a copy of the files is created in a subfolder of the Binaries folder with a timestamp. This way, the latest implementation run is always found at the same position, but backups of the previous (and current) runs are still available.
@@ -212,7 +229,7 @@ The latest binaries can be found here:
 - */[YOUR_PATH]/Implementation/Xilinx/TimeCard/Binaries/Factory_TimeCardOS.bin*
 - */[YOUR_PATH]/Implementation/Xilinx/TimeCard/Binaries/Golden_TimeCardOS.bin*
 - */[YOUR_PATH]/Implementation/Xilinx/TimeCard/Binaries/TimeCardOS.bin*
-
+- */[YOUR_PATH]/Implementation/Xilinx/TimeCard/Binaries/TimeCardOS_Gotham.bin*
 
 The timestamped backups are found in a folder in this format:
 
@@ -233,8 +250,8 @@ The design is implemented at the FPGA [Artix-7 XC7A100T-FGG484-1](https://docs.x
 A resource utilization summary is shown below.
 |Resource|Used|Available|Util%|
 |--------|:--:|:-------:|:---:|
-|LUTs|34777|63400|54.85|
-|Flip Flops|29128|126800|22.97|
+|LUTs|35300|63400|55.68|
+|Flip Flops|29881|126800|23.57|
 |BRAMs|22.5|135|22.90|
 |DSPs|23|240|9.58|
 
@@ -264,14 +281,14 @@ This combined image has following structure:
 |-------------------|----------|
 |File Format        |BIN       |
 |Interface          |SPIX4     |
-|Size               |32M       |
+|Size               |16M       |
 |Start Address      |0x00000000|
-|End Address        |0x01FFFFFF|
+|End Address        |0x00FFFFFF|
 
 |Addr1         |Addr2         |File(s)              |
 |:------------:|:------------:|---------------------|
-|0x00000000    |0x002C93D7    |Golden_TimeCardOS.bit|
-|0x00400000    |0x006C634B    |TimeCardOS.bit       |
+|0x00000000    |0x002C2A3B    |Golden_TimeCardOS.bit|
+|0x00400000    |0x006C37AF    |TimeCardOS.bit       |
 
 The image *TimeCardOS.bin* is the update/regular image and it shall be used for the field update via SPI.
 For the update, this bitstream must be placed at 0x00400000 in the SPI flash.

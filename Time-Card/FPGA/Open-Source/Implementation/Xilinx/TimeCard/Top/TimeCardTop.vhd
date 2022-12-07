@@ -124,8 +124,8 @@ entity TimeCardTop is
         -----------------------------------------------------------------
         --MAC
         -----------------------------------------------------------------
-        MacTxDat_DatOut             : out   std_logic;
-        MacRxDat_DatIn              : in    std_logic;
+        MacTxDat_DatInOut           : inout std_logic;
+        MacRxDat_DatInOut           : inout std_logic;
         
         MacFreqControl_DatOut       : out   std_logic;
         MacAlarm_DatIn              : in    std_logic;
@@ -201,8 +201,14 @@ architecture TimeCardTop_Arch of TimeCardTop is
     
     component TimeCard_wrapper is
         port (
+            Clk_RxSdaT_EnaOut : out STD_LOGIC;
+            Clk_RxSda_DatIn : in STD_LOGIC;
+            Clk_RxSda_DatOut : out STD_LOGIC;
+            Clk_TxSclT_EnaOut : out STD_LOGIC;
+            Clk_TxScl_DatIn : in STD_LOGIC;
+            Clk_TxScl_DatOut : out STD_LOGIC;
             Ext_DatIn_tri_i : in STD_LOGIC_VECTOR ( 1 downto 0 );
-            Ext_DatOut_tri_o : out STD_LOGIC_VECTOR ( 6 downto 0 );
+            Ext_DatOut : out STD_LOGIC_VECTOR ( 6 downto 0 );
             GoldenImageN_EnaIn : in STD_LOGIC;
             GpioGnss_DatOut_tri_o : out STD_LOGIC_VECTOR ( 1 downto 0 );
             GpioMac_DatIn_tri_i : in STD_LOGIC_VECTOR ( 1 downto 0 );
@@ -260,8 +266,6 @@ architecture TimeCardTop_Arch of TimeCardTop is
             UartGnss1Tx_DatOut : out STD_LOGIC;
             UartGnss2Rx_DatIn : in STD_LOGIC;
             UartGnss2Tx_DatOut : out STD_LOGIC;
-            UartMacRx_DatIn : in STD_LOGIC;
-            UartMacTx_DatOut : out STD_LOGIC;
             pcie_7x_mgt_0_rxn : in STD_LOGIC_VECTOR ( 0 to 0 );
             pcie_7x_mgt_0_rxp : in STD_LOGIC_VECTOR ( 0 to 0 );
             pcie_7x_mgt_0_txn : out STD_LOGIC_VECTOR ( 0 to 0 );
@@ -348,6 +352,12 @@ architecture TimeCardTop_Arch of TimeCardTop is
     
     signal GoldenImageN_Ena             : std_logic;
     
+    signal Clk_RxSda_i                  : std_logic;
+    signal Clk_RxSda_o                  : std_logic;
+    signal Clk_RxSda_t                  : std_logic;
+    signal Clk_TxScl_i                  : std_logic;
+    signal Clk_TxScl_o                  : std_logic;
+    signal Clk_TxScl_t                  : std_logic;
 --*****************************************************************************************
 -- Architecture Implementation
 --*****************************************************************************************
@@ -355,6 +365,14 @@ begin
     --*************************************************************************************
     -- Concurrent Statements
     --*************************************************************************************
+    
+    -- CLK UART and CLK I2C share the same pins (it is configurable which interface is active)
+    Clk_RxSda_i <= MacRxDat_DatInOut;
+    MacRxDat_DatInOut <= Clk_RxSda_o when (Clk_RxSda_t = '0') else 'Z';
+    
+    Clk_TxScl_i <= MacTxDat_DatInOut;
+    MacTxDat_DatInOut <= Clk_TxScl_o when (Clk_TxScl_t = '0') else 'Z';
+    
     -- SMA
     Sma1InBufEnableN_EnOut <= not SmaIn1_En;
     Sma2InBufEnableN_EnOut <= not SmaIn2_En;
@@ -520,7 +538,7 @@ begin
         InSync_DatOut               => open,
         
         Ext_DatIn_tri_i             => Ext_DatIn,
-        Ext_DatOut_tri_o            => Ext_DatOut,
+        Ext_DatOut                  => Ext_DatOut,
         
         I2c_scl_io                  => I2cScl_ClkInOut,
         I2c_sda_io                  => I2cSda_DatInOut,
@@ -572,8 +590,12 @@ begin
         UartGnss2Rx_DatIn           => UartGnss2RxDat_DatIn,
         UartGnss2Tx_DatOut          => UartGnss2TxDat_Dat,
         
-        UartMacRx_DatIn             => MacRxDat_DatIn,
-        UartMacTx_DatOut            => MacTxDat_DatOut,
+        Clk_RxSda_DatIn             => Clk_RxSda_i,
+        Clk_RxSda_DatOut            => Clk_RxSda_o,
+        Clk_RxSdaT_EnaOut           => Clk_RxSda_t,
+        Clk_TxSclT_EnaOut           => Clk_TxScl_t,
+        Clk_TxScl_DatIn             => Clk_TxScl_i,
+        Clk_TxScl_DatOut            => Clk_TxScl_o,
         
         PcieRefClockN(0)            => PcieRefClkN_ClkIn,
         PcieRefClockP(0)            => PcieRefClkP_ClkIn,

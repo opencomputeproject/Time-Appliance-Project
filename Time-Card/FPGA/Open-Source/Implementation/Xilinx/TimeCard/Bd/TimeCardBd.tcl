@@ -132,6 +132,7 @@ if { $bCheckIPs == 1 } {
    set list_check_ips "\ 
 nettimelogic.com:TimeCardLib:TC_AdjustableClock:1.0\
 nettimelogic.com:TimeCardLib:TC_ClockDetector:1.0\
+nettimelogic.com:TimeCardLib:TC_CommunicationSelector:1.0\
 nettimelogic.com:TimeCardLib:TC_ConfMaster:1.0\
 nettimelogic.com:TimeCardLib:TC_CoreList:1.0\
 nettimelogic.com:TimeCardLib:TC_DummyAxiSlave:1.0\
@@ -155,6 +156,7 @@ xilinx.com:ip:clk_wiz:6.0\
 xilinx.com:ip:proc_sys_reset:5.0\
 xilinx.com:ip:util_ds_buf:2.1\
 xilinx.com:ip:xlconstant:1.1\
+xilinx.com:ip:xlslice:1.0\
 "
 
    set list_ips_missing ""
@@ -247,8 +249,6 @@ proc create_root_design { parentCell } {
   # Create interface ports
   set Ext_DatIn [ create_bd_intf_port -mode Master -vlnv xilinx.com:interface:gpio_rtl:1.0 Ext_DatIn ]
 
-  set Ext_DatOut [ create_bd_intf_port -mode Master -vlnv xilinx.com:interface:gpio_rtl:1.0 Ext_DatOut ]
-
   set GpioGnss_DatOut [ create_bd_intf_port -mode Master -vlnv xilinx.com:interface:gpio_rtl:1.0 GpioGnss_DatOut ]
 
   set GpioMac_DatIn [ create_bd_intf_port -mode Master -vlnv xilinx.com:interface:gpio_rtl:1.0 GpioMac_DatIn ]
@@ -266,6 +266,13 @@ proc create_root_design { parentCell } {
 
 
   # Create ports
+  set Clk_RxSdaT_EnaOut [ create_bd_port -dir O Clk_RxSdaT_EnaOut ]
+  set Clk_RxSda_DatIn [ create_bd_port -dir I Clk_RxSda_DatIn ]
+  set Clk_RxSda_DatOut [ create_bd_port -dir O Clk_RxSda_DatOut ]
+  set Clk_TxSclT_EnaOut [ create_bd_port -dir O Clk_TxSclT_EnaOut ]
+  set Clk_TxScl_DatIn [ create_bd_port -dir I Clk_TxScl_DatIn ]
+  set Clk_TxScl_DatOut [ create_bd_port -dir O Clk_TxScl_DatOut ]
+  set Ext_DatOut [ create_bd_port -dir O -from 6 -to 0 Ext_DatOut ]
   set GoldenImageN_EnaIn [ create_bd_port -dir I -type rst GoldenImageN_EnaIn ]
   set InHoldover_DatOut [ create_bd_port -dir O InHoldover_DatOut ]
   set InSync_DatOut [ create_bd_port -dir O InSync_DatOut ]
@@ -330,8 +337,6 @@ proc create_root_design { parentCell } {
   set UartGnss1Tx_DatOut [ create_bd_port -dir O UartGnss1Tx_DatOut ]
   set UartGnss2Rx_DatIn [ create_bd_port -dir I UartGnss2Rx_DatIn ]
   set UartGnss2Tx_DatOut [ create_bd_port -dir O UartGnss2Tx_DatOut ]
-  set UartMacRx_DatIn [ create_bd_port -dir I UartMacRx_DatIn ]
-  set UartMacTx_DatOut [ create_bd_port -dir O UartMacTx_DatOut ]
 
   # Create instance: BufgMux_IPI_0, and set properties
   set block_name BufgMux_IPI
@@ -375,16 +380,19 @@ proc create_root_design { parentCell } {
   # Create instance: TC_ClockDetector_0, and set properties
   set TC_ClockDetector_0 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_ClockDetector:1.0 TC_ClockDetector_0 ]
 
+  # Create instance: TC_CommunicationSele_0, and set properties
+  set TC_CommunicationSele_0 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_CommunicationSelector:1.0 TC_CommunicationSele_0 ]
+
   # Create instance: TC_ConfMaster_0, and set properties
   set TC_ConfMaster_0 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_ConfMaster:1.0 TC_ConfMaster_0 ]
   set_property -dict [ list \
-   CONFIG.ConfigFile_Gen {NA} \
+   CONFIG.ConfigFile_Gen {c:/NetTimeLogic/Customers/Facebook/GitRepo4/TIMECARD/Implementation/Xilinx/TimeCard/DefaultConfigFile.txt} \
  ] $TC_ConfMaster_0
 
   # Create instance: TC_CoreList_0, and set properties
   set TC_CoreList_0 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_CoreList:1.0 TC_CoreList_0 ]
   set_property -dict [ list \
-   CONFIG.CoreListFile_Gen {NA} \
+   CONFIG.CoreListFile_Gen {c:/NetTimeLogic/Customers/Facebook/GitRepo4/TIMECARD/Implementation/Xilinx/TimeCard/CoreListFile.txt} \
  ] $TC_CoreList_0
 
   # Create instance: TC_DummyAxiSlave_0, and set properties
@@ -405,8 +413,8 @@ proc create_root_design { parentCell } {
   # Create instance: TC_FpgaVersion_0, and set properties
   set TC_FpgaVersion_0 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_FpgaVersion:1.0 TC_FpgaVersion_0 ]
   set_property -dict [ list \
-   CONFIG.VersionNumber_Gen {0x0003} \
-   CONFIG.VersionNumber_Golden_Gen {0x0003} \
+   CONFIG.VersionNumber_Gen {0x0005} \
+   CONFIG.VersionNumber_Golden_Gen {0x0005} \
  ] $TC_FpgaVersion_0
 
   # Create instance: TC_FrequencyCounter_1, and set properties
@@ -539,7 +547,7 @@ proc create_root_design { parentCell } {
    CONFIG.C_ALL_INPUTS {1} \
    CONFIG.C_ALL_OUTPUTS_2 {1} \
    CONFIG.C_DOUT_DEFAULT_2 {0x00000060} \
-   CONFIG.C_GPIO2_WIDTH {7} \
+   CONFIG.C_GPIO2_WIDTH {32} \
    CONFIG.C_GPIO_WIDTH {2} \
    CONFIG.C_IS_DUAL {1} \
  ] $axi_gpio_ext
@@ -560,6 +568,9 @@ proc create_root_design { parentCell } {
   # Create instance: axi_iic, and set properties
   set axi_iic [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_iic:2.0 axi_iic ]
 
+  # Create instance: axi_iic_clock, and set properties
+  set axi_iic_clock [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_iic:2.0 axi_iic_clock ]
+
   # Create instance: axi_interconnect_0, and set properties
   set axi_interconnect_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_interconnect:2.1 axi_interconnect_0 ]
   set_property -dict [ list \
@@ -578,7 +589,7 @@ proc create_root_design { parentCell } {
    CONFIG.M12_HAS_REGSLICE {3} \
    CONFIG.M13_HAS_REGSLICE {3} \
    CONFIG.M14_HAS_REGSLICE {3} \
-   CONFIG.NUM_MI {15} \
+   CONFIG.NUM_MI {16} \
    CONFIG.NUM_SI {2} \
    CONFIG.S00_HAS_REGSLICE {3} \
    CONFIG.S01_HAS_REGSLICE {3} \
@@ -799,6 +810,21 @@ proc create_root_design { parentCell } {
    CONFIG.CONST_VAL {1} \
  ] $xlconstant_6
 
+  # Create instance: xlslice_0, and set properties
+  set xlslice_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlslice:1.0 xlslice_0 ]
+  set_property -dict [ list \
+   CONFIG.DIN_FROM {6} \
+   CONFIG.DOUT_WIDTH {7} \
+ ] $xlslice_0
+
+  # Create instance: xlslice_1, and set properties
+  set xlslice_1 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlslice:1.0 xlslice_1 ]
+  set_property -dict [ list \
+   CONFIG.DIN_FROM {31} \
+   CONFIG.DIN_TO {31} \
+   CONFIG.DOUT_WIDTH {1} \
+ ] $xlslice_1
+
   # Create interface connections
   connect_bd_intf_net -intf_net Mhz200Clk_ClkIn_1 [get_bd_intf_ports Mhz200Clk_ClkIn] [get_bd_intf_pins clk_wiz_0/CLK_IN1_D]
   connect_bd_intf_net -intf_net S00_AXI_1 [get_bd_intf_pins axi_interconnect_0/M02_AXI] [get_bd_intf_pins axi_interconnect_IIC/S00_AXI]
@@ -826,7 +852,6 @@ connect_bd_intf_net -intf_net [get_bd_intf_nets TC_AdjustableClock_0_time_out] [
   connect_bd_intf_net -intf_net TC_PpsSlave_0_offset_adjustment_out [get_bd_intf_pins TC_AdjustableClock_0/offset_adjustment_1] [get_bd_intf_pins TC_PpsSlave_0/offset_adjustment_out]
   connect_bd_intf_net -intf_net TC_TodSlave_0_time_adjustment [get_bd_intf_pins TC_AdjustableClock_0/time_adjustment_1] [get_bd_intf_pins TC_TodSlave_0/time_adjustment]
   connect_bd_intf_net -intf_net axi_gpio_ext_GPIO [get_bd_intf_ports Ext_DatIn] [get_bd_intf_pins axi_gpio_ext/GPIO]
-  connect_bd_intf_net -intf_net axi_gpio_ext_GPIO2 [get_bd_intf_ports Ext_DatOut] [get_bd_intf_pins axi_gpio_ext/GPIO2]
   connect_bd_intf_net -intf_net axi_gpio_gnss_mac_GPIO [get_bd_intf_ports GpioMac_DatIn] [get_bd_intf_pins axi_gpio_gnss_mac/GPIO]
   connect_bd_intf_net -intf_net axi_gpio_gnss_mac_GPIO2 [get_bd_intf_ports GpioGnss_DatOut] [get_bd_intf_pins axi_gpio_gnss_mac/GPIO2]
   connect_bd_intf_net -intf_net axi_iic_IIC [get_bd_intf_ports I2c] [get_bd_intf_pins axi_iic/IIC]
@@ -844,6 +869,7 @@ connect_bd_intf_net -intf_net [get_bd_intf_nets TC_AdjustableClock_0_time_out] [
   connect_bd_intf_net -intf_net axi_interconnect_0_M12_AXI [get_bd_intf_pins TC_SmaSelector_0/axi4l_slave1] [get_bd_intf_pins axi_interconnect_0/M12_AXI]
   connect_bd_intf_net -intf_net axi_interconnect_0_M13_AXI [get_bd_intf_pins TC_SmaSelector_0/axi4l_slave2] [get_bd_intf_pins axi_interconnect_0/M13_AXI]
   connect_bd_intf_net -intf_net axi_interconnect_0_M14_AXI [get_bd_intf_pins TC_ClockDetector_0/axi4l_slave] [get_bd_intf_pins axi_interconnect_0/M14_AXI]
+  connect_bd_intf_net -intf_net axi_interconnect_0_M15_AXI [get_bd_intf_pins axi_iic_clock/S_AXI] [get_bd_intf_pins axi_interconnect_0/M15_AXI]
   connect_bd_intf_net -intf_net axi_interconnect_GPIO_M00_AXI [get_bd_intf_pins axi_gpio_ext/S_AXI] [get_bd_intf_pins axi_interconnect_GPIO/M00_AXI]
   connect_bd_intf_net -intf_net axi_interconnect_GPIO_M01_AXI [get_bd_intf_pins axi_gpio_gnss_mac/S_AXI] [get_bd_intf_pins axi_interconnect_GPIO/M01_AXI]
   connect_bd_intf_net -intf_net axi_interconnect_IIC_M00_AXI [get_bd_intf_pins axi_iic/S_AXI] [get_bd_intf_pins axi_interconnect_IIC/M00_AXI]
@@ -880,9 +906,10 @@ connect_bd_intf_net -intf_net [get_bd_intf_nets TC_AdjustableClock_0_time_out] [
   connect_bd_net -net BufgMux_IPI_0_ClkOut_ClkOut [get_bd_pins BufgMux_IPI_0/ClkOut_ClkOut] [get_bd_pins BufgMux_IPI_2/ClkIn0_ClkIn]
   connect_bd_net -net BufgMux_IPI_1_ClkOut_ClkOut [get_bd_pins BufgMux_IPI_1/ClkOut_ClkOut] [get_bd_pins BufgMux_IPI_2/ClkIn1_ClkIn]
   connect_bd_net -net BufgMux_IPI_2_ClkOut_ClkOut [get_bd_pins BufgMux_IPI_2/ClkOut_ClkOut] [get_bd_pins clk_wiz_1/clk_in1]
+  connect_bd_net -net Clk_RxSda_DatIn_1 [get_bd_ports Clk_RxSda_DatIn] [get_bd_pins TC_CommunicationSele_0/RxSda_DatIn]
   connect_bd_net -net GoldenImageN_EnaIn_1 [get_bd_ports GoldenImageN_EnaIn] [get_bd_pins TC_FpgaVersion_0/GoldenImageN_EnaIn]
   connect_bd_net -net M00_ARESETN_1 [get_bd_pins axi_interconnect_0/M00_ARESETN] [get_bd_pins axi_interconnect_0/S01_ARESETN] [get_bd_pins axi_interconnect_timecard/ARESETN] [get_bd_pins axi_interconnect_timecard/M00_ARESETN] [get_bd_pins axi_interconnect_timecard/M01_ARESETN] [get_bd_pins axi_interconnect_timecard/M02_ARESETN] [get_bd_pins axi_interconnect_timecard/M03_ARESETN] [get_bd_pins axi_interconnect_timecard/M04_ARESETN] [get_bd_pins axi_interconnect_timecard/M05_ARESETN] [get_bd_pins axi_interconnect_timecard/M06_ARESETN] [get_bd_pins axi_interconnect_timecard/M07_ARESETN] [get_bd_pins axi_interconnect_timecard/M08_ARESETN] [get_bd_pins axi_interconnect_timecard/M09_ARESETN] [get_bd_pins axi_interconnect_timecard/M10_ARESETN] [get_bd_pins axi_interconnect_timecard/M11_ARESETN] [get_bd_pins axi_interconnect_timecard/M12_ARESETN] [get_bd_pins axi_interconnect_timecard/M13_ARESETN] [get_bd_pins axi_interconnect_timecard/M14_ARESETN] [get_bd_pins axi_interconnect_timecard/M15_ARESETN] [get_bd_pins axi_interconnect_timecard/M16_ARESETN] [get_bd_pins axi_interconnect_timecard/M17_ARESETN] [get_bd_pins axi_interconnect_timecard/M18_ARESETN] [get_bd_pins axi_interconnect_timecard/M19_ARESETN] [get_bd_pins axi_interconnect_timecard/M20_ARESETN] [get_bd_pins axi_interconnect_timecard/M21_ARESETN] [get_bd_pins axi_interconnect_timecard/M22_ARESETN] [get_bd_pins axi_interconnect_timecard/M23_ARESETN] [get_bd_pins axi_interconnect_timecard/S00_ARESETN] [get_bd_pins proc_sys_reset_2/interconnect_aresetn]
-  connect_bd_net -net M02_ACLK_1 [get_bd_ports Mhz50Clk_ClkOut_0] [get_bd_pins TC_ClockDetector_0/SysClk_ClkIn] [get_bd_pins TC_FpgaVersion_0/SysClk_ClkIn] [get_bd_pins TC_PpsSourceSelector_0/SysClk_ClkIn] [get_bd_pins TC_PpsSourceSelector_1/SysClk_ClkIn] [get_bd_pins TC_SmaSelector_0/SysClk_ClkIn] [get_bd_pins axi_gpio_ext/s_axi_aclk] [get_bd_pins axi_gpio_gnss_mac/s_axi_aclk] [get_bd_pins axi_hwicap_0/icap_clk] [get_bd_pins axi_hwicap_0/s_axi_aclk] [get_bd_pins axi_iic/s_axi_aclk] [get_bd_pins axi_interconnect_0/M01_ACLK] [get_bd_pins axi_interconnect_0/M02_ACLK] [get_bd_pins axi_interconnect_0/M03_ACLK] [get_bd_pins axi_interconnect_0/M04_ACLK] [get_bd_pins axi_interconnect_0/M05_ACLK] [get_bd_pins axi_interconnect_0/M06_ACLK] [get_bd_pins axi_interconnect_0/M07_ACLK] [get_bd_pins axi_interconnect_0/M08_ACLK] [get_bd_pins axi_interconnect_0/M09_ACLK] [get_bd_pins axi_interconnect_0/M11_ACLK] [get_bd_pins axi_interconnect_0/M12_ACLK] [get_bd_pins axi_interconnect_0/M13_ACLK] [get_bd_pins axi_interconnect_0/M14_ACLK] [get_bd_pins axi_interconnect_GPIO/ACLK] [get_bd_pins axi_interconnect_GPIO/M00_ACLK] [get_bd_pins axi_interconnect_GPIO/M01_ACLK] [get_bd_pins axi_interconnect_GPIO/S00_ACLK] [get_bd_pins axi_interconnect_IIC/ACLK] [get_bd_pins axi_interconnect_IIC/M00_ACLK] [get_bd_pins axi_interconnect_IIC/S00_ACLK] [get_bd_pins axi_quad_spi_flash/s_axi_aclk] [get_bd_pins axi_uart16550_ext/s_axi_aclk] [get_bd_pins axi_uart16550_gnss1/s_axi_aclk] [get_bd_pins axi_uart16550_gnss2/s_axi_aclk] [get_bd_pins axi_uart16550_mac/s_axi_aclk] [get_bd_pins axi_uart16550_reserved/s_axi_aclk] [get_bd_pins clk_wiz_0/clk_out1] [get_bd_pins proc_sys_reset_0/slowest_sync_clk]
+  connect_bd_net -net M02_ACLK_1 [get_bd_ports Mhz50Clk_ClkOut_0] [get_bd_pins TC_ClockDetector_0/SysClk_ClkIn] [get_bd_pins TC_FpgaVersion_0/SysClk_ClkIn] [get_bd_pins TC_PpsSourceSelector_0/SysClk_ClkIn] [get_bd_pins TC_PpsSourceSelector_1/SysClk_ClkIn] [get_bd_pins TC_SmaSelector_0/SysClk_ClkIn] [get_bd_pins axi_gpio_ext/s_axi_aclk] [get_bd_pins axi_gpio_gnss_mac/s_axi_aclk] [get_bd_pins axi_hwicap_0/icap_clk] [get_bd_pins axi_hwicap_0/s_axi_aclk] [get_bd_pins axi_iic/s_axi_aclk] [get_bd_pins axi_iic_clock/s_axi_aclk] [get_bd_pins axi_interconnect_0/M01_ACLK] [get_bd_pins axi_interconnect_0/M02_ACLK] [get_bd_pins axi_interconnect_0/M03_ACLK] [get_bd_pins axi_interconnect_0/M04_ACLK] [get_bd_pins axi_interconnect_0/M05_ACLK] [get_bd_pins axi_interconnect_0/M06_ACLK] [get_bd_pins axi_interconnect_0/M07_ACLK] [get_bd_pins axi_interconnect_0/M08_ACLK] [get_bd_pins axi_interconnect_0/M09_ACLK] [get_bd_pins axi_interconnect_0/M11_ACLK] [get_bd_pins axi_interconnect_0/M12_ACLK] [get_bd_pins axi_interconnect_0/M13_ACLK] [get_bd_pins axi_interconnect_0/M14_ACLK] [get_bd_pins axi_interconnect_0/M15_ACLK] [get_bd_pins axi_interconnect_GPIO/ACLK] [get_bd_pins axi_interconnect_GPIO/M00_ACLK] [get_bd_pins axi_interconnect_GPIO/M01_ACLK] [get_bd_pins axi_interconnect_GPIO/S00_ACLK] [get_bd_pins axi_interconnect_IIC/ACLK] [get_bd_pins axi_interconnect_IIC/M00_ACLK] [get_bd_pins axi_interconnect_IIC/S00_ACLK] [get_bd_pins axi_quad_spi_flash/s_axi_aclk] [get_bd_pins axi_uart16550_ext/s_axi_aclk] [get_bd_pins axi_uart16550_gnss1/s_axi_aclk] [get_bd_pins axi_uart16550_gnss2/s_axi_aclk] [get_bd_pins axi_uart16550_mac/s_axi_aclk] [get_bd_pins axi_uart16550_reserved/s_axi_aclk] [get_bd_pins clk_wiz_0/clk_out1] [get_bd_pins proc_sys_reset_0/slowest_sync_clk]
   connect_bd_net -net M10_ARESETN_1 [get_bd_ports Reset62_5MhzN_RstOut] [get_bd_pins TC_MsiIrq_0/SysRstN_RstIn] [get_bd_pins axi_interconnect_0/M10_ARESETN] [get_bd_pins proc_sys_reset_1/peripheral_aresetn]
   connect_bd_net -net MacPps_EvtIn_1 [get_bd_ports MacPps_EvtIn] [get_bd_pins TC_PpsSourceSelector_0/MacPps_EvtIn] [get_bd_pins TC_SmaSelector_0/SmaMacPpsSource_EvtIn]
   connect_bd_net -net Mhz10ClkDcxo1_ClkIn_1 [get_bd_ports Mhz10ClkDcxo1_ClkIn] [get_bd_pins BufgMux_IPI_1/ClkIn0_ClkIn] [get_bd_pins TC_ClockDetector_0/Mhz10ClkDcxo1_ClkIn]
@@ -908,6 +935,14 @@ connect_bd_intf_net -intf_net [get_bd_intf_nets TC_AdjustableClock_0_time_out] [
   connect_bd_net -net TC_ClockDetector_0_ClkWiz2Select_EnOut [get_bd_pins TC_ClockDetector_0/ClkWiz2Select_EnOut] [get_bd_pins clk_wiz_2/clk_in_sel]
   connect_bd_net -net TC_ClockDetector_0_ClockRstN_RstOut [get_bd_pins TC_ClockDetector_0/ClockRstN_RstOut] [get_bd_pins clk_wiz_1/resetn] [get_bd_pins clk_wiz_2/resetn] [get_bd_pins proc_sys_reset_2/aux_reset_in]
   connect_bd_net -net TC_ClockDetector_0_PpsSourceSelect_DatOut [get_bd_pins TC_ClockDetector_0/PpsSourceSelect_DatOut] [get_bd_pins TC_PpsSourceSelector_0/PpsSourceSelect_DatIn]
+  connect_bd_net -net TC_CommunicationSele_0_I2cSclIn_DatOut [get_bd_pins TC_CommunicationSele_0/I2cSclIn_DatOut] [get_bd_pins axi_iic_clock/scl_i]
+  connect_bd_net -net TC_CommunicationSele_0_I2cSdaIn_DatOut [get_bd_pins TC_CommunicationSele_0/I2cSdaIn_DatOut] [get_bd_pins axi_iic_clock/sda_i]
+  connect_bd_net -net TC_CommunicationSele_0_Irq_DatOut [get_bd_pins TC_CommunicationSele_0/Irq_DatOut] [get_bd_pins TC_MsiIrq_0/IrqIn5_DatIn]
+  connect_bd_net -net TC_CommunicationSele_0_RxSdaT_EnaOut [get_bd_ports Clk_RxSdaT_EnaOut] [get_bd_pins TC_CommunicationSele_0/RxSdaT_EnaOut]
+  connect_bd_net -net TC_CommunicationSele_0_RxSda_DatOut [get_bd_ports Clk_RxSda_DatOut] [get_bd_pins TC_CommunicationSele_0/RxSda_DatOut]
+  connect_bd_net -net TC_CommunicationSele_0_TxSclT_EnaOut [get_bd_ports Clk_TxSclT_EnaOut] [get_bd_pins TC_CommunicationSele_0/TxSclT_EnaOut]
+  connect_bd_net -net TC_CommunicationSele_0_TxScl_DatOut [get_bd_ports Clk_TxScl_DatOut] [get_bd_pins TC_CommunicationSele_0/TxScl_DatOut]
+  connect_bd_net -net TC_CommunicationSele_0_UartRx_DatOut [get_bd_pins TC_CommunicationSele_0/UartRx_DatOut] [get_bd_pins axi_uart16550_mac/sin]
   connect_bd_net -net TC_MsiIrq_0_MsiReq_ValOut [get_bd_pins TC_MsiIrq_0/MsiReq_ValOut] [get_bd_pins axi_pcie_0/INTX_MSI_Request]
   connect_bd_net -net TC_MsiIrq_0_MsiVectorNum_DatOut [get_bd_pins TC_MsiIrq_0/MsiVectorNum_DatOut] [get_bd_pins axi_pcie_0/MSI_Vector_Num]
   connect_bd_net -net TC_PpsGenerator_0_Pps_EvtOut [get_bd_ports Pps_EvtOut] [get_bd_pins TC_PpsGenerator_0/Pps_EvtOut] [get_bd_pins TC_SmaSelector_0/SmaFpgaPpsSource_EvtIn] [get_bd_pins TC_Timestamper_FpgaPps/SignalTimestamper_EvtIn]
@@ -953,10 +988,16 @@ connect_bd_intf_net -intf_net [get_bd_intf_nets TC_AdjustableClock_0_time_out] [
   connect_bd_net -net TC_Timestamper_Sma2_Irq_EvtOut [get_bd_pins TC_MsiIrq_0/IrqIn6_DatIn] [get_bd_pins TC_Timestamper_2/Irq_EvtOut]
   connect_bd_net -net TC_Timestamper_Sma3_Irq_EvtOut [get_bd_pins TC_MsiIrq_0/IrqIn15_DatIn] [get_bd_pins TC_Timestamper_3/Irq_EvtOut]
   connect_bd_net -net TC_Timestamper_Sma4_Irq_EvtOut [get_bd_pins TC_MsiIrq_0/IrqIn16_DatIn] [get_bd_pins TC_Timestamper_4/Irq_EvtOut]
+  connect_bd_net -net TxScl_DatIn_0_1 [get_bd_ports Clk_TxScl_DatIn] [get_bd_pins TC_CommunicationSele_0/TxScl_DatIn]
   connect_bd_net -net UartGnss1Rx_DatIn_1 [get_bd_ports UartGnss1Rx_DatIn] [get_bd_pins TC_SmaSelector_0/SmaUartGnss1Source_DatIn] [get_bd_pins TC_TodSlave_0/RxUart_DatIn] [get_bd_pins axi_uart16550_gnss1/sin]
   connect_bd_net -net UartGnss2Rx_DatIn_1 [get_bd_ports UartGnss2Rx_DatIn] [get_bd_pins TC_SmaSelector_0/SmaUartGnss2Source_DatIn] [get_bd_pins axi_uart16550_gnss2/sin]
-  connect_bd_net -net UartMacRx_DatIn_1 [get_bd_ports UartMacRx_DatIn] [get_bd_pins axi_uart16550_mac/sin]
+  connect_bd_net -net axi_gpio_ext_gpio2_io_o [get_bd_pins axi_gpio_ext/gpio2_io_o] [get_bd_pins xlslice_0/Din] [get_bd_pins xlslice_1/Din]
   connect_bd_net -net axi_hwicap_0_ip2intc_irpt [get_bd_pins TC_MsiIrq_0/IrqIn8_DatIn] [get_bd_pins axi_hwicap_0/ip2intc_irpt]
+  connect_bd_net -net axi_iic_clock_iic2intc_irpt [get_bd_pins TC_CommunicationSele_0/I2cIrq_DatIn] [get_bd_pins axi_iic_clock/iic2intc_irpt]
+  connect_bd_net -net axi_iic_clock_scl_o [get_bd_pins TC_CommunicationSele_0/I2cSclOut_DatIn] [get_bd_pins axi_iic_clock/scl_o]
+  connect_bd_net -net axi_iic_clock_scl_t [get_bd_pins TC_CommunicationSele_0/I2cSclT_EnaIn] [get_bd_pins axi_iic_clock/scl_t]
+  connect_bd_net -net axi_iic_clock_sda_o [get_bd_pins TC_CommunicationSele_0/I2cSdaOut_DatIn] [get_bd_pins axi_iic_clock/sda_o]
+  connect_bd_net -net axi_iic_clock_sda_t [get_bd_pins TC_CommunicationSele_0/I2cSdaT_EnaIn] [get_bd_pins axi_iic_clock/sda_t]
   connect_bd_net -net axi_iic_iic2intc_irpt [get_bd_pins TC_MsiIrq_0/IrqIn7_DatIn] [get_bd_pins axi_iic/iic2intc_irpt]
   connect_bd_net -net axi_pcie_0_INTX_MSI_Grant [get_bd_pins TC_MsiIrq_0/MsiGrant_ValIn] [get_bd_pins axi_pcie_0/INTX_MSI_Grant]
   connect_bd_net -net axi_pcie_0_MSI_Vector_Width [get_bd_pins TC_MsiIrq_0/MsiVectorWidth_DatIn] [get_bd_pins axi_pcie_0/MSI_Vector_Width]
@@ -975,8 +1016,8 @@ connect_bd_intf_net -intf_net [get_bd_intf_nets TC_AdjustableClock_0_time_out] [
   connect_bd_net -net axi_uart16550_gnss1_sout [get_bd_ports UartGnss1Tx_DatOut] [get_bd_pins axi_uart16550_gnss1/sout]
   connect_bd_net -net axi_uart16550_gnss2_ip2intc_irpt [get_bd_pins TC_MsiIrq_0/IrqIn4_DatIn] [get_bd_pins axi_uart16550_gnss2/ip2intc_irpt]
   connect_bd_net -net axi_uart16550_gnss2_sout [get_bd_ports UartGnss2Tx_DatOut] [get_bd_pins axi_uart16550_gnss2/sout]
-  connect_bd_net -net axi_uart16550_mac_ip2intc_irpt [get_bd_pins TC_MsiIrq_0/IrqIn5_DatIn] [get_bd_pins axi_uart16550_mac/ip2intc_irpt]
-  connect_bd_net -net axi_uart16550_mac_sout [get_bd_ports UartMacTx_DatOut] [get_bd_pins axi_uart16550_mac/sout]
+  connect_bd_net -net axi_uart16550_mac_ip2intc_irpt [get_bd_pins TC_CommunicationSele_0/UartIrq_DatIn] [get_bd_pins axi_uart16550_mac/ip2intc_irpt]
+  connect_bd_net -net axi_uart16550_mac_sout [get_bd_pins TC_CommunicationSele_0/UartTx_DatIn] [get_bd_pins axi_uart16550_mac/sout]
   connect_bd_net -net axi_uart16550_nmea_ip2intc_irpt [get_bd_pins TC_MsiIrq_0/IrqIn10_DatIn] [get_bd_pins axi_uart16550_reserved/ip2intc_irpt]
   connect_bd_net -net clk_wiz_0_clk_out1 [get_bd_pins clk_wiz_1/clk_out1] [get_bd_pins clk_wiz_2/clk_in2]
   connect_bd_net -net clk_wiz_0_clk_out4 [get_bd_pins axi_quad_spi_flash/ext_spi_clk] [get_bd_pins clk_wiz_0/clk_out4]
@@ -985,7 +1026,7 @@ connect_bd_intf_net -intf_net [get_bd_intf_nets TC_AdjustableClock_0_time_out] [
   connect_bd_net -net clk_wiz_2_clk_out2 [get_bd_pins clk_wiz_0/clk_out2] [get_bd_pins clk_wiz_2/clk_in1]
   connect_bd_net -net clk_wiz_2_clk_out3 [get_bd_pins TC_PpsGenerator_0/SysClkNx_ClkIn] [get_bd_pins TC_PpsSlave_0/SysClkNx_ClkIn] [get_bd_pins TC_SignalGenerator_1/SysClkNx_ClkIn] [get_bd_pins TC_SignalGenerator_2/SysClkNx_ClkIn] [get_bd_pins TC_SignalGenerator_3/SysClkNx_ClkIn] [get_bd_pins TC_SignalGenerator_4/SysClkNx_ClkIn] [get_bd_pins TC_Timestamper_1/SysClkNx_ClkIn] [get_bd_pins TC_Timestamper_2/SysClkNx_ClkIn] [get_bd_pins TC_Timestamper_3/SysClkNx_ClkIn] [get_bd_pins TC_Timestamper_4/SysClkNx_ClkIn] [get_bd_pins TC_Timestamper_FpgaPps/SysClkNx_ClkIn] [get_bd_pins TC_Timestamper_Gnss1Pps/SysClkNx_ClkIn] [get_bd_pins clk_wiz_2/clk_out2]
   connect_bd_net -net clk_wiz_2_locked [get_bd_pins clk_wiz_2/locked] [get_bd_pins proc_sys_reset_2/dcm_locked]
-  connect_bd_net -net proc_sys_reset_0_peripheral_aresetn [get_bd_ports Reset50MhzN_RstOut_0] [get_bd_pins TC_ClockDetector_0/SysRstN_RstIn] [get_bd_pins TC_FpgaVersion_0/SysRstN_RstIn] [get_bd_pins TC_PpsSourceSelector_0/SysRstN_RstIn] [get_bd_pins TC_PpsSourceSelector_1/SysRstN_RstIn] [get_bd_pins TC_SmaSelector_0/SysRstN_RstIn] [get_bd_pins axi_gpio_ext/s_axi_aresetn] [get_bd_pins axi_gpio_gnss_mac/s_axi_aresetn] [get_bd_pins axi_hwicap_0/s_axi_aresetn] [get_bd_pins axi_iic/s_axi_aresetn] [get_bd_pins axi_interconnect_0/M01_ARESETN] [get_bd_pins axi_interconnect_0/M02_ARESETN] [get_bd_pins axi_interconnect_0/M03_ARESETN] [get_bd_pins axi_interconnect_0/M04_ARESETN] [get_bd_pins axi_interconnect_0/M05_ARESETN] [get_bd_pins axi_interconnect_0/M06_ARESETN] [get_bd_pins axi_interconnect_0/M07_ARESETN] [get_bd_pins axi_interconnect_0/M08_ARESETN] [get_bd_pins axi_interconnect_0/M09_ARESETN] [get_bd_pins axi_interconnect_0/M11_ARESETN] [get_bd_pins axi_interconnect_0/M12_ARESETN] [get_bd_pins axi_interconnect_0/M13_ARESETN] [get_bd_pins axi_interconnect_0/M14_ARESETN] [get_bd_pins axi_interconnect_GPIO/ARESETN] [get_bd_pins axi_interconnect_GPIO/M00_ARESETN] [get_bd_pins axi_interconnect_GPIO/M01_ARESETN] [get_bd_pins axi_interconnect_GPIO/S00_ARESETN] [get_bd_pins axi_interconnect_IIC/ARESETN] [get_bd_pins axi_interconnect_IIC/M00_ARESETN] [get_bd_pins axi_interconnect_IIC/S00_ARESETN] [get_bd_pins axi_quad_spi_flash/s_axi_aresetn] [get_bd_pins axi_uart16550_ext/s_axi_aresetn] [get_bd_pins axi_uart16550_gnss1/s_axi_aresetn] [get_bd_pins axi_uart16550_gnss2/s_axi_aresetn] [get_bd_pins axi_uart16550_mac/s_axi_aresetn] [get_bd_pins axi_uart16550_reserved/s_axi_aresetn] [get_bd_pins proc_sys_reset_0/peripheral_aresetn]
+  connect_bd_net -net proc_sys_reset_0_peripheral_aresetn [get_bd_ports Reset50MhzN_RstOut_0] [get_bd_pins TC_ClockDetector_0/SysRstN_RstIn] [get_bd_pins TC_FpgaVersion_0/SysRstN_RstIn] [get_bd_pins TC_PpsSourceSelector_0/SysRstN_RstIn] [get_bd_pins TC_PpsSourceSelector_1/SysRstN_RstIn] [get_bd_pins TC_SmaSelector_0/SysRstN_RstIn] [get_bd_pins axi_gpio_ext/s_axi_aresetn] [get_bd_pins axi_gpio_gnss_mac/s_axi_aresetn] [get_bd_pins axi_hwicap_0/s_axi_aresetn] [get_bd_pins axi_iic/s_axi_aresetn] [get_bd_pins axi_iic_clock/s_axi_aresetn] [get_bd_pins axi_interconnect_0/M01_ARESETN] [get_bd_pins axi_interconnect_0/M02_ARESETN] [get_bd_pins axi_interconnect_0/M03_ARESETN] [get_bd_pins axi_interconnect_0/M04_ARESETN] [get_bd_pins axi_interconnect_0/M05_ARESETN] [get_bd_pins axi_interconnect_0/M06_ARESETN] [get_bd_pins axi_interconnect_0/M07_ARESETN] [get_bd_pins axi_interconnect_0/M08_ARESETN] [get_bd_pins axi_interconnect_0/M09_ARESETN] [get_bd_pins axi_interconnect_0/M11_ARESETN] [get_bd_pins axi_interconnect_0/M12_ARESETN] [get_bd_pins axi_interconnect_0/M13_ARESETN] [get_bd_pins axi_interconnect_0/M14_ARESETN] [get_bd_pins axi_interconnect_0/M15_ARESETN] [get_bd_pins axi_interconnect_GPIO/ARESETN] [get_bd_pins axi_interconnect_GPIO/M00_ARESETN] [get_bd_pins axi_interconnect_GPIO/M01_ARESETN] [get_bd_pins axi_interconnect_GPIO/S00_ARESETN] [get_bd_pins axi_interconnect_IIC/ARESETN] [get_bd_pins axi_interconnect_IIC/M00_ARESETN] [get_bd_pins axi_interconnect_IIC/S00_ARESETN] [get_bd_pins axi_quad_spi_flash/s_axi_aresetn] [get_bd_pins axi_uart16550_ext/s_axi_aresetn] [get_bd_pins axi_uart16550_gnss1/s_axi_aresetn] [get_bd_pins axi_uart16550_gnss2/s_axi_aresetn] [get_bd_pins axi_uart16550_mac/s_axi_aresetn] [get_bd_pins axi_uart16550_reserved/s_axi_aresetn] [get_bd_pins proc_sys_reset_0/peripheral_aresetn]
   connect_bd_net -net proc_sys_reset_2_peripheral_aresetn [get_bd_ports Reset50MhzN_RstOut] [get_bd_pins TC_AdjustableClock_0/SysRstN_RstIn] [get_bd_pins TC_ConfMaster_0/SysRstN_RstIn] [get_bd_pins TC_CoreList_0/SysRstN_RstIn] [get_bd_pins TC_DummyAxiSlave_0/SysRstN_RstIn] [get_bd_pins TC_DummyAxiSlave_1/SysRstN_RstIn] [get_bd_pins TC_DummyAxiSlave_2/SysRstN_RstIn] [get_bd_pins TC_DummyAxiSlave_3/SysRstN_RstIn] [get_bd_pins TC_DummyAxiSlave_4/SysRstN_RstIn] [get_bd_pins TC_FrequencyCounter_1/SysRstN_RstIn] [get_bd_pins TC_FrequencyCounter_2/SysRstN_RstIn] [get_bd_pins TC_FrequencyCounter_3/SysRstN_RstIn] [get_bd_pins TC_FrequencyCounter_4/SysRstN_RstIn] [get_bd_pins TC_PpsGenerator_0/SysRstN_RstIn] [get_bd_pins TC_PpsSlave_0/SysRstN_RstIn] [get_bd_pins TC_SignalGenerator_1/SysRstN_RstIn] [get_bd_pins TC_SignalGenerator_2/SysRstN_RstIn] [get_bd_pins TC_SignalGenerator_3/SysRstN_RstIn] [get_bd_pins TC_SignalGenerator_4/SysRstN_RstIn] [get_bd_pins TC_Timestamper_1/SysRstN_RstIn] [get_bd_pins TC_Timestamper_2/SysRstN_RstIn] [get_bd_pins TC_Timestamper_3/SysRstN_RstIn] [get_bd_pins TC_Timestamper_4/SysRstN_RstIn] [get_bd_pins TC_Timestamper_FpgaPps/SysRstN_RstIn] [get_bd_pins TC_Timestamper_Gnss1Pps/SysRstN_RstIn] [get_bd_pins TC_TodSlave_0/SysRstN_RstIn] [get_bd_pins proc_sys_reset_2/peripheral_aresetn]
   connect_bd_net -net util_ds_buf_0_BUFGCE_O [get_bd_pins BufgMux_IPI_0/ClkIn0_ClkIn] [get_bd_pins TC_ClockDetector_0/Mhz10ClkSma_ClkIn] [get_bd_pins util_ds_buf_0/BUFGCE_O]
   connect_bd_net -net util_ds_buf_1_IBUF_OUT [get_bd_pins axi_pcie_0/REFCLK] [get_bd_pins util_ds_buf_1/IBUF_OUT]
@@ -995,10 +1036,12 @@ connect_bd_intf_net -intf_net [get_bd_intf_nets TC_AdjustableClock_0_time_out] [
   connect_bd_net -net xlconstant_4_dout [get_bd_pins axi_uart16550_reserved/sin] [get_bd_pins xlconstant_4/dout]
   connect_bd_net -net xlconstant_5_dout [get_bd_pins TC_MsiIrq_0/IrqIn17_DatIn] [get_bd_pins TC_MsiIrq_0/IrqIn18_DatIn] [get_bd_pins xlconstant_5/dout]
   connect_bd_net -net xlconstant_6_dout [get_bd_pins proc_sys_reset_1/ext_reset_in] [get_bd_pins xlconstant_6/dout]
+  connect_bd_net -net xlslice_0_Dout [get_bd_ports Ext_DatOut] [get_bd_pins xlslice_0/Dout]
+  connect_bd_net -net xlslice_1_Dout [get_bd_pins TC_CommunicationSele_0/SelIn_DatIn] [get_bd_pins xlslice_1/Dout]
 
   # Create address segments
   create_bd_addr_seg -range 0x00010000 -offset 0x01000000 [get_bd_addr_spaces TC_ConfMaster_0/axi4l_master] [get_bd_addr_segs TC_AdjustableClock_0/axi4l_slave/reg0] SEG_TC_AdjustableClock_0_reg0
-  create_bd_addr_seg -range 0x00010000 -offset 0x00130000 [get_bd_addr_spaces TC_ConfMaster_0/axi4l_master] [get_bd_addr_segs TC_ClockDetector_0/axi4l_slave/reg0] SEG_TC_ClockDetector_0_reg0
+  create_bd_addr_seg -range 0x00001000 -offset 0x00130000 [get_bd_addr_spaces TC_ConfMaster_0/axi4l_master] [get_bd_addr_segs TC_ClockDetector_0/axi4l_slave/reg0] SEG_TC_ClockDetector_0_reg0
   create_bd_addr_seg -range 0x00010000 -offset 0x01300000 [get_bd_addr_spaces TC_ConfMaster_0/axi4l_master] [get_bd_addr_segs TC_CoreList_0/axi4l_slave/reg0] SEG_TC_CoreList_0_reg0
   create_bd_addr_seg -range 0x00010000 -offset 0x01070000 [get_bd_addr_spaces TC_ConfMaster_0/axi4l_master] [get_bd_addr_segs TC_DummyAxiSlave_0/axi4l_slave/reg0] SEG_TC_DummyAxiSlave_0_reg0
   create_bd_addr_seg -range 0x00010000 -offset 0x01080000 [get_bd_addr_spaces TC_ConfMaster_0/axi4l_master] [get_bd_addr_segs TC_DummyAxiSlave_1/axi4l_slave/reg0] SEG_TC_DummyAxiSlave_1_reg0
@@ -1022,13 +1065,14 @@ connect_bd_intf_net -intf_net [get_bd_intf_nets TC_AdjustableClock_0_time_out] [
   create_bd_addr_seg -range 0x00010000 -offset 0x01060000 [get_bd_addr_spaces TC_ConfMaster_0/axi4l_master] [get_bd_addr_segs TC_Timestamper_2/axi4l_slave/reg0] SEG_TC_SignalTimestamper_Sma2_reg0
   create_bd_addr_seg -range 0x00010000 -offset 0x01110000 [get_bd_addr_spaces TC_ConfMaster_0/axi4l_master] [get_bd_addr_segs TC_Timestamper_3/axi4l_slave/reg0] SEG_TC_SignalTimestamper_Sma3_reg0
   create_bd_addr_seg -range 0x00010000 -offset 0x01120000 [get_bd_addr_spaces TC_ConfMaster_0/axi4l_master] [get_bd_addr_segs TC_Timestamper_4/axi4l_slave/reg0] SEG_TC_SignalTimestamper_Sma4_reg0
-  create_bd_addr_seg -range 0x00010000 -offset 0x00140000 [get_bd_addr_spaces TC_ConfMaster_0/axi4l_master] [get_bd_addr_segs TC_SmaSelector_0/axi4l_slave1/reg0] SEG_TC_SmaSelector_0_reg0
-  create_bd_addr_seg -range 0x00010000 -offset 0x00220000 [get_bd_addr_spaces TC_ConfMaster_0/axi4l_master] [get_bd_addr_segs TC_SmaSelector_0/axi4l_slave2/reg0] SEG_TC_SmaSelector_0_reg01
+  create_bd_addr_seg -range 0x00004000 -offset 0x00140000 [get_bd_addr_spaces TC_ConfMaster_0/axi4l_master] [get_bd_addr_segs TC_SmaSelector_0/axi4l_slave1/reg0] SEG_TC_SmaSelector_0_reg0
+  create_bd_addr_seg -range 0x00004000 -offset 0x00220000 [get_bd_addr_spaces TC_ConfMaster_0/axi4l_master] [get_bd_addr_segs TC_SmaSelector_0/axi4l_slave2/reg0] SEG_TC_SmaSelector_0_reg01
   create_bd_addr_seg -range 0x00010000 -offset 0x01050000 [get_bd_addr_spaces TC_ConfMaster_0/axi4l_master] [get_bd_addr_segs TC_TodSlave_0/axi4l_slave/Reg] SEG_TC_TodSlave_0_Reg
-  create_bd_addr_seg -range 0x00010000 -offset 0x00100000 [get_bd_addr_spaces TC_ConfMaster_0/axi4l_master] [get_bd_addr_segs axi_gpio_ext/S_AXI/Reg] SEG_axi_gpio_ext_Reg
-  create_bd_addr_seg -range 0x00010000 -offset 0x00110000 [get_bd_addr_spaces TC_ConfMaster_0/axi4l_master] [get_bd_addr_segs axi_gpio_gnss_mac/S_AXI/Reg] SEG_axi_gpio_gnss_mac_Reg
+  create_bd_addr_seg -range 0x00001000 -offset 0x00100000 [get_bd_addr_spaces TC_ConfMaster_0/axi4l_master] [get_bd_addr_segs axi_gpio_ext/S_AXI/Reg] SEG_axi_gpio_ext_Reg
+  create_bd_addr_seg -range 0x00001000 -offset 0x00110000 [get_bd_addr_spaces TC_ConfMaster_0/axi4l_master] [get_bd_addr_segs axi_gpio_gnss_mac/S_AXI/Reg] SEG_axi_gpio_gnss_mac_Reg
   create_bd_addr_seg -range 0x00010000 -offset 0x00300000 [get_bd_addr_spaces TC_ConfMaster_0/axi4l_master] [get_bd_addr_segs axi_hwicap_0/S_AXI_LITE/Reg] SEG_axi_hwicap_0_Reg
   create_bd_addr_seg -range 0x00010000 -offset 0x00150000 [get_bd_addr_spaces TC_ConfMaster_0/axi4l_master] [get_bd_addr_segs axi_iic/S_AXI/Reg] SEG_axi_iic_Reg
+  create_bd_addr_seg -range 0x00010000 -offset 0x00200000 [get_bd_addr_spaces TC_ConfMaster_0/axi4l_master] [get_bd_addr_segs axi_iic_clock/S_AXI/Reg] SEG_axi_iic_clock_Reg
   create_bd_addr_seg -range 0x00001000 -offset 0x00010000 [get_bd_addr_spaces TC_ConfMaster_0/axi4l_master] [get_bd_addr_segs axi_pcie_0/S_AXI_CTL/CTL0] SEG_axi_pcie_0_CTL0
   create_bd_addr_seg -range 0x00010000 -offset 0x00310000 [get_bd_addr_spaces TC_ConfMaster_0/axi4l_master] [get_bd_addr_segs axi_quad_spi_flash/AXI_LITE/Reg] SEG_axi_quad_spi_flash_Reg
   create_bd_addr_seg -range 0x00010000 -offset 0x001A0000 [get_bd_addr_spaces TC_ConfMaster_0/axi4l_master] [get_bd_addr_segs axi_uart16550_ext/S_AXI/Reg] SEG_axi_uart16550_ext_Reg
@@ -1037,7 +1081,7 @@ connect_bd_intf_net -intf_net [get_bd_intf_nets TC_AdjustableClock_0_time_out] [
   create_bd_addr_seg -range 0x00010000 -offset 0x00180000 [get_bd_addr_spaces TC_ConfMaster_0/axi4l_master] [get_bd_addr_segs axi_uart16550_mac/S_AXI/Reg] SEG_axi_uart16550_mac_Reg
   create_bd_addr_seg -range 0x00010000 -offset 0x00190000 [get_bd_addr_spaces TC_ConfMaster_0/axi4l_master] [get_bd_addr_segs axi_uart16550_reserved/S_AXI/Reg] SEG_axi_uart16550_reserved_Reg
   create_bd_addr_seg -range 0x00010000 -offset 0x01000000 [get_bd_addr_spaces axi_pcie_0/M_AXI] [get_bd_addr_segs TC_AdjustableClock_0/axi4l_slave/reg0] SEG_TC_AdjustableClock_0_reg0
-  create_bd_addr_seg -range 0x00010000 -offset 0x00130000 [get_bd_addr_spaces axi_pcie_0/M_AXI] [get_bd_addr_segs TC_ClockDetector_0/axi4l_slave/reg0] SEG_TC_ClockDetector_0_reg0
+  create_bd_addr_seg -range 0x00001000 -offset 0x00130000 [get_bd_addr_spaces axi_pcie_0/M_AXI] [get_bd_addr_segs TC_ClockDetector_0/axi4l_slave/reg0] SEG_TC_ClockDetector_0_reg0
   create_bd_addr_seg -range 0x00010000 -offset 0x01300000 [get_bd_addr_spaces axi_pcie_0/M_AXI] [get_bd_addr_segs TC_CoreList_0/axi4l_slave/reg0] SEG_TC_CoreList_0_reg0
   create_bd_addr_seg -range 0x00010000 -offset 0x01070000 [get_bd_addr_spaces axi_pcie_0/M_AXI] [get_bd_addr_segs TC_DummyAxiSlave_0/axi4l_slave/reg0] SEG_TC_DummyAxiSlave_0_reg0
   create_bd_addr_seg -range 0x00010000 -offset 0x01080000 [get_bd_addr_spaces axi_pcie_0/M_AXI] [get_bd_addr_segs TC_DummyAxiSlave_1/axi4l_slave/reg0] SEG_TC_DummyAxiSlave_1_reg0
@@ -1061,13 +1105,14 @@ connect_bd_intf_net -intf_net [get_bd_intf_nets TC_AdjustableClock_0_time_out] [
   create_bd_addr_seg -range 0x00010000 -offset 0x01060000 [get_bd_addr_spaces axi_pcie_0/M_AXI] [get_bd_addr_segs TC_Timestamper_2/axi4l_slave/reg0] SEG_TC_SignalTimestamper_Sma2_reg0
   create_bd_addr_seg -range 0x00010000 -offset 0x01110000 [get_bd_addr_spaces axi_pcie_0/M_AXI] [get_bd_addr_segs TC_Timestamper_3/axi4l_slave/reg0] SEG_TC_SignalTimestamper_Sma3_reg0
   create_bd_addr_seg -range 0x00010000 -offset 0x01120000 [get_bd_addr_spaces axi_pcie_0/M_AXI] [get_bd_addr_segs TC_Timestamper_4/axi4l_slave/reg0] SEG_TC_SignalTimestamper_Sma4_reg0
-  create_bd_addr_seg -range 0x00010000 -offset 0x00140000 [get_bd_addr_spaces axi_pcie_0/M_AXI] [get_bd_addr_segs TC_SmaSelector_0/axi4l_slave1/reg0] SEG_TC_SmaSelector_0_reg0
-  create_bd_addr_seg -range 0x00010000 -offset 0x00220000 [get_bd_addr_spaces axi_pcie_0/M_AXI] [get_bd_addr_segs TC_SmaSelector_0/axi4l_slave2/reg0] SEG_TC_SmaSelector_0_reg03
+  create_bd_addr_seg -range 0x00004000 -offset 0x00140000 [get_bd_addr_spaces axi_pcie_0/M_AXI] [get_bd_addr_segs TC_SmaSelector_0/axi4l_slave1/reg0] SEG_TC_SmaSelector_0_reg0
+  create_bd_addr_seg -range 0x00004000 -offset 0x00220000 [get_bd_addr_spaces axi_pcie_0/M_AXI] [get_bd_addr_segs TC_SmaSelector_0/axi4l_slave2/reg0] SEG_TC_SmaSelector_0_reg03
   create_bd_addr_seg -range 0x00010000 -offset 0x01050000 [get_bd_addr_spaces axi_pcie_0/M_AXI] [get_bd_addr_segs TC_TodSlave_0/axi4l_slave/Reg] SEG_TC_TodSlave_0_Reg
-  create_bd_addr_seg -range 0x00010000 -offset 0x00100000 [get_bd_addr_spaces axi_pcie_0/M_AXI] [get_bd_addr_segs axi_gpio_ext/S_AXI/Reg] SEG_axi_gpio_ext_Reg
-  create_bd_addr_seg -range 0x00010000 -offset 0x00110000 [get_bd_addr_spaces axi_pcie_0/M_AXI] [get_bd_addr_segs axi_gpio_gnss_mac/S_AXI/Reg] SEG_axi_gpio_gnss_mac_Reg
+  create_bd_addr_seg -range 0x00001000 -offset 0x00100000 [get_bd_addr_spaces axi_pcie_0/M_AXI] [get_bd_addr_segs axi_gpio_ext/S_AXI/Reg] SEG_axi_gpio_ext_Reg
+  create_bd_addr_seg -range 0x00001000 -offset 0x00110000 [get_bd_addr_spaces axi_pcie_0/M_AXI] [get_bd_addr_segs axi_gpio_gnss_mac/S_AXI/Reg] SEG_axi_gpio_gnss_mac_Reg
   create_bd_addr_seg -range 0x00010000 -offset 0x00300000 [get_bd_addr_spaces axi_pcie_0/M_AXI] [get_bd_addr_segs axi_hwicap_0/S_AXI_LITE/Reg] SEG_axi_hwicap_0_Reg
   create_bd_addr_seg -range 0x00010000 -offset 0x00150000 [get_bd_addr_spaces axi_pcie_0/M_AXI] [get_bd_addr_segs axi_iic/S_AXI/Reg] SEG_axi_iic_Reg
+  create_bd_addr_seg -range 0x00010000 -offset 0x00200000 [get_bd_addr_spaces axi_pcie_0/M_AXI] [get_bd_addr_segs axi_iic_clock/S_AXI/Reg] SEG_axi_iic_clock_Reg
   create_bd_addr_seg -range 0x00001000 -offset 0x00010000 [get_bd_addr_spaces axi_pcie_0/M_AXI] [get_bd_addr_segs axi_pcie_0/S_AXI_CTL/CTL0] SEG_axi_pcie_0_CTL0
   create_bd_addr_seg -range 0x00010000 -offset 0x00310000 [get_bd_addr_spaces axi_pcie_0/M_AXI] [get_bd_addr_segs axi_quad_spi_flash/AXI_LITE/Reg] SEG_axi_quad_spi_flash_Reg
   create_bd_addr_seg -range 0x00010000 -offset 0x001A0000 [get_bd_addr_spaces axi_pcie_0/M_AXI] [get_bd_addr_segs axi_uart16550_ext/S_AXI/Reg] SEG_axi_uart16550_ext_Reg

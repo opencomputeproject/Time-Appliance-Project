@@ -29,3 +29,9 @@ source "$ScriptFolder/CreateBinariesGolden.tcl"
 source "$ScriptFolder/CreateBinaries.tcl"
 
 write_cfgmem -format BIN -interface SPIx4 -size 16 -loadbit "up 0x00000000 $ScriptFolder/Binaries/Golden_TimeCardOS.bit up 0x0400000 $ScriptFolder/Binaries/TimeCardOS.bit" -file $ScriptFolder/Binaries/Factory_TimeCardOS.bin -force
+
+# Creating Header
+open_bd_design $ScriptFolder/TimeCard/TimeCard.srcs/sources_1/bd/TimeCard/TimeCard.bd
+set VID [get_property CONFIG.VENDOR_ID [get_bd_cells /axi_pcie_0]]
+set DID [get_property CONFIG.DEVICE_ID [get_bd_cells /axi_pcie_0]]
+exec "$ScriptFolder/Additional Files/tft" -input $ScriptFolder/Binaries/TimeCardOS.bin -output $ScriptFolder/Binaries/TimeCardOS_Gotham.bin -vendor $VID -device $DID -apply

@@ -128,11 +128,11 @@ set_input_delay -clock [get_clocks DummyClk] -max 5.000 [get_ports {Uart1RxDat_D
 set_output_delay -clock [get_clocks DummyClk] -min 15.000 [get_ports {Uart1TxDat_DatOut}]
 set_output_delay -clock [get_clocks DummyClk] -max 0.000 [get_ports {Uart1TxDat_DatOut}]
 
-set_input_delay -clock [get_clocks DummyClk] -min 0.000 [get_ports {MacRxDat_DatIn}]
-set_input_delay -clock [get_clocks DummyClk] -max 5.000 [get_ports {MacRxDat_DatIn}]
+set_input_delay -clock [get_clocks DummyClk] -min 0.000 [get_ports {MacRxDat_DatInOut MacTxDat_DatInOut}]
+set_input_delay -clock [get_clocks DummyClk] -max 5.000 [get_ports {MacRxDat_DatInOut MacTxDat_DatInOut}]
 
-set_output_delay -clock [get_clocks DummyClk] -min 15.000 [get_ports {MacTxDat_DatOut}]
-set_output_delay -clock [get_clocks DummyClk] -max 0.000 [get_ports {MacTxDat_DatOut}]
+set_output_delay -clock [get_clocks DummyClk] -min 15.000 [get_ports {MacRxDat_DatInOut MacTxDat_DatInOut}]
+set_output_delay -clock [get_clocks DummyClk] -max 0.000 [get_ports {MacRxDat_DatInOut MacTxDat_DatInOut}]
 
 
 #**************************************************************
