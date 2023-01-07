@@ -1,11 +1,11 @@
 Altium Designer Pick and Place Locations
-W:\My Drive\Meta\TAP\Workspace\outputs\fab_844-XXXXX-XX\xydata\844-XXXXX-XX-RevX1.txt
+\\Mac\Home\Documents\GitHub\Time-Appliance-Project\Time-Card\GNSS\UBlox\NEO-M9N\Altium\ECAD\outputs\fab_844-XXXXX-XX\xydata\844-XXXXX-XX-RevX1.txt
 
 ========================================================================================================================
 File Design Information:
 
-Date:       05/01/23
-Time:       13:08
+Date:       06/01/23
+Time:       19:56
 Revision:   Not in VersionControl
 Variant:    845-XXXXX_PCBA_projectname
 Units used: mm
