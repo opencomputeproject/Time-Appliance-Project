@@ -12,6 +12,6 @@ This design is a combination of NetTimeLogic IP cores, Xilinx IP cores and custo
 This design is a combination of Open-Source IP cores, Xilinx IP cores and custom cores.
 The Open-Source IP cores are available as VHDL source code. Everything to create the full project is available.
 
-# Time-Card FPGA Video Tutorial
-Some video tutorials related to the Time Card FPGA design you can find on the NetTimeLogic YouTube Channel:
-https://youtube.com/playlist?list=PLKlJXMu8iTDpMalIw0yf9mNr1cmAaR0Ja
+# Time-Card FPGA Video Tutorials
+Some video tutorials related to the Time Card FPGA design you can find on the [NetTimeLogic YouTube Channel](https://youtube.com/playlist?list=PLKlJXMu8iTDpMalIw0yf9mNr1cmAaR0Ja)
+
