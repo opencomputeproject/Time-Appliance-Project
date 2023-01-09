@@ -15,3 +15,5 @@ The Open-Source IP cores are available as VHDL source code. Everything to create
 # Time-Card FPGA Video Tutorials
 Some video tutorials related to the Time Card FPGA design you can find on the [NetTimeLogic YouTube Channel](https://youtube.com/playlist?list=PLKlJXMu8iTDpMalIw0yf9mNr1cmAaR0Ja)
 
+- [How to build the open source FPGA design for the Time Card from scratch](https://www.youtube.com/watch?v=ajXK6HVlo5c)
+- [How to program the FPGA of the Time Card](https://www.youtube.com/watch?v=Whwu7Bnzbcs)
