@@ -80,6 +80,9 @@ Register address space is not contiguous. Register addresses are only offsets in
 Non existing register access in the mapped memory area is answered with a slave decoding error.
 ### 3.1 Register Set 1
 The Register set 1 configures mapping 1. In mapping 1, SMA 1 and SMA 2 are inputs, while SMA 3 and SMA 4 are outputs. 
+
+Additionally, the Register Set 1 provides the status of the 4 SMA inputs.
+
 #### 3.1.1 Register Set 1 Overview 
 The Register Set 1 overview is shown in the table below. 
 ![RegisterSet1](Additional%20Files/Regset1_Overview.png)
@@ -88,6 +91,7 @@ The tables below describe the registers of the SMA Selector's mapping 1.
 ![InputSel1](Additional%20Files/Regset1_1_InputSel.png)
 ![OutputSel1](Additional%20Files/Regset1_2_OutputSel.png)
 ![Version1](Additional%20Files/Regset1_3_Version.png)
+![InputStatus](Additional%20Files/Regset1_4_InputStatus.png)
 ### 3.2 Register Set 2
 The Register set 2 configures mapping 2. In mapping 2, SMA 1 and SMA 2 are outputs, while SMA 3 and SMA 4 are inputs. 
 #### 3.2.1 Register Set 2 Overview 
@@ -98,6 +102,7 @@ The tables below describe the registers of the SMA Selector's mapping 2. The ver
 ![InputSel2](Additional%20Files/Regset2_1_InputSel.png)
 ![OutputSel2](Additional%20Files/Regset2_2_OutputSel.png)
 ![Version2](Additional%20Files/Regset2_3_Version.png)
+
 ## 4 Design Description
 The SMA Selector multiplexes the input and output options, according to the configuration mappings. 
 The core contains 2 AXI4Lite slaves for configuration and status supervision from a CPU. 

@@ -17,6 +17,8 @@ The folder contains the files for the custom IP cores which are used at the Time
    │               
    ├───ClockDetector
    │               
+   ├───CommunicationSelecor
+   │               
    ├───ConfMaster
    │               
    ├───CoreList

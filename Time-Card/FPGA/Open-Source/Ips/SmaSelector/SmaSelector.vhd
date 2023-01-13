@@ -202,13 +202,14 @@ architecture SmaSelector_Arch of SmaSelector is
     -- SMA Selector version
     constant SmaSelectorMajorVersion_Con            : std_logic_vector(7 downto 0) := std_logic_vector(to_unsigned(0, 8));
     constant SmaSelectorMinorVersion_Con            : std_logic_vector(7 downto 0) := std_logic_vector(to_unsigned(1, 8));
-    constant SmaSelectorBuildVersion_Con            : std_logic_vector(15 downto 0) := std_logic_vector(to_unsigned(0, 16));
+    constant SmaSelectorBuildVersion_Con            : std_logic_vector(15 downto 0) := std_logic_vector(to_unsigned(1, 16));
     constant SmaSelectorVersion_Con                 : std_logic_vector(31 downto 0) := SmaSelectorMajorVersion_Con & SmaSelectorMinorVersion_Con & SmaSelectorBuildVersion_Con;
 
     -- AXI 1 regs                                                     Addr       , Mask       , RW  , Reset
     constant SmaInputSelect1_Reg_Con                : Axi_Reg_Type:= (x"00000000", x"FFFFFFFF", Rw_E, (SmaInput2SourceSelect_Gen & SmaInput1SourceSelect_Gen));
     constant SmaOutputSelect1_Reg_Con               : Axi_Reg_Type:= (x"00000008", x"FFFFFFFF", Rw_E, (SmaOutput4SourceSelect_Gen & SmaOutput3SourceSelect_Gen));
     constant SmaSelectorVersion1_Reg_Con            : Axi_Reg_Type:= (x"00000010", x"FFFFFFFF", Ro_E, SmaSelectorVersion_Con);
+    constant SmaInputStatus_Reg_Con                 : Axi_Reg_Type:= (x"00002000", x"00003333", Ro_E, x"00000000");
 
     -- AXI 2 regs                                                     Addr       , Mask       , RW  , Reset
     constant SmaInputSelect2_Reg_Con                : Axi_Reg_Type:= (x"00000000", x"FFFFFFFF", Rw_E, (SmaInput4SourceSelect_Gen & SmaInput3SourceSelect_Gen));
@@ -223,6 +224,9 @@ architecture SmaSelector_Arch of SmaSelector is
     -- Signal Definitions
     --*************************************************************************************
     signal Sma10MHzSourceEnable_EnReg               : std_logic;
+    -- SMA status                   
+    signal SmaInputStatus_Dat                       : std_logic_vector(31 downto 0) := (others => '0');    
+    signal SmaInputStatus_DatReg                    : std_logic_vector(31 downto 0) := (others => '0');    
         
     -- Selection Map1       
     signal SmaInput1SourceSelect_DatReg             : std_logic_vector(15 downto 0);
@@ -276,8 +280,15 @@ begin
     --*************************************************************************************
     -- Concurrent Statements
     --*************************************************************************************
+    
+    -- SMA status 
+    SmaInputStatus_Dat(1 downto 0) <= SmaIn1_DatIn & SmaInput1SourceSelect_DatReg(15);
+    SmaInputStatus_Dat(5 downto 4) <= SmaIn2_DatIn & SmaInput2SourceSelect_DatReg(15);
+    SmaInputStatus_Dat(9 downto 8) <= SmaIn3_DatIn & SmaInput3SourceSelect_DatReg(15);
+    SmaInputStatus_Dat(13 downto 12) <= SmaIn4_DatIn & SmaInput4SourceSelect_DatReg(15);
+    
     -- Clock only supported via Sma Input 0 and must be enabled
-    Sma10MHzSourceEnable_EnOut <= Sma10MHzSourceEnable_EnReg;
+    Sma10MHzSourceEnable_EnOut                      <= Sma10MHzSourceEnable_EnReg;
                    
     SmaIn1_EnOut <= SmaInput1SourceSelect_DatReg(15);
     SmaIn2_EnOut <= SmaInput2SourceSelect_DatReg(15);
@@ -491,11 +502,14 @@ begin
             Axi_Init_Proc(SmaInputSelect1_Reg_Con, SmaInputSelect1_DatReg);
             Axi_Init_Proc(SmaOutputSelect1_Reg_Con, SmaOutputSelect1_DatReg);
             Axi_Init_Proc(SmaSelectorVersion1_Reg_Con, SmaSelectorVersion1_DatReg);
+            Axi_Init_Proc(SmaInputStatus_Reg_Con, SmaInputStatus_DatReg);
 
             SmaInput1SourceSelect_DatReg <= (others => '0');
             SmaInput2SourceSelect_DatReg <= (others => '0');
             SmaOutput3SourceSelect_DatReg <= (others => '0');
             SmaOutput4SourceSelect_DatReg <= (others => '0');
+            SmaInputStatus_DatReg <= (others=>'0');
+            
         elsif ((SysClk_ClkIn'event) and (SysClk_ClkIn = '1')) then
             if ((Axi1WriteAddrValid_ValIn = '1') and (Axi1WriteAddrReady_RdyReg = '1')) then
                 Axi1WriteAddrReady_RdyReg <= '0';
@@ -536,6 +550,7 @@ begin
                         Axi_Read_Proc(SmaInputSelect1_Reg_Con, SmaInputSelect1_DatReg, TempAddress1, Axi1ReadDataData_DatReg, Axi1ReadDataResponse_DatReg);
                         Axi_Read_Proc(SmaOutputSelect1_Reg_Con, SmaOutputSelect1_DatReg, TempAddress1, Axi1ReadDataData_DatReg, Axi1ReadDataResponse_DatReg);
                         Axi_Read_Proc(SmaSelectorVersion1_Reg_Con, SmaSelectorVersion1_DatReg, TempAddress1, Axi1ReadDataData_DatReg, Axi1ReadDataResponse_DatReg);
+                        Axi_Read_Proc(SmaInputStatus_Reg_Con, SmaInputStatus_DatReg, TempAddress1, Axi1ReadDataData_DatReg, Axi1ReadDataResponse_DatReg);
                         Axi1_AccessState_StaReg <= Resp_St;    
                     end if;
                     
@@ -548,7 +563,8 @@ begin
                         Axi_Write_Proc(SmaInputSelect1_Reg_Con, SmaInputSelect1_DatReg, TempAddress1, Axi1WriteDataData_DatIn, Axi1WriteRespResponse_DatReg);
                         Axi_Write_Proc(SmaOutputSelect1_Reg_Con, SmaOutputSelect1_DatReg, TempAddress1, Axi1WriteDataData_DatIn, Axi1WriteRespResponse_DatReg);
                         Axi_Write_Proc(SmaSelectorVersion1_Reg_Con, SmaSelectorVersion1_DatReg, TempAddress1, Axi1WriteDataData_DatIn, Axi1WriteRespResponse_DatReg);
-                        Axi1_AccessState_StaReg <= Resp_St;                                                        
+                        Axi_Write_Proc(SmaInputStatus_Reg_Con, SmaInputStatus_DatReg, TempAddress1, Axi1WriteDataData_DatIn, Axi1WriteRespResponse_DatReg);
+                        Axi1_AccessState_StaReg <= Resp_St;
                     end if; 
                     
                 when Resp_St =>
@@ -566,6 +582,8 @@ begin
             
             SmaOutput3SourceSelect_DatReg <= SmaOutputSelect1_DatReg(15 downto 0);
             SmaOutput4SourceSelect_DatReg <= SmaOutputSelect1_DatReg(31 downto 16);
+            
+            SmaInputStatus_DatReg <= SmaInputStatus_Dat;
             
         end if;
     end process Axi1_Prc;
