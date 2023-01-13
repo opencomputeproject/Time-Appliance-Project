@@ -25,9 +25,8 @@ set current_vivado_version [version -short]
 
 if { [string first $scripts_vivado_version $current_vivado_version] == -1 } {
    puts ""
-   catch {common::send_msg_id "BD_TCL-109" "ERROR" "This script was generated using Vivado <$scripts_vivado_version> and is being run in <$current_vivado_version> of Vivado. Please run the script in Vivado <$scripts_vivado_version> then open the design in Vivado <$current_vivado_version>. Upgrade the design by running \"Tools => Report => Report IP Status...\", then run write_bd_tcl to create an updated script."}
+   common::send_msg_id "BD_TCL-1002" "WARNING" "This script was generated using Vivado <$scripts_vivado_version> without IP versions in the create_bd_cell commands, but is now being run in <$current_vivado_version> of Vivado. There may have been major IP version changes between Vivado <$scripts_vivado_version> and <$current_vivado_version>, which could impact the parameter settings of the IPs."
 
-   return 1
 }
 
 ################################################################
@@ -130,33 +129,33 @@ set bCheckIPsPassed 1
 set bCheckIPs 1
 if { $bCheckIPs == 1 } {
    set list_check_ips "\ 
-nettimelogic.com:TimeCardLib:TC_AdjustableClock:1.0\
-nettimelogic.com:TimeCardLib:TC_ClockDetector:1.0\
-nettimelogic.com:TimeCardLib:TC_CommunicationSelector:1.0\
-nettimelogic.com:TimeCardLib:TC_ConfMaster:1.0\
-nettimelogic.com:TimeCardLib:TC_CoreList:1.0\
-nettimelogic.com:TimeCardLib:TC_DummyAxiSlave:1.0\
-nettimelogic.com:TimeCardLib:TC_FpgaVersion:1.0\
-nettimelogic.com:TimeCardLib:TC_FrequencyCounter:1.0\
-nettimelogic.com:TimeCardLib:TC_MsiIrq:1.0\
-nettimelogic.com:TimeCardLib:TC_PpsGenerator:1.0\
-nettimelogic.com:TimeCardLib:TC_PpsSlave:1.0\
-nettimelogic.com:TimeCardLib:TC_PpsSourceSelector:1.0\
-nettimelogic.com:TimeCardLib:TC_SignalGenerator:1.0\
-nettimelogic.com:TimeCardLib:TC_SmaSelector:1.0\
-nettimelogic.com:TimeCardLib:TC_SignalTimestamper:1.0\
-nettimelogic.com:TimeCardLib:TC_TodSlave:1.0\
-xilinx.com:ip:axi_gpio:2.0\
-xilinx.com:ip:axi_hwicap:3.0\
-xilinx.com:ip:axi_iic:2.0\
-xilinx.com:ip:axi_pcie:2.9\
-xilinx.com:ip:axi_quad_spi:3.2\
-xilinx.com:ip:axi_uart16550:2.0\
-xilinx.com:ip:clk_wiz:6.0\
-xilinx.com:ip:proc_sys_reset:5.0\
-xilinx.com:ip:util_ds_buf:2.1\
-xilinx.com:ip:xlconstant:1.1\
-xilinx.com:ip:xlslice:1.0\
+nettimelogic.com:TimeCardLib:TC_AdjustableClock:*\
+nettimelogic.com:TimeCardLib:TC_ClockDetector:*\
+nettimelogic.com:TimeCardLib:TC_CommunicationSelector:*\
+nettimelogic.com:TimeCardLib:TC_ConfMaster:*\
+nettimelogic.com:TimeCardLib:TC_CoreList:*\
+nettimelogic.com:TimeCardLib:TC_DummyAxiSlave:*\
+nettimelogic.com:TimeCardLib:TC_FpgaVersion:*\
+nettimelogic.com:TimeCardLib:TC_FrequencyCounter:*\
+nettimelogic.com:TimeCardLib:TC_MsiIrq:*\
+nettimelogic.com:TimeCardLib:TC_PpsGenerator:*\
+nettimelogic.com:TimeCardLib:TC_PpsSlave:*\
+nettimelogic.com:TimeCardLib:TC_PpsSourceSelector:*\
+nettimelogic.com:TimeCardLib:TC_SignalGenerator:*\
+nettimelogic.com:TimeCardLib:TC_SmaSelector:*\
+nettimelogic.com:TimeCardLib:TC_SignalTimestamper:*\
+nettimelogic.com:TimeCardLib:TC_TodSlave:*\
+xilinx.com:ip:axi_gpio:*\
+xilinx.com:ip:axi_hwicap:*\
+xilinx.com:ip:axi_iic:*\
+xilinx.com:ip:axi_pcie:*\
+xilinx.com:ip:axi_quad_spi:*\
+xilinx.com:ip:axi_uart16550:*\
+xilinx.com:ip:clk_wiz:*\
+xilinx.com:ip:proc_sys_reset:*\
+xilinx.com:ip:util_ds_buf:*\
+xilinx.com:ip:xlconstant:*\
+xilinx.com:ip:xlslice:*\
 "
 
    set list_ips_missing ""
@@ -372,88 +371,88 @@ proc create_root_design { parentCell } {
    }
   
   # Create instance: TC_AdjustableClock_0, and set properties
-  set TC_AdjustableClock_0 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_AdjustableClock:1.0 TC_AdjustableClock_0 ]
+  set TC_AdjustableClock_0 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_AdjustableClock TC_AdjustableClock_0 ]
   set_property -dict [ list \
    CONFIG.ClockInSyncThreshold_Gen {500} \
  ] $TC_AdjustableClock_0
 
   # Create instance: TC_ClockDetector_0, and set properties
-  set TC_ClockDetector_0 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_ClockDetector:1.0 TC_ClockDetector_0 ]
+  set TC_ClockDetector_0 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_ClockDetector TC_ClockDetector_0 ]
 
   # Create instance: TC_CommunicationSele_0, and set properties
-  set TC_CommunicationSele_0 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_CommunicationSelector:1.0 TC_CommunicationSele_0 ]
+  set TC_CommunicationSele_0 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_CommunicationSelector TC_CommunicationSele_0 ]
 
   # Create instance: TC_ConfMaster_0, and set properties
-  set TC_ConfMaster_0 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_ConfMaster:1.0 TC_ConfMaster_0 ]
+  set TC_ConfMaster_0 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_ConfMaster TC_ConfMaster_0 ]
   set_property -dict [ list \
-   CONFIG.ConfigFile_Gen {c:/NetTimeLogic/Customers/Facebook/GitRepo4/TIMECARD/Implementation/Xilinx/TimeCard/DefaultConfigFile.txt} \
+   CONFIG.ConfigFile_Gen {NA} \
  ] $TC_ConfMaster_0
 
   # Create instance: TC_CoreList_0, and set properties
-  set TC_CoreList_0 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_CoreList:1.0 TC_CoreList_0 ]
+  set TC_CoreList_0 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_CoreList TC_CoreList_0 ]
   set_property -dict [ list \
-   CONFIG.CoreListFile_Gen {c:/NetTimeLogic/Customers/Facebook/GitRepo4/TIMECARD/Implementation/Xilinx/TimeCard/CoreListFile.txt} \
+   CONFIG.CoreListFile_Gen {NA} \
  ] $TC_CoreList_0
 
   # Create instance: TC_DummyAxiSlave_0, and set properties
-  set TC_DummyAxiSlave_0 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_DummyAxiSlave:1.0 TC_DummyAxiSlave_0 ]
+  set TC_DummyAxiSlave_0 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_DummyAxiSlave TC_DummyAxiSlave_0 ]
 
   # Create instance: TC_DummyAxiSlave_1, and set properties
-  set TC_DummyAxiSlave_1 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_DummyAxiSlave:1.0 TC_DummyAxiSlave_1 ]
+  set TC_DummyAxiSlave_1 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_DummyAxiSlave TC_DummyAxiSlave_1 ]
 
   # Create instance: TC_DummyAxiSlave_2, and set properties
-  set TC_DummyAxiSlave_2 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_DummyAxiSlave:1.0 TC_DummyAxiSlave_2 ]
+  set TC_DummyAxiSlave_2 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_DummyAxiSlave TC_DummyAxiSlave_2 ]
 
   # Create instance: TC_DummyAxiSlave_3, and set properties
-  set TC_DummyAxiSlave_3 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_DummyAxiSlave:1.0 TC_DummyAxiSlave_3 ]
+  set TC_DummyAxiSlave_3 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_DummyAxiSlave TC_DummyAxiSlave_3 ]
 
   # Create instance: TC_DummyAxiSlave_4, and set properties
-  set TC_DummyAxiSlave_4 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_DummyAxiSlave:1.0 TC_DummyAxiSlave_4 ]
+  set TC_DummyAxiSlave_4 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_DummyAxiSlave TC_DummyAxiSlave_4 ]
 
   # Create instance: TC_FpgaVersion_0, and set properties
-  set TC_FpgaVersion_0 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_FpgaVersion:1.0 TC_FpgaVersion_0 ]
+  set TC_FpgaVersion_0 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_FpgaVersion TC_FpgaVersion_0 ]
   set_property -dict [ list \
    CONFIG.VersionNumber_Gen {0x0005} \
    CONFIG.VersionNumber_Golden_Gen {0x0005} \
  ] $TC_FpgaVersion_0
 
   # Create instance: TC_FrequencyCounter_1, and set properties
-  set TC_FrequencyCounter_1 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_FrequencyCounter:1.0 TC_FrequencyCounter_1 ]
+  set TC_FrequencyCounter_1 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_FrequencyCounter TC_FrequencyCounter_1 ]
 
   # Create instance: TC_FrequencyCounter_2, and set properties
-  set TC_FrequencyCounter_2 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_FrequencyCounter:1.0 TC_FrequencyCounter_2 ]
+  set TC_FrequencyCounter_2 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_FrequencyCounter TC_FrequencyCounter_2 ]
 
   # Create instance: TC_FrequencyCounter_3, and set properties
-  set TC_FrequencyCounter_3 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_FrequencyCounter:1.0 TC_FrequencyCounter_3 ]
+  set TC_FrequencyCounter_3 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_FrequencyCounter TC_FrequencyCounter_3 ]
 
   # Create instance: TC_FrequencyCounter_4, and set properties
-  set TC_FrequencyCounter_4 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_FrequencyCounter:1.0 TC_FrequencyCounter_4 ]
+  set TC_FrequencyCounter_4 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_FrequencyCounter TC_FrequencyCounter_4 ]
 
   # Create instance: TC_MsiIrq_0, and set properties
-  set TC_MsiIrq_0 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_MsiIrq:1.0 TC_MsiIrq_0 ]
+  set TC_MsiIrq_0 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_MsiIrq TC_MsiIrq_0 ]
   set_property -dict [ list \
    CONFIG.LevelInterrupt_Gen {0x000E05B8} \
    CONFIG.NumberOfInterrupts_Gen {20} \
  ] $TC_MsiIrq_0
 
   # Create instance: TC_PpsGenerator_0, and set properties
-  set TC_PpsGenerator_0 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_PpsGenerator:1.0 TC_PpsGenerator_0 ]
+  set TC_PpsGenerator_0 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_PpsGenerator TC_PpsGenerator_0 ]
   set_property -dict [ list \
    CONFIG.CableDelay_Gen {true} \
    CONFIG.HighResFreqMultiply_Gen {4} \
  ] $TC_PpsGenerator_0
 
   # Create instance: TC_PpsSlave_0, and set properties
-  set TC_PpsSlave_0 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_PpsSlave:1.0 TC_PpsSlave_0 ]
+  set TC_PpsSlave_0 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_PpsSlave TC_PpsSlave_0 ]
 
   # Create instance: TC_PpsSourceSelector_0, and set properties
-  set TC_PpsSourceSelector_0 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_PpsSourceSelector:1.0 TC_PpsSourceSelector_0 ]
+  set TC_PpsSourceSelector_0 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_PpsSourceSelector TC_PpsSourceSelector_0 ]
 
   # Create instance: TC_PpsSourceSelector_1, and set properties
-  set TC_PpsSourceSelector_1 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_PpsSourceSelector:1.0 TC_PpsSourceSelector_1 ]
+  set TC_PpsSourceSelector_1 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_PpsSourceSelector TC_PpsSourceSelector_1 ]
 
   # Create instance: TC_SignalGenerator_1, and set properties
-  set TC_SignalGenerator_1 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_SignalGenerator:1.0 TC_SignalGenerator_1 ]
+  set TC_SignalGenerator_1 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_SignalGenerator TC_SignalGenerator_1 ]
   set_property -dict [ list \
    CONFIG.CableDelay_Gen {true} \
    CONFIG.HighResFreqMultiply_Gen {4} \
@@ -461,7 +460,7 @@ proc create_root_design { parentCell } {
  ] $TC_SignalGenerator_1
 
   # Create instance: TC_SignalGenerator_2, and set properties
-  set TC_SignalGenerator_2 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_SignalGenerator:1.0 TC_SignalGenerator_2 ]
+  set TC_SignalGenerator_2 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_SignalGenerator TC_SignalGenerator_2 ]
   set_property -dict [ list \
    CONFIG.CableDelay_Gen {true} \
    CONFIG.HighResFreqMultiply_Gen {4} \
@@ -469,7 +468,7 @@ proc create_root_design { parentCell } {
  ] $TC_SignalGenerator_2
 
   # Create instance: TC_SignalGenerator_3, and set properties
-  set TC_SignalGenerator_3 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_SignalGenerator:1.0 TC_SignalGenerator_3 ]
+  set TC_SignalGenerator_3 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_SignalGenerator TC_SignalGenerator_3 ]
   set_property -dict [ list \
    CONFIG.CableDelay_Gen {true} \
    CONFIG.HighResFreqMultiply_Gen {4} \
@@ -477,7 +476,7 @@ proc create_root_design { parentCell } {
  ] $TC_SignalGenerator_3
 
   # Create instance: TC_SignalGenerator_4, and set properties
-  set TC_SignalGenerator_4 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_SignalGenerator:1.0 TC_SignalGenerator_4 ]
+  set TC_SignalGenerator_4 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_SignalGenerator TC_SignalGenerator_4 ]
   set_property -dict [ list \
    CONFIG.CableDelay_Gen {true} \
    CONFIG.HighResFreqMultiply_Gen {4} \
@@ -485,10 +484,10 @@ proc create_root_design { parentCell } {
  ] $TC_SignalGenerator_4
 
   # Create instance: TC_SmaSelector_0, and set properties
-  set TC_SmaSelector_0 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_SmaSelector:1.0 TC_SmaSelector_0 ]
+  set TC_SmaSelector_0 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_SmaSelector TC_SmaSelector_0 ]
 
   # Create instance: TC_Timestamper_1, and set properties
-  set TC_Timestamper_1 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_SignalTimestamper:1.0 TC_Timestamper_1 ]
+  set TC_Timestamper_1 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_SignalTimestamper TC_Timestamper_1 ]
   set_property -dict [ list \
    CONFIG.CableDelay_Gen {true} \
    CONFIG.HighResFreqMultiply_Gen {4} \
@@ -496,7 +495,7 @@ proc create_root_design { parentCell } {
  ] $TC_Timestamper_1
 
   # Create instance: TC_Timestamper_2, and set properties
-  set TC_Timestamper_2 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_SignalTimestamper:1.0 TC_Timestamper_2 ]
+  set TC_Timestamper_2 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_SignalTimestamper TC_Timestamper_2 ]
   set_property -dict [ list \
    CONFIG.CableDelay_Gen {true} \
    CONFIG.HighResFreqMultiply_Gen {4} \
@@ -504,7 +503,7 @@ proc create_root_design { parentCell } {
  ] $TC_Timestamper_2
 
   # Create instance: TC_Timestamper_3, and set properties
-  set TC_Timestamper_3 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_SignalTimestamper:1.0 TC_Timestamper_3 ]
+  set TC_Timestamper_3 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_SignalTimestamper TC_Timestamper_3 ]
   set_property -dict [ list \
    CONFIG.CableDelay_Gen {true} \
    CONFIG.HighResFreqMultiply_Gen {4} \
@@ -512,7 +511,7 @@ proc create_root_design { parentCell } {
  ] $TC_Timestamper_3
 
   # Create instance: TC_Timestamper_4, and set properties
-  set TC_Timestamper_4 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_SignalTimestamper:1.0 TC_Timestamper_4 ]
+  set TC_Timestamper_4 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_SignalTimestamper TC_Timestamper_4 ]
   set_property -dict [ list \
    CONFIG.CableDelay_Gen {true} \
    CONFIG.HighResFreqMultiply_Gen {4} \
@@ -520,7 +519,7 @@ proc create_root_design { parentCell } {
  ] $TC_Timestamper_4
 
   # Create instance: TC_Timestamper_FpgaPps, and set properties
-  set TC_Timestamper_FpgaPps [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_SignalTimestamper:1.0 TC_Timestamper_FpgaPps ]
+  set TC_Timestamper_FpgaPps [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_SignalTimestamper TC_Timestamper_FpgaPps ]
   set_property -dict [ list \
    CONFIG.CableDelay_Gen {true} \
    CONFIG.HighResFreqMultiply_Gen {4} \
@@ -528,7 +527,7 @@ proc create_root_design { parentCell } {
  ] $TC_Timestamper_FpgaPps
 
   # Create instance: TC_Timestamper_Gnss1Pps, and set properties
-  set TC_Timestamper_Gnss1Pps [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_SignalTimestamper:1.0 TC_Timestamper_Gnss1Pps ]
+  set TC_Timestamper_Gnss1Pps [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_SignalTimestamper TC_Timestamper_Gnss1Pps ]
   set_property -dict [ list \
    CONFIG.CableDelay_Gen {true} \
    CONFIG.HighResFreqMultiply_Gen {4} \
@@ -536,13 +535,13 @@ proc create_root_design { parentCell } {
  ] $TC_Timestamper_Gnss1Pps
 
   # Create instance: TC_TodSlave_0, and set properties
-  set TC_TodSlave_0 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_TodSlave:1.0 TC_TodSlave_0 ]
+  set TC_TodSlave_0 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_TodSlave TC_TodSlave_0 ]
   set_property -dict [ list \
    CONFIG.UartDefaultBaudRate_Gen {4} \
  ] $TC_TodSlave_0
 
   # Create instance: axi_gpio_ext, and set properties
-  set axi_gpio_ext [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_gpio:2.0 axi_gpio_ext ]
+  set axi_gpio_ext [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_gpio axi_gpio_ext ]
   set_property -dict [ list \
    CONFIG.C_ALL_INPUTS {1} \
    CONFIG.C_ALL_OUTPUTS_2 {1} \
@@ -553,7 +552,7 @@ proc create_root_design { parentCell } {
  ] $axi_gpio_ext
 
   # Create instance: axi_gpio_gnss_mac, and set properties
-  set axi_gpio_gnss_mac [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_gpio:2.0 axi_gpio_gnss_mac ]
+  set axi_gpio_gnss_mac [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_gpio axi_gpio_gnss_mac ]
   set_property -dict [ list \
    CONFIG.C_ALL_INPUTS {1} \
    CONFIG.C_ALL_OUTPUTS_2 {1} \
@@ -563,16 +562,16 @@ proc create_root_design { parentCell } {
  ] $axi_gpio_gnss_mac
 
   # Create instance: axi_hwicap_0, and set properties
-  set axi_hwicap_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_hwicap:3.0 axi_hwicap_0 ]
+  set axi_hwicap_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_hwicap axi_hwicap_0 ]
 
   # Create instance: axi_iic, and set properties
-  set axi_iic [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_iic:2.0 axi_iic ]
+  set axi_iic [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_iic axi_iic ]
 
   # Create instance: axi_iic_clock, and set properties
-  set axi_iic_clock [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_iic:2.0 axi_iic_clock ]
+  set axi_iic_clock [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_iic axi_iic_clock ]
 
   # Create instance: axi_interconnect_0, and set properties
-  set axi_interconnect_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_interconnect:2.1 axi_interconnect_0 ]
+  set axi_interconnect_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_interconnect axi_interconnect_0 ]
   set_property -dict [ list \
    CONFIG.M00_HAS_REGSLICE {3} \
    CONFIG.M01_HAS_REGSLICE {3} \
@@ -596,22 +595,22 @@ proc create_root_design { parentCell } {
  ] $axi_interconnect_0
 
   # Create instance: axi_interconnect_GPIO, and set properties
-  set axi_interconnect_GPIO [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_interconnect:2.1 axi_interconnect_GPIO ]
+  set axi_interconnect_GPIO [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_interconnect axi_interconnect_GPIO ]
 
   # Create instance: axi_interconnect_IIC, and set properties
-  set axi_interconnect_IIC [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_interconnect:2.1 axi_interconnect_IIC ]
+  set axi_interconnect_IIC [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_interconnect axi_interconnect_IIC ]
   set_property -dict [ list \
    CONFIG.NUM_MI {1} \
  ] $axi_interconnect_IIC
 
   # Create instance: axi_interconnect_timecard, and set properties
-  set axi_interconnect_timecard [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_interconnect:2.1 axi_interconnect_timecard ]
+  set axi_interconnect_timecard [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_interconnect axi_interconnect_timecard ]
   set_property -dict [ list \
    CONFIG.NUM_MI {24} \
  ] $axi_interconnect_timecard
 
   # Create instance: axi_pcie_0, and set properties
-  set axi_pcie_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_pcie:2.9 axi_pcie_0 ]
+  set axi_pcie_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_pcie axi_pcie_0 ]
   set_property -dict [ list \
    CONFIG.AXIBAR2PCIEBAR_0 {0x00000000} \
    CONFIG.BAR0_SCALE {Megabytes} \
@@ -626,7 +625,7 @@ proc create_root_design { parentCell } {
  ] $axi_pcie_0
 
   # Create instance: axi_quad_spi_flash, and set properties
-  set axi_quad_spi_flash [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_quad_spi:3.2 axi_quad_spi_flash ]
+  set axi_quad_spi_flash [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_quad_spi axi_quad_spi_flash ]
   set_property -dict [ list \
    CONFIG.C_FIFO_DEPTH {256} \
    CONFIG.C_SCK_RATIO {2} \
@@ -635,37 +634,37 @@ proc create_root_design { parentCell } {
  ] $axi_quad_spi_flash
 
   # Create instance: axi_uart16550_ext, and set properties
-  set axi_uart16550_ext [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_uart16550:2.0 axi_uart16550_ext ]
+  set axi_uart16550_ext [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_uart16550 axi_uart16550_ext ]
   set_property -dict [ list \
    CONFIG.C_S_AXI_ACLK_FREQ_HZ {50000000} \
  ] $axi_uart16550_ext
 
   # Create instance: axi_uart16550_gnss1, and set properties
-  set axi_uart16550_gnss1 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_uart16550:2.0 axi_uart16550_gnss1 ]
+  set axi_uart16550_gnss1 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_uart16550 axi_uart16550_gnss1 ]
   set_property -dict [ list \
    CONFIG.C_S_AXI_ACLK_FREQ_HZ {50000000} \
  ] $axi_uart16550_gnss1
 
   # Create instance: axi_uart16550_gnss2, and set properties
-  set axi_uart16550_gnss2 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_uart16550:2.0 axi_uart16550_gnss2 ]
+  set axi_uart16550_gnss2 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_uart16550 axi_uart16550_gnss2 ]
   set_property -dict [ list \
    CONFIG.C_S_AXI_ACLK_FREQ_HZ {50000000} \
  ] $axi_uart16550_gnss2
 
   # Create instance: axi_uart16550_mac, and set properties
-  set axi_uart16550_mac [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_uart16550:2.0 axi_uart16550_mac ]
+  set axi_uart16550_mac [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_uart16550 axi_uart16550_mac ]
   set_property -dict [ list \
    CONFIG.C_S_AXI_ACLK_FREQ_HZ {50000000} \
  ] $axi_uart16550_mac
 
   # Create instance: axi_uart16550_reserved, and set properties
-  set axi_uart16550_reserved [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_uart16550:2.0 axi_uart16550_reserved ]
+  set axi_uart16550_reserved [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_uart16550 axi_uart16550_reserved ]
   set_property -dict [ list \
    CONFIG.C_S_AXI_ACLK_FREQ_HZ {50000000} \
  ] $axi_uart16550_reserved
 
   # Create instance: clk_wiz_0, and set properties
-  set clk_wiz_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:clk_wiz:6.0 clk_wiz_0 ]
+  set clk_wiz_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:clk_wiz clk_wiz_0 ]
   set_property -dict [ list \
    CONFIG.CLKIN1_JITTER_PS {50.0} \
    CONFIG.CLKOUT1_JITTER {129.198} \
@@ -698,7 +697,7 @@ proc create_root_design { parentCell } {
  ] $clk_wiz_0
 
   # Create instance: clk_wiz_1, and set properties
-  set clk_wiz_1 [ create_bd_cell -type ip -vlnv xilinx.com:ip:clk_wiz:6.0 clk_wiz_1 ]
+  set clk_wiz_1 [ create_bd_cell -type ip -vlnv xilinx.com:ip:clk_wiz clk_wiz_1 ]
   set_property -dict [ list \
    CONFIG.CLKIN1_JITTER_PS {10} \
    CONFIG.CLKIN1_UI_JITTER {10} \
@@ -722,7 +721,7 @@ proc create_root_design { parentCell } {
  ] $clk_wiz_1
 
   # Create instance: clk_wiz_2, and set properties
-  set clk_wiz_2 [ create_bd_cell -type ip -vlnv xilinx.com:ip:clk_wiz:6.0 clk_wiz_2 ]
+  set clk_wiz_2 [ create_bd_cell -type ip -vlnv xilinx.com:ip:clk_wiz clk_wiz_2 ]
   set_property -dict [ list \
    CONFIG.CLKIN1_JITTER_PS {50.0} \
    CONFIG.CLKIN2_JITTER_PS {50.0} \
@@ -749,13 +748,13 @@ proc create_root_design { parentCell } {
  ] $clk_wiz_2
 
   # Create instance: proc_sys_reset_0, and set properties
-  set proc_sys_reset_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset:5.0 proc_sys_reset_0 ]
+  set proc_sys_reset_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset proc_sys_reset_0 ]
   set_property -dict [ list \
    CONFIG.C_AUX_RESET_HIGH {0} \
  ] $proc_sys_reset_0
 
   # Create instance: proc_sys_reset_1, and set properties
-  set proc_sys_reset_1 [ create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset:5.0 proc_sys_reset_1 ]
+  set proc_sys_reset_1 [ create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset proc_sys_reset_1 ]
   set_property -dict [ list \
    CONFIG.C_AUX_RESET_HIGH {0} \
    CONFIG.C_AUX_RST_WIDTH {16} \
@@ -763,62 +762,62 @@ proc create_root_design { parentCell } {
  ] $proc_sys_reset_1
 
   # Create instance: proc_sys_reset_2, and set properties
-  set proc_sys_reset_2 [ create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset:5.0 proc_sys_reset_2 ]
+  set proc_sys_reset_2 [ create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset proc_sys_reset_2 ]
   set_property -dict [ list \
    CONFIG.C_AUX_RESET_HIGH {0} \
    CONFIG.C_EXT_RST_WIDTH {4} \
  ] $proc_sys_reset_2
 
   # Create instance: util_ds_buf_0, and set properties
-  set util_ds_buf_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:util_ds_buf:2.1 util_ds_buf_0 ]
+  set util_ds_buf_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:util_ds_buf util_ds_buf_0 ]
   set_property -dict [ list \
    CONFIG.C_BUF_TYPE {BUFGCE} \
  ] $util_ds_buf_0
 
   # Create instance: util_ds_buf_1, and set properties
-  set util_ds_buf_1 [ create_bd_cell -type ip -vlnv xilinx.com:ip:util_ds_buf:2.1 util_ds_buf_1 ]
+  set util_ds_buf_1 [ create_bd_cell -type ip -vlnv xilinx.com:ip:util_ds_buf util_ds_buf_1 ]
   set_property -dict [ list \
    CONFIG.C_BUF_TYPE {IBUFDSGTE} \
  ] $util_ds_buf_1
 
   # Create instance: xlconstant_0, and set properties
-  set xlconstant_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant:1.1 xlconstant_0 ]
+  set xlconstant_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant xlconstant_0 ]
   set_property -dict [ list \
    CONFIG.CONST_VAL {0} \
    CONFIG.CONST_WIDTH {2} \
  ] $xlconstant_0
 
   # Create instance: xlconstant_1, and set properties
-  set xlconstant_1 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant:1.1 xlconstant_1 ]
+  set xlconstant_1 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant xlconstant_1 ]
   set_property -dict [ list \
    CONFIG.CONST_VAL {0} \
    CONFIG.CONST_WIDTH {1} \
  ] $xlconstant_1
 
   # Create instance: xlconstant_2, and set properties
-  set xlconstant_2 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant:1.1 xlconstant_2 ]
+  set xlconstant_2 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant xlconstant_2 ]
 
   # Create instance: xlconstant_4, and set properties
-  set xlconstant_4 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant:1.1 xlconstant_4 ]
+  set xlconstant_4 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant xlconstant_4 ]
 
   # Create instance: xlconstant_5, and set properties
-  set xlconstant_5 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant:1.1 xlconstant_5 ]
+  set xlconstant_5 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant xlconstant_5 ]
 
   # Create instance: xlconstant_6, and set properties
-  set xlconstant_6 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant:1.1 xlconstant_6 ]
+  set xlconstant_6 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant xlconstant_6 ]
   set_property -dict [ list \
    CONFIG.CONST_VAL {1} \
  ] $xlconstant_6
 
   # Create instance: xlslice_0, and set properties
-  set xlslice_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlslice:1.0 xlslice_0 ]
+  set xlslice_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlslice xlslice_0 ]
   set_property -dict [ list \
    CONFIG.DIN_FROM {6} \
    CONFIG.DOUT_WIDTH {7} \
  ] $xlslice_0
 
   # Create instance: xlslice_1, and set properties
-  set xlslice_1 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlslice:1.0 xlslice_1 ]
+  set xlslice_1 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlslice xlslice_1 ]
   set_property -dict [ list \
    CONFIG.DIN_FROM {31} \
    CONFIG.DIN_TO {31} \

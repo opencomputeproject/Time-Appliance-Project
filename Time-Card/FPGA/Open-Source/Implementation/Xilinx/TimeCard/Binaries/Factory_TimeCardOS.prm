@@ -8,5 +8,5 @@ Start Address      0x00000000
 End Address        0x00FFFFFF
 
 Addr1         Addr2         Date                    File(s)
-0x00000000    0x002C2A3B    Sep 14 13:01:02 2022    C:/NetTimeLogic/Customers/Facebook/GitRepo4/TIMECARD/Implementation/Xilinx/TimeCard/Binaries/Golden_TimeCardOS.bit
-0x00400000    0x006C54F7    Dec  6 10:35:00 2022    C:/NetTimeLogic/Customers/Facebook/GitRepo4/TIMECARD/Implementation/Xilinx/TimeCard/Binaries/TimeCardOS.bit
+0x00000000    0x002C2A3B    Sep 14 13:01:02 2022    [LOCAL_PATH]/Implementation/Xilinx/TimeCard/Binaries/Golden_TimeCardOS.bit
+0x00400000    0x006C54F7    Dec  6 10:35:00 2022    [LOCAL_PATH]/Implementation/Xilinx/TimeCard/Binaries/TimeCardOS.bit
