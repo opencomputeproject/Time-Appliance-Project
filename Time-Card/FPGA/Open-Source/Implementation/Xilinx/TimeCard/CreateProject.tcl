@@ -198,28 +198,30 @@ set obj [get_filesets utils_1]
 # Set 'utils_1' fileset properties
 set obj [get_filesets utils_1]
 
+set VivadoVersion [lindex [split [version -short] "."] 0]
+set Synthesis_Flow "Vivado Synthesis $VivadoVersion"
+set Implementation_Flow "Vivado Implementation $VivadoVersion"
+
 # Create 'synth_1' run (if not found)
 if {[string equal [get_runs -quiet synth_1] ""]} {
-    create_run -name synth_1 -part xc7a100tfgg484-1 -flow {Vivado Synthesis 2019} -strategy "Vivado Synthesis Defaults" -report_strategy {No Reports} -constrset constrs_1
+    create_run -name synth_1 -part xc7a100tfgg484-1 -flow $Synthesis_Flow -strategy "Vivado Synthesis Defaults" -report_strategy {No Reports} -constrset constrs_1
 } else {
   set_property strategy "Vivado Synthesis Defaults" [get_runs synth_1]
-  set_property flow "Vivado Synthesis 2019" [get_runs synth_1]
+  set_property flow $Synthesis_Flow [get_runs synth_1]
 }
 set obj [get_runs synth_1]
-set_property -name "strategy" -value "Vivado Synthesis Defaults" -objects $obj
 set_property -name "steps.synth_design.args.more options" -value "-generic GoldenImage_Gen=false" -objects $obj
 
 
 # Create 'impl_1' run (if not found)
 if {[string equal [get_runs -quiet impl_1] ""]} {
-    create_run -name impl_1 -part xc7a100tfgg484-1 -flow {Vivado Implementation 2019} -strategy "Vivado Implementation Defaults" -report_strategy {No Reports} -constrset constrs_1 -parent_run synth_1
+    create_run -name impl_1 -part xc7a100tfgg484-1 -flow $Implementation_Flow -strategy "Vivado Implementation Defaults" -report_strategy {No Reports} -constrset constrs_1 -parent_run synth_1
 } else {
-  set_property strategy Performance_Retiming [get_runs impl_1]
-  set_property flow "Vivado Implementation 2019" [get_runs impl_1]
+  set_property strategy "Vivado Implementation Defaults" [get_runs impl_1]
+  set_property flow $Implementation_Flow [get_runs impl_1]
 }
 
 set obj [get_runs impl_1]
-set_property -name "strategy" -value "Vivado Implementation Defaults" -objects $obj
 set_property -name "steps.write_bitstream.args.readback_file" -value "0" -objects $obj
 set_property -name "steps.write_bitstream.args.verbose" -value "0" -objects $obj
 set_property -name "steps.write_bitstream.args.BIN_FILE" -value "1" -objects $obj
@@ -227,10 +229,10 @@ set_property -name "steps.write_bitstream.args.BIN_FILE" -value "1" -objects $ob
 
 # Create 'synth_golden' run (if not found)
 if {[string equal [get_runs -quiet synth_golden] ""]} {
-    create_run -name synth_golden -part xc7a100tfgg484-1 -flow {Vivado Synthesis 2019} -strategy "Vivado Synthesis Defaults" -report_strategy {No Reports} -constrset constrs_golden
+    create_run -name synth_golden -part xc7a100tfgg484-1 -flow $Synthesis_Flow -strategy "Vivado Synthesis Defaults" -report_strategy {No Reports} -constrset constrs_golden
 } else {
   set_property strategy "Vivado Synthesis Defaults" [get_runs synth_golden]
-  set_property flow "Vivado Synthesis 2019" [get_runs synth_golden]
+  set_property flow $Synthesis_Flow [get_runs synth_golden]
 }
 set obj [get_runs synth_golden]
 set_property -name "strategy" -value "Vivado Synthesis Defaults" -objects $obj
@@ -239,10 +241,10 @@ set_property -name "steps.synth_design.args.more options" -value "-generic Golde
 
 # Create 'impl_golden' run (if not found)
 if {[string equal [get_runs -quiet impl_golden] ""]} {
-    create_run -name impl_golden -part xc7a100tfgg484-1 -flow {Vivado Implementation 2019} -strategy "Vivado Implementation Defaults" -report_strategy {No Reports} -constrset constrs_golden -parent_run synth_golden
+    create_run -name impl_golden -part xc7a100tfgg484-1 -flow $Implementation_Flow -strategy "Vivado Implementation Defaults" -report_strategy {No Reports} -constrset constrs_golden -parent_run synth_golden
 } else {
-  set_property strategy Performance_Retiming [get_runs impl_golden]
-  set_property flow "Vivado Implementation 2019" [get_runs impl_golden]
+  set_property strategy "Vivado Implementation Defaults" [get_runs impl_golden]
+  set_property flow $Implementation_Flow [get_runs impl_golden]
 }
 
 set obj [get_runs impl_golden]
