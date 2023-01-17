@@ -17,3 +17,4 @@ Some video tutorials related to the Time Card FPGA design you can find on the [N
 
 - [How to build the open source FPGA design for the Time Card from scratch](https://www.youtube.com/watch?v=ajXK6HVlo5c)
 - [How to program the FPGA of the Time Card](https://www.youtube.com/watch?v=Whwu7Bnzbcs)
+- [How to build the FPGA design in newer Vivado versions](https://www.youtube.com/watch?v=lijj4WYPaPA)
