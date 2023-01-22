@@ -4166,11 +4166,17 @@ gpio_output_map(char *buf, struct ptp_ocp *bp, u16 map[][2], u16 bit)
 static void
 _signal_summary_show(struct seq_file *s, struct ptp_ocp *bp, int nr)
 {
-	struct signal_reg __iomem *reg = bp->signal_out[nr]->mem;
-	struct ptp_ocp_signal *signal = &bp->signal[nr];
+	struct signal_reg __iomem *reg;
+	struct ptp_ocp_signal *signal;
 	char label[8];
 	bool on;
 	u32 val;
+
+	if (!bp->signal_out[nr])
+		return;
+
+	reg = bp->signal_out[nr]->mem;
+	signal = &bp->signal[nr];
 
 	if (!signal)
 		return;
