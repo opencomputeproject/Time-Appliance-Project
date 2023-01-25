@@ -41,8 +41,8 @@ You have all necessary source code, BOM, Gerber files and binaries to build it y
 
 To fabricate a Time Card, you can follow these videos to Fab Time Cards with PCBWay, and purchase the accessories to assemble them.
 
-[Time Card PCBWay Fabrication and Assembly](https://www.youtube.com/watch?v=qPRaQU9TBTw)
-[Time Card Accessories](https://www.youtube.com/watch?v=4X3i5tge4S4)
+* [Time Card PCBWay Fabrication and Assembly](https://www.youtube.com/watch?v=qPRaQU9TBTw)
+* [Time Card Accessories](https://www.youtube.com/watch?v=4X3i5tge4S4)
 
 
 ## Form Factor
