@@ -8,6 +8,7 @@ This spec can be accessed using http://www.timingcard.com
 
 ## Table of Contents
 1. [General](#General)
+1. [Where can I get one](#Where-can-I-get-one)
 1. [Form Factor](#Form-Factor)
 1. [GNSS](#GNSS)
    1. [Receiver](#Receiver)
@@ -20,7 +21,6 @@ This spec can be accessed using http://www.timingcard.com
    1. [LED](#LED)
 1. [Precision](#Precision)
 1. [Repository content](#Repository-content)
-1. [Where can I get one](#Where-can-I-get-one)
 1. [License](#License)
 
 ## List of images
