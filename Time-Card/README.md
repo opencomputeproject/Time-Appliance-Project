@@ -35,6 +35,14 @@ List Of Images | Description
 
 Time Master is a critical part of a PTP enabled network. It provides accurate time via GNSS while maintaining accuracy in case of GNSS failure via a high stability (and holdover) oscillator such as an atomic clock. Existing products in the market are often closed sourced and are far from having sufficient features. The Time Card project presents an open source solution via a PCIe card.
 
+## Where can I get one?
+
+You have all necessary source code, BOM, Gerber files and binaries to build it yourself. However, we are currently working with several suppliers and will have their contact info soon available to allow you to purchase an out-of-the-box ready Time Card.
+
+To fabricate a Time Card, you can follow these videos to Fab Time Cards with PCBWay, and purchase the accessories to assemble them.
+![Time Card PCBWay Fabrication and Assembly](https://www.youtube.com/watch?v=qPRaQU9TBTw)
+![Time Card Accessories](https://www.youtube.com/watch?v=4X3i5tge4S4)
+
 
 ## Form Factor
 * Standard PCIe Stand-up Card
@@ -147,9 +155,6 @@ Using a Calnex Sentinel device are comparing various things. Here we are compari
 * Driver (Kernel Module) CentOS 8
 * CAD files for the custom PCIe bracket 
 
-# Where can I get one?
-
-You have all necessary source code, BOM, Gerber files and binaries to build it yourself. However, we are currently working with several suppliers and will have their contact info soon available to allow you to purchase an out-of-the-box ready Time Card.
 
 # License
 Contributions to this Specification are made under the terms and conditions set forth in Open Web Foundation Contributor License Agreement (“OWF CLA 1.0”) (“Contribution License”) by: 
