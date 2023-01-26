@@ -37,13 +37,17 @@ Time Master is a critical part of a PTP enabled network. It provides accurate ti
 
 ## Where can I get one?
 
-You have all necessary source code, BOM, Gerber files and binaries to build it yourself. However, we are currently working with several suppliers and will have their contact info soon available to allow you to purchase an out-of-the-box ready Time Card.
+There are currently 3 options to get your hands on this Time Card.
 
-1. To fabricate a Time Card, you can follow these videos to Fab Time Cards with PCBWay, and purchase the accessories to assemble them.
+The simplest option is: Timebeat manufacture to order all variants of the Time Card and can modify the spec to suit. Get in touch at sales@timebeat.app or simply order one online at https://store.timebeat.app
+
+Alternatively, you have all necessary source code, BOM, Gerber files and binaries to build it yourself.
+Follow these videos to Fabricate Time Cards with PCBWay, and purchase the accessories to assemble them.
 * [Time Card PCBWay Fabrication and Assembly](https://www.youtube.com/watch?v=qPRaQU9TBTw)
 * [Time Card Accessories](https://www.youtube.com/watch?v=4X3i5tge4S4)
-1. To Purchase a pre-made pre-programmed Time Card, or other Time Related devices, TimeBeat sells these as well
-* [TimeBeat Store](https://store.timebeat.app)
+
+The 3rd option is of course to source and produce the Time Card with the manufacturers you seek out yourself.
+
 
 ## Form Factor
 * Standard PCIe Stand-up Card
