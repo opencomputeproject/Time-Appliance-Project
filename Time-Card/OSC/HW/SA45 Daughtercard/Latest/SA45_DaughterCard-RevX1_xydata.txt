@@ -1,0 +1,47 @@
+Altium Designer Pick and Place Locations
+C:\P4_Workspaces\research\users\ChrisXRobles\Tasks\T131322016 - SA45 Daughter Card\outputs\assembly_SA45_DaughterCard\xydata\SA45_DaughterCard-RevX1_xydata.txt
+
+========================================================================================================================
+File Design Information:
+
+Date:       24/01/23
+Time:       17:30
+Revision:   Not in VersionControl
+Variant:    SA45
+Units used: mm
+
+Designator Comment                          Layer       Footprint                           Center-X(mm) Center-Y(mm) Rotation Description                                        
+J6         Keystone_4871                    BottomLayer Keystone_4871                       4.4000       38.6000      180      ""                                                 
+J5         Keystone_4871                    BottomLayer Keystone_4871                       36.2000      40.1000      180      ""                                                 
+J4         Keystone_4871                    BottomLayer Keystone_4871                       35.5000      -1.0000      180      ""                                                 
+J3         Keystone_4871                    BottomLayer Keystone_4871                       4.4000       2.0000       180      ""                                                 
+P10        Mill-Max_8600-0-05-80-00-00-03-0 BottomLayer TH001V_109DIA_000mt_8600-0          14.2700      43.3300      180      "CONN, PC PIN, PRESS-FIT, 10.16MM LENGTH, TIN, TH" 
+P9         Mill-Max_8600-0-05-80-00-00-03-0 BottomLayer TH001V_109DIA_000mt_8600-0          11.2220      43.3300      180      "CONN, PC PIN, PRESS-FIT, 10.16MM LENGTH, TIN, TH" 
+P8         Mill-Max_8600-0-05-80-00-00-03-0 BottomLayer TH001V_109DIA_000mt_8600-0          8.1740       43.3300      180      "CONN, PC PIN, PRESS-FIT, 10.16MM LENGTH, TIN, TH" 
+P7         Mill-Max_8600-0-05-80-00-00-03-0 BottomLayer TH001V_109DIA_000mt_8600-0          5.1260       43.3300      180      "CONN, PC PIN, PRESS-FIT, 10.16MM LENGTH, TIN, TH" 
+P6         Mill-Max_8600-0-05-80-00-00-03-0 BottomLayer TH001V_109DIA_000mt_8600-0          2.0780       43.3300      180      "CONN, PC PIN, PRESS-FIT, 10.16MM LENGTH, TIN, TH" 
+P5         Mill-Max_8600-0-05-80-00-00-03-0 BottomLayer TH001V_109DIA_000mt_8600-0          0.0000       0.0000       180      "CONN, PC PIN, PRESS-FIT, 10.16MM LENGTH, TIN, TH" 
+P4         Mill-Max_8600-0-05-80-00-00-03-0 BottomLayer TH001V_109DIA_000mt_8600-0          0.0000       40.6400      180      "CONN, PC PIN, PRESS-FIT, 10.16MM LENGTH, TIN, TH" 
+P3         Mill-Max_8600-0-05-80-00-00-03-0 BottomLayer TH001V_109DIA_000mt_8600-0          40.6400      40.6400      180      "CONN, PC PIN, PRESS-FIT, 10.16MM LENGTH, TIN, TH" 
+P2         Mill-Max_8600-0-05-80-00-00-03-0 BottomLayer TH001V_109DIA_000mt_8600-0          40.6800      20.3400      180      "CONN, PC PIN, PRESS-FIT, 10.16MM LENGTH, TIN, TH" 
+P1         Mill-Max_8600-0-05-80-00-00-03-0 BottomLayer TH001V_109DIA_000mt_8600-0          40.6400      0.0000       180      "CONN, PC PIN, PRESS-FIT, 10.16MM LENGTH, TIN, TH" 
+R2         Yageo_RC0402FR-0791KL            BottomLayer RESC1005X040N                       14.3850      19.1650      0        "RES SMD 91K OHM 1% 1/16W 0402"                    
+R6         Yageo_RC0201JR-070RL             BottomLayer RESC0603X026N                       15.8650      20.5550      90       "RES, 0.0 OHM, 0.5A, 1/20W, 0201"                  
+L1         4.7uH                            BottomLayer Eaton_HCM0703-4R7-R                 23.4150      16.8525      0        ""                                                 
+R4         Yageo_RC0402FR-0730KL            BottomLayer RESC1005X040N                       14.3850      18.0150      180      "RES SMD 30K OHM 1% 1/16W 0402"                    
+C12        Murata_GRM155R61H104KE14D        BottomLayer CAPC1005X055N                       23.4150      12.2900      180      "CAP, CER, X5R, 0.10UF, 10%, 50V, 0402, 0.55MM T"  
+U3         DiodesInc_AP63356QZV-7           BottomLayer DiodesInc_AP63356QZV-7              17.1650      17.8963      0        ""                                                 
+R3         Yageo_RC1206JR-070RL             BottomLayer RESC3216X070N                       33.7400      7.6400       0        "RES, 0 OHM, 2A, 1/4W, 1206"                       
+C3         Murata_GRM155R61H104KE14D        BottomLayer CAPC1005X055N                       18.6800      21.1750      0        "CAP, CER, X5R, 0.10UF, 10%, 50V, 0402, 0.55MM T"  
+C5         Murata_GRM21BR6YA106KE43L        BottomLayer CAPC2013X145N                       16.8150      9.7900       0        "CAP, CER, X5R, 10UF, 10%, 35V, 0805, 1.45MM T"    
+C2         Murata_GRM155R61H104KE14D        BottomLayer CAPC1005X055N                       40.0900      8.1000       90       "CAP, CER, X5R, 0.10UF, 10%, 50V, 0402, 0.55MM T"  
+C1         Murata_GRM155R6YA105KE11D        BottomLayer CAPC1005X061N                       38.3100      9.9400       0        "CAP, CER, X5R, 1UF, 10%, 35V, 0402, 0.55MM T"     
+C4         Murata_GRM0335C1E330JA01D        BottomLayer CAPC0603X033N                       14.8650      20.5450      270      "CAP, CER, NP0, 33PF, 5%, 25V, 0201, 0.33MM T"     
+J2         Wurth_9774040243R                BottomLayer TH000V_300DIAx400_001mt_9774040243R 20.2400      42.1400      180      "STANDOFF, ROUND, M2X0.4 STEEL 4MM, 9774040243R"   
+J1         Wurth_9774040243R                BottomLayer TH000V_300DIAx400_001mt_9774040243R 20.4400      -1.2600      180      "STANDOFF, ROUND, M2X0.4 STEEL 4MM, 9774040243R"   
+C11        Murata_GRM21BR61A226ME51L        BottomLayer CAPC2013X140N                       23.3150      7.7900       180      "CAP, CER, X5R, 22UF, 20%, 10V, 0805, 1.40MM T"    
+C10        Murata_GRM21BR61A226ME51L        BottomLayer CAPC2013X140N                       23.3150      10.2900      180      "CAP, CER, X5R, 22UF, 20%, 10V, 0805, 1.40MM T"    
+C6         Murata_GRM155R61H104KE14D        BottomLayer CAPC1005X055N                       17.1150      14.7900      0        "CAP, CER, X5R, 0.10UF, 10%, 50V, 0402, 0.55MM T"  
+C8         Murata_GRM21BR61A226ME51L        BottomLayer CAPC2013X140N                       16.8150      7.3900       0        "CAP, CER, X5R, 22UF, 20%, 10V, 0805, 1.40MM T"    
+C7         Murata_GRM21BR6YA106KE43L        BottomLayer CAPC2013X145N                       16.8150      12.3900      0        "CAP, CER, X5R, 10UF, 10%, 35V, 0805, 1.45MM T"    
+U1         Microchip_SA45                   TopLayer    Microchip_SA45                      21.3400      20.3400      180      ""                                                 
