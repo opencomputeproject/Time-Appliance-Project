@@ -2189,7 +2189,7 @@ ptp_ocp_nmea_out_init(struct ptp_ocp *bp)
 		return;
 
 	iowrite32(0, &bp->nmea_out->ctrl);		/* disable */
-	iowrite32(7, &bp->nmea_out->uart_baud);		/* 115200 */
+	iowrite32(3, &bp->nmea_out->uart_baud);		/* 9600 */
 	iowrite32(1, &bp->nmea_out->ctrl);		/* enable */
 }
 
