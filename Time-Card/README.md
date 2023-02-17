@@ -7,7 +7,7 @@ You can find the [IEEE publication](https://ieeexplore.ieee.org/document/9918379
 
 In addition to the ongoing IEEE PAR (P3335: Standard for Architecture and Interfaces for Time Card) on this [link](https://standards.ieee.org/ieee/3335/11127/)
 
-This spec can be accessed using http://www.timingcard.com  
+This spec can be accessed using http://www.timingcard.com or http://timecard.ch  
 
 ![Time Card](images/timingcard.png)
 
