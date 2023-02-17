@@ -1,7 +1,8 @@
 To save spec as PDF - select text below (including images) -> right click -> Print -> Save as PDF
 # Time Card
 #### Spec revision № 1.0
-Time Card is the heart of the [Open Time Server](http://www.opentimeserver.com) Project.  
+Time Card is the heart of the [Open Time Server](http://www.opentimeserver.com) Project.
+
 You can find the [IEEE publication](https://ieeexplore.ieee.org/document/9918379) for it.
 
 In addition to the ongoing IEEE PAR (P3335: Standard for Architecture and Interfaces for Time Card) on this [link](https://standards.ieee.org/ieee/3335/11127/)
