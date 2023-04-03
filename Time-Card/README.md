@@ -98,7 +98,7 @@ Atomic clock examples:
 <img width="666" alt="orolia-mro-50" src="https://user-images.githubusercontent.com/1751211/132625857-12b92625-4d08-4ae7-be18-f8ff6b79b49d.png">
 <img width="555" alt="microchip-mac-sa4x" src="https://user-images.githubusercontent.com/1751211/132625863-4a053483-61bf-4617-9bbe-95c464014563.png">
 <img width="555" alt="taitien-dta-100" src="https://github.com/opencomputeproject/Time-Appliance-Project/blob/master/Time-Card/images/DTA-100.png">
-<img width="555" alt="taitien-dta-5151" src=https://github.com/opencomputeproject/Time-Appliance-Project/blob/master/Time-Card/images/DT5151.png">
+<img width="555" alt="taitien-dta-5151" src="https://github.com/opencomputeproject/Time-Appliance-Project/blob/master/Time-Card/images/DT5151.png">
    
 </p>
 
