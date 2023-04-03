@@ -1,0 +1,8 @@
+Default baudrate is 57600
+
+enabling discipline 
+
+!MP
+
+!D<tau in sec>
+!D300 set tau to 300 seconds
