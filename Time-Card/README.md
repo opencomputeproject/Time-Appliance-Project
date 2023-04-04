@@ -87,6 +87,7 @@ In order to perform sustainable operation we recommend to use an AC with a holdo
 
 Atomic clock examples:
 * [SA5X](https://www.microsemi.com/product-directory/embedded-clocks-frequency-references/5570-miniature-atomic-clock-mac-sa5x)
+* [LN CSAC](https://www.microsemi.com/product-directory/embedded-clocks-frequency-references/4518-low-noise-csac-ln-csac)
 * [mRO-50](https://www.orolia.com/products/atomic-clocks-oscillators/mro-50)
 * [SA.45s](https://www.microsemi.com/product-directory/embedded-clocks-frequency-references/5207-space-csac)
 * [DTA-100](https://www.taitien.com/wp-content/uploads/2021/10/XO-0191-Low-Power-Atomic-Oscillator-DTA-100-Series.pdf)
