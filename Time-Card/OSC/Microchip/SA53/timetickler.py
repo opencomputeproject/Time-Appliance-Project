@@ -25,8 +25,10 @@ MAC_COMMANDS_GET = [
     "Temperature",
     "serial",
     "Locked",
+    "PhaseLimit",
+    "EffectiveTuning",
 ]
-MAC_COMMANDS_SET = ["PpsWidth", "TauPps0", "PpsSource", "PpsOffset", "Disciplining", "DisciplineThresholdPps0"]
+MAC_COMMANDS_SET = ["PpsWidth", "TauPps0", "PpsSource", "PpsOffset", "Disciplining", "DisciplineThresholdPps0", "PhaseMetering", "DigitalTuning", "CableDelay", "latch"]
  
 log = logging.getLogger(__name__)
 
@@ -66,13 +68,19 @@ def query_timecard_mac(tty, fields, n):
 
 def set_timecard_mac(tty, field, value, store=False):
     with serial.Serial(tty, baudrate=DEFAULT_BAUDRATE, timeout=1) as tty_dev:
-        cmd_str = "\{set," + field + "," + value + "}"
+        if field == "latch":
+            cmd_str = "\{latch}"
+        else:
+            cmd_str = "\{set," + field + "," + value + "}"
         tty_dev.write(cmd_str.encode())
         if store:
             cmd_str = "\{store}"
             tty_dev.write(cmd_str.encode())
         ret_val = tty_dev.readline().decode().strip()
-        print(f"Set: {field} to: {value}, stored: {store}, returned: {ret_val}")
+        if field == "latch":
+            print(f"Set: {field}, stored: {store}, returned: {ret_val}")
+        else:
+            print(f"Set: {field} to: {value}, stored: {store}, returned: {ret_val}")
  
 
 def main():
