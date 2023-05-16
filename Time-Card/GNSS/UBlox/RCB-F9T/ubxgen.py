@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 # Inspired by https://portal.u-blox.com/s/question/0D52p00008HKCh8CAH/ublox-8-configuration-using-hex-commands
-# ex: ./ubxgen.py -c ./timingCardUBXG9_PPS_NetTimeLogic-PassiveAntenna115200.txt -t /dev/ttyS2 | bash -x
+# ex: ./ubxgen.py -c ./Configs/ZED-F9T-00B-01/timingCardUBXG9_PPS_NetTimeLogic-PassiveAntenna115200.txt -t /dev/ttyS2 | bash -x
 import argparse
 import binascii
 import sys
