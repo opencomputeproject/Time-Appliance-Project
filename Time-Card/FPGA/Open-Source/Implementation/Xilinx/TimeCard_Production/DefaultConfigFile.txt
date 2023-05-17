@@ -6,7 +6,7 @@
 // Command; BaseAddr; RegAddr; Data or Time in ns if Wait;
 
 // Adj Clock
-// Enable 
+// Disable 
 00000004 01000000 00000000 00000000
 // Select source_1 (PPS+ToD)
 00000004 01000000 00000008 00000001

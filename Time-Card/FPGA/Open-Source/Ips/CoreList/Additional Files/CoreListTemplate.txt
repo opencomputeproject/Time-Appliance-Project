@@ -12,6 +12,7 @@
 // TC FPGA Version Core Type            0xA
 // TC PPS Slave Core Type               0xB
 // TC TOD Slave Core Type               0xC
+// TC Dummy Axi Slave Core Type         0xD
 // Xilinx AXI PCIe Core Type            0x10000
 // Xilinx AXI GPIO Core Type            0x10001
 // Xilinx AXI IIC Core Type             0x10002

@@ -62,13 +62,16 @@ Some **Core Types** are predefined:
 |TC Clock Detector Core Type         |0x00000007|
 |TC SMA Selector Core Type           |0x00000008|
 |TC PPS Source Selector Core Type    |0x00000009|
+|TC FPGA Version Core Type    		 |0x0000000A|
+|TC PPS Slave Core Type    			 |0x0000000B|
+|TC ToD Slave Core Type			     |0x0000000C|
+|TC Dummy Axi Slave Core Type        |0x0000000D|
 |Xilinx AXI PCIe Core Type           |0x00010000|
-|Xilinx AXI Version Core Type        |0x00010001|
-|Xilinx AXI GPIO Core Type           |0x00010002|
-|Xilinx AXI IIC Core Type            |0x00010003|
-|Xilinx AXI UART Core Type           |0x00010004|
-|Xilinx AXI HWICAP Core Type         |0x00010005|
-|Xilinx AXI QUAD SPI FLASH Core Type |0x00010006|
+|Xilinx AXI GPIO Core Type           |0x00010001|
+|Xilinx AXI IIC Core Type            |0x00010002|
+|Xilinx AXI UART Core Type           |0x00010003|
+|Xilinx AXI HWICAP Core Type         |0x00010004|
+|Xilinx AXI QUAD SPI FLASH Core Type |0x00010005|
 
 The **Core Intstance Nr** indicates the instantiation number of a core type, starting counting from "0".
 
