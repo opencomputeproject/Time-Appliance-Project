@@ -1,16 +1,18 @@
 Altium Designer Pick and Place Locations
-C:\Users\julianstj\Desktop\WorkNotes\Projects\PTP\Time-Appliance-Project-master\Time-Card\GNSS\UBlox\M2-NEO-M9N\ECAD\V1\Project Outputs for M2_NEO-M9N_MODULE\Pick Place for M2_NEO-M9N_MODULE(845-XXXXX_PCBA_projectname).csv
+C:\Users\julianstj\Desktop\WorkNotes\Projects\PTP\Time-Appliance-Project-master\Time-Card\GNSS\UBlox\M2-NEO-M9N_Untested\V1\ECAD\Project Outputs for M2_NEO-M9N_MODULE\Pick Place for M2_NEO-M9N_MODULE(845-XXXXX_PCBA_projectname).csv
 
 ========================================================================================================================
 File Design Information:
 
-Date:       18/05/23
-Time:       12:44
+Date:       19/05/23
+Time:       14:23
 Revision:   Not in VersionControl
 Variant:    845-XXXXX_PCBA_projectname
 Units used: mil
 
 "Designator","Comment","Layer","Footprint","Center-X(mil)","Center-Y(mil)","Rotation","Description"
+"R15","0_5%_0402","TopLayer","RESC1005X40X25NL05T10","271.654","527.559","90",""
+"R14","DNI_0_5%_0402","TopLayer","RESC1005X40X25NL05T10","228.346","527.559","90",""
 "R13","0_5%_0402","TopLayer","RESC1005X40X25NL05T10","314.961","271.654","270",""
 "R12","0_5%_0402","TopLayer","RESC1005X40X25NL05T10","149.606","271.654","270",""
 "R11","10K_5%_0402","TopLayer","RESC1005X40X25LL05T10","401.575","523.622","270",""
@@ -36,7 +38,7 @@ Units used: mil
 "R3","10K 1/8W 0402","TopLayer","r0402","472.441","417.323","0","Res Thick Film 0402 10K Ohm 1% 0.125W(1/8W) ±100ppm/°C Pad SMD T/R"
 "R1","0 ohm 0402","TopLayer","r0402","393.701","1275.591","180","RES SMD 0 OHM JUMPER 1/16W 0402"
 "LED2","Green","TopLayer","led0603","472.441","346.457","0","LED High-Power Uni-Color Green 574nm 2-Pin Chip LED T/R"
-"L1","27nH 300mA 460mohm 0402","TopLayer","L0402","169.291","1417.323","180","Inductor RF Chip Multi-Layer 27nH 5% 100MHz 8Q-Factor Air 300mA 460mOhm DCR 0402 Paper T/R"
+"L1","27nH 350mA 0.46ohm 0402","TopLayer","FP-LQG15HH_02-IPC_C","169.291","1417.323","180","Multilayer type RF Inductor 27nH ±5% 0.46O 350mA 0402"
 "J2","U.FL-R-SMT-1(10)","TopLayer","FP-U_FL-R-SMT-1_10-MFG","133.858","1540.846","180","CONN U.FL RCPT STR 50 OHM SMD"
 "J1","OCPTAP_M2_FINGERS","TopLayer","OCPTAP_M2_FINGERS","433.071","55.118","0",""
 "C4","47pF 50V 0402","TopLayer","c0402","153.543","1350.394","270","0402 47 pF 50 V ±5 % Tolerance NP0 SMT Multilayer Ceramic Capacitor"
