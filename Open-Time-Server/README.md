@@ -1,5 +1,5 @@
 *To save spec as PDF - select text below (including images) -> right click -> Print -> Save as PDF*
-![Back to Time Appliances Project's wiki](https://www.opencompute.org/wiki/Time_Appliance_Project)
+[Back to Time Appliances Project's wiki](https://www.opencompute.org/wiki/Time_Appliance_Project)
 # Open Time Server
 #### Spec revision № 1.0
 The Open Time Server (OTS) is an Open, Scalable and Validated reference architecture that can be deployed in Data Centers or in an edge environments.  
