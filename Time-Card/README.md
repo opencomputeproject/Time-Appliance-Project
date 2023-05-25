@@ -106,6 +106,7 @@ Atomic clock examples:
 OCXO examples:
 * [DT-5151](https://www.taitien.com/ti-products/ultra-high-precision-disciplined-oscillator-dt-5151-series)
 * [SiT5711](https://www.sitime.com/products/stratum-3e-ocxos/sit5711)
+<img width="555" alt="taitien-dta-100" src="https://github.com/opencomputeproject/Time-Appliance-Project/blob/master/Time-Card/images/DT-5151.png">
 
 TCXO examples:
 * [SiT5356](https://www.sitime.com/products/super-tcxo/sit5356)
