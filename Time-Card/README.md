@@ -91,7 +91,6 @@ Atomic clock examples:
 * [mRO-50](https://www.orolia.com/products/atomic-clocks-oscillators/mro-50)
 * [SA.45s](https://www.microsemi.com/product-directory/embedded-clocks-frequency-references/5207-space-csac)
 * [DTA-100](https://www.taitien.com/wp-content/uploads/2021/10/XO-0191-Low-Power-Atomic-Oscillator-DTA-100-Series.pdf)
-* [DT-5151](https://www.taitien.com/ti-products/ultra-high-precision-disciplined-oscillator-dt-5151-series)
 
 <p align="center">
 <img width="666" alt="microchip-mac-sa5x" src="https://user-images.githubusercontent.com/1751211/132626512-3fded23e-dcad-4325-ba4a-0825a9191dce.png">
@@ -99,13 +98,13 @@ Atomic clock examples:
 <img width="666" alt="orolia-mro-50" src="https://user-images.githubusercontent.com/1751211/132625857-12b92625-4d08-4ae7-be18-f8ff6b79b49d.png">
 <img width="555" alt="microchip-mac-sa4x" src="https://user-images.githubusercontent.com/1751211/132625863-4a053483-61bf-4617-9bbe-95c464014563.png">
 <img width="555" alt="taitien-dta-100" src="https://github.com/opencomputeproject/Time-Appliance-Project/blob/master/Time-Card/images/DTA-100.png">
-<img width="555" alt="taitien-dta-5151" src="https://github.com/opencomputeproject/Time-Appliance-Project/blob/master/Time-Card/images/DT-5151.png">
    
 </p>
 
 <p align="center">Figure 2. Atomic Clock Examples</p>
 
 OCXO examples:
+* [DT-5151](https://www.taitien.com/ti-products/ultra-high-precision-disciplined-oscillator-dt-5151-series)
 * [SiT5711](https://www.sitime.com/products/stratum-3e-ocxos/sit5711)
 
 TCXO examples:
