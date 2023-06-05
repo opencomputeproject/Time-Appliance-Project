@@ -112,6 +112,7 @@ OCXO examples:
 
 TCXO examples:
 * [SiT5356](https://www.sitime.com/products/super-tcxo/sit5356)
+<img width="555" alt="SiT5356" src="https://www.sitime.com/sites/default/files/styles/original_image/public/products/Elite-10-Pin-Ceramic-package-3D-top%26bottom-small.png">
 
 ## Bridge
 
