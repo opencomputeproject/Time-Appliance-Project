@@ -51,7 +51,7 @@ Follow these videos to Fabricate Time Cards with PCBWay, and purchase the access
 
 The 2rd option is of course to source and produce the Time Card with the manufacturers you seek out yourself.
 
-The 3rd option is to purchase the Time Card from 3rd party vendors like [Safran](https://safran-navigation-timing.com/about-the-atomic-reference-time-card-art-card/), [Timebeat](https://store.timebeat.app) or [ADVA](https://www.adva.com/en/newsroom/press-releases/20211109-adva-timing-card-brings-precise-synchronization-to-open-compute-servers).
+The 3rd option is to purchase the Time Card from 3rd party vendors like [Safran](https://safran-navigation-timing.com/about-the-atomic-reference-time-card-art-card/), [Timebeat](https://store.timebeat.app) or [ADVA](https://urldefense.com/v3/__https://www.oscilloquartz.com/en/products-and-services/embedded-timing-solutions/osa-5400-timecard__;!!Bt8RZUm9aw!74Qc6wh6_yFfgOhGUCr-rX5q6hd1NxC9HwjI7CwVO24C2SXXuzDXk4W3NjlSOZtTBWtvV11UzSicxA$).
 
 
 ## Form Factor
