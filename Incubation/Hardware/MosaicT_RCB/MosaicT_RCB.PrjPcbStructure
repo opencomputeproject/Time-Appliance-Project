@@ -1,0 +1,7 @@
+Record=TopLevelDocument|FileName=CONNECTORS.SchDoc|SheetNumber=2
+Record=NoMainPathDocument|SourceDocument=CONNECTORS.SchDoc|FileName=GNSS_A.SchDoc|SheetNumber=3
+Record=NoMainPathDocument|SourceDocument=CONNECTORS.SchDoc|FileName=GNSS_B.SchDoc|SheetNumber=4
+Record=NoMainPathDocument|SourceDocument=CONNECTORS.SchDoc|FileName=GNSS_SUPPORT.SchDoc|SheetNumber=5
+Record=NoMainPathDocument|SourceDocument=CONNECTORS.SchDoc|FileName=POWER.SchDoc|SheetNumber=7
+Record=NoMainPathDocument|SourceDocument=CONNECTORS.SchDoc|FileName=REF_TIMING.SchDoc|SheetNumber=6
+Record=NoMainPathDocument|SourceDocument=CONNECTORS.SchDoc|FileName=TABLE_OF_CONTENTS.SchDoc|SheetNumber=1
