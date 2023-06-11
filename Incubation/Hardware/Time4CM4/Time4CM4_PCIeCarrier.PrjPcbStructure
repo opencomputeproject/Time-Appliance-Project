@@ -1,0 +1,13 @@
+Record=TopLevelDocument|FileName=40_Pin_Connector.SchDoc|SheetNumber=7
+Record=NoMainPathDocument|SourceDocument=40_Pin_Connector.SchDoc|FileName=CM4_Conn.SchDoc|SheetNumber=1
+Record=NoMainPathDocument|SourceDocument=40_Pin_Connector.SchDoc|FileName=CM4_HDMI.SchDoc|SheetNumber=2
+Record=NoMainPathDocument|SourceDocument=40_Pin_Connector.SchDoc|FileName=Dip_Switch.SchDoc|SheetNumber=7
+Record=NoMainPathDocument|SourceDocument=40_Pin_Connector.SchDoc|FileName=External_Connectors.SchDoc|SheetNumber=5
+Record=NoMainPathDocument|SourceDocument=40_Pin_Connector.SchDoc|FileName=PCIe_Connector.SchDoc|SheetNumber=3
+Record=NoMainPathDocument|SourceDocument=40_Pin_Connector.SchDoc|FileName=PCIe_UART_Bridge.SchDoc|SheetNumber=3
+Record=NoMainPathDocument|SourceDocument=40_Pin_Connector.SchDoc|FileName=PCIe_USB30.SchDoc|SheetNumber=9
+Record=NoMainPathDocument|SourceDocument=40_Pin_Connector.SchDoc|FileName=PCIe_USB30_Conn_Internal_Vertical.SchDoc|SheetNumber= 
+Record=NoMainPathDocument|SourceDocument=40_Pin_Connector.SchDoc|FileName=PCIe_USB30_Conn_Panel_Bottom.SchDoc|SheetNumber=12
+Record=NoMainPathDocument|SourceDocument=40_Pin_Connector.SchDoc|FileName=PCIe_USB30_Conn_Panel_Top.SchDoc|SheetNumber=11
+Record=NoMainPathDocument|SourceDocument=40_Pin_Connector.SchDoc|FileName=PCIe_USB30_Power.SchDoc|SheetNumber=10
+Record=NoMainPathDocument|SourceDocument=40_Pin_Connector.SchDoc|FileName=Power.SchDoc|SheetNumber=4
