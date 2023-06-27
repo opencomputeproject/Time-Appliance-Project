@@ -9,7 +9,7 @@ In addition to the ongoing IEEE PAR (P3335: Standard for Architecture and Interf
 
 This spec can be accessed using http://www.timingcard.com or http://timecard.ch  
 
-![Time Card](images/timingcard.png)
+![Time Card](images/TimecardV9.png)
 
 ## Table of Contents
 1. [General](#General)
