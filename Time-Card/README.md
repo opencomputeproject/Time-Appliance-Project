@@ -53,7 +53,7 @@ The 2rd option is of course to source and produce the Time Card with the manufac
 
 The 3rd option is to purchase the Time Card from 3rd party vendors like [Safran](https://safran-navigation-timing.com/about-the-atomic-reference-time-card-art-card/), [Timebeat](https://store.timebeat.app) or [ADVA](https://urldefense.com/v3/__https://www.oscilloquartz.com/en/products-and-services/embedded-timing-solutions/osa-5400-timecard__;!!Bt8RZUm9aw!74Qc6wh6_yFfgOhGUCr-rX5q6hd1NxC9HwjI7CwVO24C2SXXuzDXk4W3NjlSOZtTBWtvV11UzSicxA$). Of course, this is the most conveniet way to get your hands on a Time Card, yet the most expensive one. There is a cost associated with the vendors manufacturing the card and providing you all kinds of support in addition to their profit margins. It is good to know how much you are paying for parts and how much you are paying for covenience.
 
-## What is the price for parts on a Time Card
+## What is the price for parts of a Time Card
 
 There are various parts that can sit on the Time Card as options and can change the total price. 
 Here we have a breakdown:
