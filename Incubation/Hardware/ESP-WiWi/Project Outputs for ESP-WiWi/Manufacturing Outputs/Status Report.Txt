@@ -1,0 +1,10 @@
+Output: Bill of Materials
+Type  : BOM
+From  : Variant [[No Variations]] of Project [ESP-WiWi.PrjPcb]
+   Generated File[Bill of Materials-ESP-WiWi.xlsx]
+
+
+Files Generated   : 1
+Documents Printed : 0
+
+Finished Output Generation At 11:23:03 AM On 6/22/2023
