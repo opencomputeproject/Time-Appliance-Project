@@ -4,15 +4,16 @@ C:\Users\julianstj\Desktop\WorkNotes\Projects\PTP\Time-Appliance-Project-master\
 ========================================================================================================================
 File Design Information:
 
-Date:       14/04/23
-Time:       15:35
+Date:       01/07/23
+Time:       10:03
 Revision:   Not in VersionControl
 Variant:    No variations
 Units used: mil
 
 Designator Comment                                      Layer       Footprint                                Center-X(mil) Center-Y(mil) Rotation Description                                                                                        
+R36        4.7K_1%_0402                                 TopLayer    RESC1005X40X25LL05T05                    1231.299      1926.181      0        "Chip Resistor, 4.7 KOhm, +/- 1%, 0.1 W, -55 to 155 degC, 0402 (1005 Metric), RoHS, Tape and Reel" 
+R35        4.7K_1%_0402                                 TopLayer    RESC1005X40X25LL05T05                    1335.630      1924.213      180      "Chip Resistor, 4.7 KOhm, +/- 1%, 0.1 W, -55 to 155 degC, 0402 (1005 Metric), RoHS, Tape and Reel" 
 R33        Yageo_RC0201JR-070RL                         TopLayer    RESC0603X026N                            1851.373      1715.458      180      "RES, 0.0 OHM, 0.5A, 1/20W, 0201"                                                                  
-FL3        Wurth_742792641                              TopLayer    FB_1608X100N_CBF                         1004.921      1794.488      270      "FERRITE BEAD, 300 OHM@100MHZ, 25%, 2A, 0.15 OHM DCR, 0603, 1.0MM T"                               
 C23        "Samsung Electro-Mechanics_CL05B104JO5NNNC"  TopLayer    CAPC1005X055N                            1123.031      1809.646      270      "CAP, CER, X7R, 0.1UF, 5%, 16V, 0402, 0.55MM T"                                                    
 C22        Murata_GRM188R61A106ME69D                    TopLayer    CAPC1608X090N                            1067.913      1796.457      270      "CAP, CER, X5R, 10UF, 20%, 10V, 0603, 0.80MM T"                                                    
 R34        Yageo_RC0201FR-0710KL                        TopLayer    RESC0603X026N                            948.001       1813.386      270      "RES, 10K OHM, 1%, 1/20W, 200PPM/C, 0201"                                                          
@@ -52,22 +53,17 @@ C21        "Samsung Electro-Mechanics_CL05B104JO5NNNC"  BottomLayer CAPC1005X055
 R7         "Stackpole Electronics, Inc._HCJ0402ZT0R00"  TopLayer    RESC1005X045N                            1799.213      1641.246      90       "RES, 0.0 OHM, 1/8W, 6.5A, 0402"                                                                   
 R6         "Stackpole Electronics, Inc._HCJ0402ZT0R00"  TopLayer    RESC1005X045N                            1168.724      1187.425      45       "RES, 0.0 OHM, 1/8W, 6.5A, 0402"                                                                   
 Y4         "Rakon_RFPO45 US 10 LF"                      TopLayer    OSC004_600_970x750x430_RFP045            1319.882      1138.780      90       "OSC, OCXO, RFPO45, 10 - 26MHZ, 10PPB STAB, HCMOS, 3.3V, 9.7X7.5X4.3MM, SMT"                       
-FL7        Wurth_742792641                              TopLayer    FB_1608X100N_CBF                         1272.638      800.437       0        "FERRITE BEAD, 300 OHM@100MHZ, 25%, 2A, 0.15 OHM DCR, 0603, 1.0MM T"                               
 C20        Murata_GRM188D71A106MA73D                    TopLayer    CAPC1608X100N                            1271.654      861.461       0        "CAP, CER, X7T, 10UF, 20%, 10V, 0603, 1.00MM T"                                                    
 C19        "Samsung Electro-Mechanics_CL05B104JO5NNNC"  TopLayer    CAPC1005X055N                            1259.156      913.633       0        "CAP, CER, X7R, 0.1UF, 5%, 16V, 0402, 0.55MM T"                                                    
 R8         "Stackpole Electronics, Inc._HCJ0402ZT0R00"  TopLayer    RESC1005X045N                            1780.315      1715.458      0        "RES, 0.0 OHM, 1/8W, 6.5A, 0402"                                                                   
 Y3         Abracon_AOCJYR-10.000MHZ-M5625LF             TopLayer    OSC004_600_970x750x410_AOCJYR            1177.166      1374.998      270      "OSC, OCXO, 10.000MHZ, 25PPB STAB, LVCMOS, 3.3V, 9.7X7.5X4.3MM, SMT"                               
-FL6        Wurth_742792641                              BottomLayer FB_1608X100N_CBF                         1139.424      1624.016      180      "FERRITE BEAD, 300 OHM@100MHZ, 25%, 2A, 0.15 OHM DCR, 0603, 1.0MM T"                               
 C18        Murata_GRM188D71A106MA73D                    BottomLayer CAPC1608X100N                            1273.622      1624.016      0        "CAP, CER, X7T, 10UF, 20%, 10V, 0603, 1.00MM T"                                                    
 C17        "Samsung Electro-Mechanics_CL05B104JO5NNNC"  TopLayer    CAPC1005X055N                            1365.158      1474.409      270      "CAP, CER, X7R, 0.1UF, 5%, 16V, 0402, 0.55MM T"                                                    
-U1         TI_TPS758A01KTTR                             TopLayer    TO170P1524X483-HS-6N_EP1070x860_KTT      1093.504      312.008       270      "IC, REG, TPS758A01, LDO, ADJ, 3A, 3% ACCUR, DDPAK-5"                                              
-R3         Yageo_RC0402FR-0730K1L                       TopLayer    RESC1005X040N                            671.511       107.131       90       "RES SMD 30.1K OHM 1% 1/16W 0402"                                                                  
-R2         Yageo_RC0402FR-0751KL                        TopLayer    RESC1005X040N                            721.708       107.131       270      "RES SMD 51K OHM 1% 1/16W 0402"                                                                    
+U1         LMS1587IS-3.3/NOPB                           TopLayer    KTT0003B_L                               1107.061      331.059       0        "3A Low Dropout Fast Response Regulators, 3-pin TO-263, Pb-Free"                                   
+R2         DNI_0_1206                                   TopLayer    FP-RC1206-MFG                            572.835       286.417       90       "RES SMD 0 OHM JUMPER 1/4W 1206"                                                                   
 C16        Kemet_T491B476K010AT                         TopLayer    CAPMP3528X210N_T520                      283.464       523.032       90       "CAP TANT 47UF 10% 10V 1411"                                                                       
-C5         Kemet_T491B476K010AT                         TopLayer    CAPMP3528X210N_T520                      695.866       287.795       90       "CAP TANT 47UF 10% 10V 1411"                                                                       
+C5         Kemet_T491B476K010AT                         TopLayer    CAPMP3528X210N_T520                      569.882       528.543       90       "CAP TANT 47UF 10% 10V 1411"                                                                       
 C15        Kemet_T491B476K010AT                         TopLayer    CAPMP3528X210N_T520                      431.102       523.032       90       "CAP TANT 47UF 10% 10V 1411"                                                                       
-FL5        Wurth_742792641                              BottomLayer FB_1608X100N_CBF                         1506.999      1458.661      180      "FERRITE BEAD, 300 OHM@100MHZ, 25%, 2A, 0.15 OHM DCR, 0603, 1.0MM T"                               
-FL4        Wurth_742792641                              TopLayer    FB_1608X100N_CBF                         875.000       1276.815      0        "FERRITE BEAD, 300 OHM@100MHZ, 25%, 2A, 0.15 OHM DCR, 0603, 1.0MM T"                               
 FL2        TDK_MPZ1608S601ATA00                         BottomLayer INDC1608X095N                            789.961       720.296       90       "FERRITE BEAD, 600 OHM @100MHZ, 25%, 1A, 0.150 OHM DCR, 0603, 0.95MM T"                            
 FL1        TDK_MPZ1608S601ATA00                         BottomLayer INDC1608X095N                            868.597       1262.008      270      "FERRITE BEAD, 600 OHM @100MHZ, 25%, 1A, 0.150 OHM DCR, 0603, 0.95MM T"                            
 U4         TI_DS90LV028AQMA/NOPB                        BottomLayer SOP127P600X175_8N                        568.898       922.441       0        "IC, RVCR, DS90LV028AQ-Q1, DUAL, DIFF, LVDS, 400MBPS, SOIC-8"                                      
@@ -91,10 +87,10 @@ J2         Wurth_9774040243R                            BottomLayer TH000V_300DI
 J1         Wurth_9774040243R                            BottomLayer TH000V_300DIAx400_001mt_9774040243R      1830.709      1374.016      180      "STANDOFF, ROUND, M2X0.4 STEEL 4MM, 9774040243R"                                                   
 R1         "Stackpole Electronics, Inc._RMCF1210ZT0R00" TopLayer    RESC3225X070N                            134.842       469.488       90       "RES, 0.0 OHM, 3A, 1/2W, 1210"                                                                     
 P9         Samtec_HTSW-102-07-T-S                       TopLayer    TH002_254_508x254x838_000mt_HTSW         184.842       704.724       0        "CONN, PIN, HEADER, 2POS, 2.54MM PITCH, 8.38MM H, VERT, TIN, TH"                                   
-C4         Murata_GRM21BR61A226ME51L                    TopLayer    CAPC2013X140N                            712.598       523.622       180      "CAP, CER, X5R, 22UF, 20%, 10V, 0805, 1.40MM T"                                                    
+C4         Murata_GRM21BR61A226ME51L                    TopLayer    CAPC2013X140N                            756.890       186.024       270      "CAP, CER, X5R, 22UF, 20%, 10V, 0805, 1.40MM T"                                                    
 C3         Murata_GRM21BR61A226ME51L                    TopLayer    CAPC2013X140N                            170.276       833.661       0        "CAP, CER, X5R, 22UF, 20%, 10V, 0805, 1.40MM T"                                                    
 C2         Murata_GRM21BR61A226ME51L                    TopLayer    CAPC2013X140N                            170.276       933.071       0        "CAP, CER, X5R, 22UF, 20%, 10V, 0805, 1.40MM T"                                                    
-C1         "Samsung Electro-Mechanics_CL05B104JO5NNNC"  TopLayer    CAPC1005X055N                            729.921       445.866       180      "CAP, CER, X7R, 0.1UF, 5%, 16V, 0402, 0.55MM T"                                                    
+C1         "Samsung Electro-Mechanics_CL05B104JO5NNNC"  TopLayer    CAPC1005X055N                            664.370       186.181       270      "CAP, CER, X7R, 0.1UF, 5%, 16V, 0402, 0.55MM T"                                                    
 P5         Mill-Max_8600-0-05-80-00-00-03-0             BottomLayer TH001V_109DIA_000mt_8600-0               200.787       200.787       180      "CONN, PC PIN, PRESS-FIT, 10.16MM LENGTH, TIN, TH"                                                 
 P4         Mill-Max_8600-0-05-80-00-00-03-0             BottomLayer TH001V_109DIA_000mt_8600-0               1799.213      1000.000      180      "CONN, PC PIN, PRESS-FIT, 10.16MM LENGTH, TIN, TH"                                                 
 P6         Mill-Max_8600-0-05-80-00-00-03-0             BottomLayer TH001V_109DIA_000mt_8600-0               283.465       1905.512      180      "CONN, PC PIN, PRESS-FIT, 10.16MM LENGTH, TIN, TH"                                                 
