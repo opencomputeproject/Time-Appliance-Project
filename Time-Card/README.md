@@ -60,10 +60,10 @@ Here we have a breakdown:
 * Time Card's mainboard: PCB with Assembly (Parts soldered on the PCB) should be about $200.
 * Alinx SOM (AC7100B) should be about $250.
 * GNSS recevier: The u-blox RCB-F9T is about $300. Other GNSS modules may vary in price based on their performance and capabilities in range of $50 to $500.
-* Atomic Clock: The SA-53 is about $1600. You can use a TCXO or OCXO board as well which can be around $100 - $200
+* Atomic Clock: The SA-53 is about $1995 (from microchipdirect). You can use a TCXO or OCXO board as well which can be around $100 - $200
 So, in conclusion:
 * A Time Card with a RCB-F9T GNSS and a TCXO costs about $200 + $250 + $300 + $100 = $850 in parts.
-* A Time Card with a RCB-F9T GNSS and a MAC (SA-53) costs about $200 + $250 + $300 + $1600 = $2300 in parts.
+* A Time Card with a RCB-F9T GNSS and a MAC (SA-53) costs about $200 + $250 + $300 + $1995 = $2695 in parts.
 
 ## Form Factor
 * Standard PCIe Stand-up Card
