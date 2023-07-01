@@ -1,18 +1,20 @@
 Altium Designer Pick and Place Locations
-C:\Users\julianstj\Desktop\WorkNotes\Projects\PTP\Time-Appliance-Project-master\Time-Card\GNSS\UBlox\M2-NEO-M9N_Untested\V1\ECAD\Project Outputs for M2_NEO-M9N_MODULE\Pick Place for M2_NEO-M9N_MODULE(845-XXXXX_PCBA_projectname).csv
+C:\Users\julianstj\Desktop\WorkNotes\Projects\PTP\Time-Appliance-Project-master\Time-Card\GNSS\UBlox\M2-NEO-M9N\ECAD\Project Outputs for M2_NEO-M9N_MODULE\Pick Place for M2_NEO-M9N_MODULE(845-XXXXX_PCBA_projectname).csv
 
 ========================================================================================================================
 File Design Information:
 
-Date:       19/05/23
-Time:       14:23
+Date:       01/07/23
+Time:       10:25
 Revision:   Not in VersionControl
 Variant:    845-XXXXX_PCBA_projectname
 Units used: mil
 
 "Designator","Comment","Layer","Footprint","Center-X(mil)","Center-Y(mil)","Rotation","Description"
-"R15","0_5%_0402","TopLayer","RESC1005X40X25NL05T10","271.654","527.559","90",""
-"R14","DNI_0_5%_0402","TopLayer","RESC1005X40X25NL05T10","228.346","527.559","90",""
+"LED1","Green","TopLayer","led0603","275.591","531.496","270","LED High-Power Uni-Color Green 574nm 2-Pin Chip LED T/R"
+"R16","1K_1%_0402","TopLayer","RESC1005X40X25NL05T05","330.709","531.496","270","Chip Resistor, 1 KOhm, +/- 1%, 100 mW, -55 to 155 degC, 0402 (1005 Metric), RoHS, Tape and Reel"
+"R15","0_5%_0402","TopLayer","RESC1005X40X25NL05T10","220.472","527.559","90",""
+"R14","DNI_0_5%_0402","TopLayer","RESC1005X40X25NL05T10","177.165","527.559","90",""
 "R13","0_5%_0402","TopLayer","RESC1005X40X25NL05T10","314.961","271.654","270",""
 "R12","0_5%_0402","TopLayer","RESC1005X40X25NL05T10","149.606","271.654","270",""
 "R11","10K_5%_0402","TopLayer","RESC1005X40X25LL05T10","401.575","523.622","270",""
@@ -35,7 +37,7 @@ Units used: mil
 "R8","0 ohm 0402","TopLayer","r0402","204.724","271.653","270","RES SMD 0 OHM JUMPER 1/16W 0402"
 "R5","0 ohm 0402","TopLayer","r0402","259.842","271.653","270","RES SMD 0 OHM JUMPER 1/16W 0402"
 "R4","10 OHM 1/4W 0603","TopLayer","r0603","263.779","1354.331","180","Res Surge Chip Thick Film 0603 10 Ohm 1% 1/4W ±200ppm/°C Molded Paper T/R"
-"R3","10K 1/8W 0402","TopLayer","r0402","472.441","417.323","0","Res Thick Film 0402 10K Ohm 1% 0.125W(1/8W) ±100ppm/°C Pad SMD T/R"
+"R3","1K_1%_0402","TopLayer","RESC1005X40X25NL05T05","472.441","417.323","0","Chip Resistor, 1 KOhm, +/- 1%, 100 mW, -55 to 155 degC, 0402 (1005 Metric), RoHS, Tape and Reel"
 "R1","0 ohm 0402","TopLayer","r0402","393.701","1275.591","180","RES SMD 0 OHM JUMPER 1/16W 0402"
 "LED2","Green","TopLayer","led0603","472.441","346.457","0","LED High-Power Uni-Color Green 574nm 2-Pin Chip LED T/R"
 "L1","27nH 350mA 0.46ohm 0402","TopLayer","FP-LQG15HH_02-IPC_C","169.291","1417.323","180","Multilayer type RF Inductor 27nH ±5% 0.46O 350mA 0402"
