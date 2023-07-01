@@ -1,0 +1,49 @@
+Altium Designer Pick and Place Locations
+C:\Users\julianstj\Desktop\WorkNotes\Projects\PTP\Time-Appliance-Project-master\Time-Card\GNSS\UBlox\M2-ZED-F9T\ECAD\Project Outputs for M2_ZED-F9T_MODULE\Pick Place for M2_ZED-F9T_MODULE(845-XXXXX_PCBA_projectname).txt
+
+========================================================================================================================
+File Design Information:
+
+Date:       01/07/23
+Time:       12:20
+Revision:   Not in VersionControl
+Variant:    845-XXXXX_PCBA_projectname
+Units used: mil
+
+Designator Comment           Layer    Footprint                      Center-X(mil) Center-Y(mil) Rotation Description                                                                                 
+D3         LTST-C191KGKT     TopLayer FP-LTST-C191KGKT-MFG           99.915        461.922       0        "LED GREEN CLEAR SMD"                                                                       
+D2         LTST-C191KGKT     TopLayer FP-LTST-C191KGKT-MFG           724.409       381.890       0        "LED GREEN CLEAR SMD"                                                                       
+U1         ZED-F9T-00B       TopLayer GPS_ZED-F9T                    435.039       972.835       180      "Multi-band GNSS Receiver with Nanosecond-level Timing Accuracy"                            
+U4         LPV511MGX/NOPB    TopLayer DCK0005A_N                     200.787       1561.929      90       "micropower Rail-to-Rail Input and Output Operational Amplifier, 5-pin SC-70, Pb-Free"      
+U3         SN74LVC3G07DCUR   TopLayer DCU0008A_N                     82.677        1480.315      270      "Triple Buffer/Driver With Open-Drain Output, DCU0008A, LARGE T&R"                          
+R18        1k                TopLayer FP-RMCF0402-MFG                43.307        1354.331      270      "1kO ±1% 0.063W 0402 Thick Film Chip Resistor AEC-Q200 compliant"                           
+R17        1k                TopLayer FP-RMCF0402-MFG                102.362       1354.331      270      "1kO ±1% 0.063W 0402 Thick Film Chip Resistor AEC-Q200 compliant"                           
+P1         U.FL-R-SMT-1(01)  TopLayer HRS-U.FL-R-SMT-3_V             674.423       1562.989      0        "Ultra Small Coaxial Connector, 6 GHz, -40 to 90 degC, 3-Pin SMD, RoHS, Bulk"               
+D1         PESD0402-140      TopLayer FP-PESD0402-MFG                698.995       1478.892      180      "TVS DIODE 14V 40V 0402"                                                                    
+C12        10nF              TopLayer FP-GRM033-0_03-IPC_B           598.274       1421.324      270      "Chip Multilayer Ceramic Capacitors for General Purpose, 0201, 10000pF, X7R, 15%, 10%, 16V" 
+C11        100nF             TopLayer FP-0402-L_1_0_0_05-W_0_5-IPC_B 157.480       1377.953      270      None                                                                                        
+C10        100nF             TopLayer FP-0402-L_1_0_0_05-W_0_5-IPC_B 673.228       1374.016      90       None                                                                                        
+C9         100nF             TopLayer FP-0402-L_1_0_0_05-W_0_5-IPC_B 106.299       1614.173      180      None                                                                                        
+R16        "22_1%_1218 1.5W" TopLayer FP-CRCW1218-HPe3-MFG           472.441       1425.197      270      "RES Thick Film, 22.6O, 1%, 1.5W, 100ppm/°C, 1218"                                          
+R15        0_5%_0402         TopLayer RESC1005X40X25NL05T10          409.449       307.087       90       ""                                                                                          
+R14        DNI_0_5%_0402     TopLayer RESC1005X40X25NL05T10          448.819       307.087       90       ""                                                                                          
+R13        0_5%_0402         TopLayer RESC1005X40X25NL05T10          318.898       318.898       270      ""                                                                                          
+R12        0_5%_0402         TopLayer RESC1005X40X25NL05T10          271.654       318.898       270      ""                                                                                          
+R11        100k              TopLayer FP-RMCF0402-IPC_C              248.031       1469.441      0        "100kO ±1% 0.063W 0402 Thick Film Chip Resistor AEC-Q200 compliant"                         
+R2         0_5%_0402         TopLayer RESC1005X40X25NL05T10          311.024       440.945       180      ""                                                                                          
+C7         47uF_6.3V_1206    TopLayer FP-GRM31C-0_2-e0_3_0_8-IPC_C   98.425        267.716       180      "Chip Multilayer Ceramic Capacitors for General Purpose, 1206, 47uF, X5R, 15%, 20%, 6.3V"   
+C6         47uF_6.3V_1206    TopLayer FP-GRM31C-0_2-e0_3_0_8-IPC_C   795.276       251.969       90       "Chip Multilayer Ceramic Capacitors for General Purpose, 1206, 47uF, X5R, 15%, 20%, 6.3V"   
+R9         100k              TopLayer FP-RMCF0402-IPC_C              212.598       1401.575      270      "100kO ±1% 0.063W 0402 Thick Film Chip Resistor AEC-Q200 compliant"                         
+R7         1k                TopLayer FP-RMCF0402-MFG                106.299       515.748       180      "1kO ±1% 0.063W 0402 Thick Film Chip Resistor AEC-Q200 compliant"                           
+Q1         NTR2101PT1G       TopLayer ONSC-SOT-23-3-318-08_V         299.213       1385.827      0        "Small Signal MOSFET, -8 V, -3.7 A, Single P-Channel, 3-Pin SOT-23, Pb-Free, Tape and Reel" 
+C5         1uF_25V_0402      TopLayer FP-CL542-IPC_C                 251.969       500.000       0        "Cap Ceramic 1uF 25V X5R ±10% SMD 0402 +85°C Paper T/R"                                     
+R10        1k                TopLayer FP-RMCF0402-MFG                322.835       1469.488      0        "1kO ±1% 0.063W 0402 Thick Film Chip Resistor AEC-Q200 compliant"                           
+R4         1k                TopLayer FP-RMCF0402-MFG                629.921       381.890       0        "1kO ±1% 0.063W 0402 Thick Film Chip Resistor AEC-Q200 compliant"                           
+R3         0_5%_0402         TopLayer RESC1005X40X25NL05T10          311.024       397.638       180      ""                                                                                          
+R1         1k                TopLayer FP-RMCF0402-MFG                251.969       551.181       180      "1kO ±1% 0.063W 0402 Thick Film Chip Resistor AEC-Q200 compliant"                           
+L1         "47nH 300mA"      TopLayer FP-LQG15HH_02-IPC_B            657.001       1436.139      0        "Multilayer type RF Inductor 47nH ±5% 0.72O 300mA 0402"                                     
+J1         OCPTAP_M2_FINGERS TopLayer OCPTAP_M2_FINGERS              433.071       55.118        0        ""                                                                                          
+C4         1uF_25V_0402      TopLayer FP-CL542-IPC_C                 519.685       570.866       0        "Cap Ceramic 1uF 25V X5R ±10% SMD 0402 +85°C Paper T/R"                                     
+C3         1uF_25V_0402      TopLayer FP-CL542-IPC_C                 519.685       610.236       0        "Cap Ceramic 1uF 25V X5R ±10% SMD 0402 +85°C Paper T/R"                                     
+C2         1uF_25V_0402      TopLayer FP-CL542-IPC_C                 433.071       610.236       0        "Cap Ceramic 1uF 25V X5R ±10% SMD 0402 +85°C Paper T/R"                                     
+C1         1uF_25V_0402      TopLayer FP-CL542-IPC_C                 346.546       611.126       180      "Cap Ceramic 1uF 25V X5R ±10% SMD 0402 +85°C Paper T/R"                                     
