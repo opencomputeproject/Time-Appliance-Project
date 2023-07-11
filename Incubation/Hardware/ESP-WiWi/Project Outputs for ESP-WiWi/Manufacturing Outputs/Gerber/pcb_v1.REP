@@ -2,6 +2,102 @@
 FileName = pcb_v1.GBR
 AutoAperture = True
 *************************************************************
+Generating : Keep-Out Layer
+      File : pcb_v1.GKO
+
+    Adding Layer      : Keep-Out Layer
+
+
+Used DCodes :
+    D161
+    D162
+*************************************************************
+
+*************************************************************
+Generating : Bottom Paste
+      File : pcb_v1.GBP
+
+    Adding Layer      : Bottom Paste
+
+    Adding Layer      : L4 SIG
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D29
+    D32
+*************************************************************
+
+*************************************************************
+Generating : Top Paste
+      File : pcb_v1.GTP
+
+    Adding Layer      : Top Paste
+
+    Adding Layer      : L1 SIG
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D20
+    D21
+    D22
+    D23
+    D24
+    D25
+    D26
+    D27
+    D28
+    D29
+    D30
+    D31
+    D32
+    D33
+    D34
+    D35
+    D36
+    D37
+    D38
+    D39
+    D40
+    D41
+    D42
+    D43
+    D44
+    D45
+    D46
+    D47
+    D48
+    D49
+    D50
+    D51
+    D52
+    D53
+    D54
+    D55
+    D56
+    D57
+    D58
+    D59
+    D60
+    D61
+    D62
+    D63
+    D64
+    D65
+    D66
+    D67
+    D68
+    D69
+    D70
+    D71
+    D72
+    D73
+*************************************************************
+
+*************************************************************
 Generating : Bottom Solder
       File : pcb_v1.GBS
 
@@ -25,78 +121,6 @@ Used DCodes :
     D131
     D132
     D133
-*************************************************************
-
-*************************************************************
-Generating : Bottom Overlay
-      File : pcb_v1.GBO
-
-    Adding Layer      : Bottom Overlay
-
-
-Used DCodes :
-*************************************************************
-
-*************************************************************
-Generating : L3 SIG
-      File : pcb_v1.G2
-
-    Adding Layer      : L3 SIG
-
-    Adding Layer      : Multi-Layer
-
-
-Used DCodes :
-    D147
-    D148
-    D149
-    D150
-    D151
-    D152
-    D153
-    D154
-    D155
-    D156
-    D157
-    D158
-    D159
-    D160
-*************************************************************
-
-*************************************************************
-Generating : Top Overlay
-      File : pcb_v1.GTO
-
-    Adding Layer      : Top Overlay
-
-
-Used DCodes :
-    D10
-    D11
-    D12
-    D13
-    D14
-    D15
-    D16
-    D17
-    D18
-    D19
-*************************************************************
-
-*************************************************************
-Generating : Bottom Paste
-      File : pcb_v1.GBP
-
-    Adding Layer      : Bottom Paste
-
-    Adding Layer      : L4 SIG
-
-    Adding Layer      : Multi-Layer
-
-
-Used DCodes :
-    D29
-    D32
 *************************************************************
 
 *************************************************************
@@ -180,6 +204,124 @@ Used DCodes :
 *************************************************************
 
 *************************************************************
+Generating : Bottom Overlay
+      File : pcb_v1.GBO
+
+    Adding Layer      : Bottom Overlay
+
+
+Used DCodes :
+*************************************************************
+
+*************************************************************
+Generating : Top Overlay
+      File : pcb_v1.GTO
+
+    Adding Layer      : Top Overlay
+
+
+Used DCodes :
+    D10
+    D11
+    D12
+    D13
+    D14
+    D15
+    D16
+    D17
+    D18
+    D19
+*************************************************************
+
+*************************************************************
+Generating : L4 SIG
+      File : pcb_v1.GBL
+
+    Adding Layer      : L4 SIG
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D13
+    D14
+    D29
+    D32
+    D134
+    D135
+    D136
+    D142
+    D143
+    D145
+    D147
+    D148
+    D149
+    D150
+    D151
+    D152
+    D153
+    D154
+    D155
+    D156
+    D157
+    D158
+    D159
+    D160
+*************************************************************
+
+*************************************************************
+Generating : L3 SIG
+      File : pcb_v1.G2
+
+    Adding Layer      : L3 SIG
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D147
+    D148
+    D149
+    D150
+    D151
+    D152
+    D153
+    D154
+    D155
+    D156
+    D157
+    D158
+    D159
+    D160
+*************************************************************
+
+*************************************************************
+Generating : L2 SIG
+      File : pcb_v1.G1
+
+    Adding Layer      : L2 SIG
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D147
+    D148
+    D149
+    D150
+    D151
+    D152
+    D153
+    D154
+    D155
+    D156
+    D157
+    D158
+    D159
+    D160
+*************************************************************
+
+*************************************************************
 Generating : L1 SIG
       File : pcb_v1.GTL
 
@@ -258,148 +400,6 @@ Used DCodes :
     D144
     D145
     D146
-    D147
-    D148
-    D149
-    D150
-    D151
-    D152
-    D153
-    D154
-    D155
-    D156
-    D157
-    D158
-    D159
-    D160
-*************************************************************
-
-*************************************************************
-Generating : Keep-Out Layer
-      File : pcb_v1.GKO
-
-    Adding Layer      : Keep-Out Layer
-
-
-Used DCodes :
-    D161
-    D162
-*************************************************************
-
-*************************************************************
-Generating : L2 SIG
-      File : pcb_v1.G1
-
-    Adding Layer      : L2 SIG
-
-    Adding Layer      : Multi-Layer
-
-
-Used DCodes :
-    D147
-    D148
-    D149
-    D150
-    D151
-    D152
-    D153
-    D154
-    D155
-    D156
-    D157
-    D158
-    D159
-    D160
-*************************************************************
-
-*************************************************************
-Generating : Top Paste
-      File : pcb_v1.GTP
-
-    Adding Layer      : Top Paste
-
-    Adding Layer      : L1 SIG
-
-    Adding Layer      : Multi-Layer
-
-
-Used DCodes :
-    D20
-    D21
-    D22
-    D23
-    D24
-    D25
-    D26
-    D27
-    D28
-    D29
-    D30
-    D31
-    D32
-    D33
-    D34
-    D35
-    D36
-    D37
-    D38
-    D39
-    D40
-    D41
-    D42
-    D43
-    D44
-    D45
-    D46
-    D47
-    D48
-    D49
-    D50
-    D51
-    D52
-    D53
-    D54
-    D55
-    D56
-    D57
-    D58
-    D59
-    D60
-    D61
-    D62
-    D63
-    D64
-    D65
-    D66
-    D67
-    D68
-    D69
-    D70
-    D71
-    D72
-    D73
-*************************************************************
-
-*************************************************************
-Generating : L4 SIG
-      File : pcb_v1.GBL
-
-    Adding Layer      : L4 SIG
-
-    Adding Layer      : Multi-Layer
-
-
-Used DCodes :
-    D13
-    D14
-    D29
-    D32
-    D134
-    D135
-    D136
-    D142
-    D143
-    D145
     D147
     D148
     D149
