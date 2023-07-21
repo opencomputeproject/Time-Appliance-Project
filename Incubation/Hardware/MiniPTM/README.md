@@ -8,3 +8,4 @@ A PCIe card with multiple timing features
 	* Controlled by I225 through GPIO as I2C
 	* DPLL supports Clock / 1PPS / TOD / User data over a single diff pair.
 	* Intended to be used a cheap option for two way time and frequency transfer to high precision over fiber
+ * SiT5501 as high stability oscillator for DPLL
