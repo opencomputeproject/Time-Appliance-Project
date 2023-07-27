@@ -185,6 +185,15 @@ degrade_sa53_method2() {
 
 	done	
 }
+
+short_read_phase() {
+	# turn off disciplining for a very short time just to sample phase
+	SA53_stop_disc
+	timed_read_sa53_status 5
+	SA53_start_disc
+
+}
+
 converge_test() {
 	echo "Starting converge test!"
 	write_csv_header
@@ -195,6 +204,50 @@ converge_test() {
 
 	# Phase has degraded to threshold, test different methods
 	# of recovering it
+
+
+	# Just monitor how long until it stabilizes
+	val=$($oscpy set TauPps0 7000)
+	SA53_start_disc
+	timed_read_sa53_status 140000
+	short_read_phase
+	timed_read_sa53_status 14000
+	short_read_phase
+	timed_read_sa53_status 14000
+	short_read_phase
+	timed_read_sa53_status 14000
+	short_read_phase
+	timed_read_sa53_status 14000
+	short_read_phase
+	timed_read_sa53_status 14000
+	short_read_phase
+	timed_read_sa53_status 14000
+	short_read_phase
+	timed_read_sa53_status 14000
+	short_read_phase
+	timed_read_sa53_status 14000
+	short_read_phase
+	timed_read_sa53_status 14000
+	short_read_phase
+	timed_read_sa53_status 14000
+	short_read_phase
+	timed_read_sa53_status 14000
+	short_read_phase
+	timed_read_sa53_status 14000
+	short_read_phase
+	timed_read_sa53_status 14000
+	short_read_phase
+	timed_read_sa53_status 14000
+	short_read_phase
+	timed_read_sa53_status 14000
+	short_read_phase
+	timed_read_sa53_status 14000
+	short_read_phase
+
+	
+
+
+	return 0
 
 	# THEORY: Leave tau at 7000 for 20 tau
 	val=$($oscpy set TauPps0 7000)
