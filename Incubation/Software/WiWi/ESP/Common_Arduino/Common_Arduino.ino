@@ -178,25 +178,12 @@ void setup() {
   if ( !digitalRead(36) && !digitalRead(37) ) {
     // both zero , only true for ESP TX
     esp_id = ESPTX_ID;
+  } else if ( !digitalRead(36) && digitalRead(37) ) {
+    esp_id = ESPRX_ID;
   } else {
-    // bom mistake, management and RX have same ID
-    // detect management by trying i2c to the dctcxo , assume DCTCXO is installed
-    Wire.begin(DCTCXO_SDA, DCTCXO_SCL);
-    Wire.beginTransmission(DCTCXO_ADDR);
-    Wire.write(0x1); // register address , doesn't really matter
-    i2c_status = Wire.endTransmission();
-    sprintf(print_buffer, "MGMT or RX disamb, endtransmission got 0x%x\n", i2c_status);
-    USBSerial.write(print_buffer);
-    if ( i2c_status == 0x0 ) {
-      // i2c worked, I'm management
-      esp_id = ESPMGMT_ID;
-      
-    } else {
-      // i2c failed, I'm RX
-      esp_id = ESPRX_ID;
-    }
-    Wire.end();
+    esp_id = ESPMGMT_ID;
   }
+   
 
   if ( esp_id == ESPMGMT_ID ) {
     USBSerial.write("Found management ID!\n");
