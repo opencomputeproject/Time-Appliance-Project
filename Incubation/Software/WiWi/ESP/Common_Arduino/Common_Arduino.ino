@@ -57,6 +57,20 @@ SW4 , TX to WiWi or RX to WiWi -> Controlled by ESPTX GPIO6: high for output1 (T
 void esptx_disconnect_txrx_wiwi() {
   sprintf(print_buffer, "ESP TX disable antenna connections for tx and rx modules\n");
   USBSerial.write(print_buffer);
+  // turn on attenuators 
+  digitalWrite(1, LOW);
+  // select TX path
+  digitalWrite(7, HIGH);
+  // disconnect TX antenna
+  digitalWrite(8, LOW);
+  digitalWrite(2, LOW);
+
+  // disconnect WiWi / RX antenna
+  digitalWrite(4, LOW);
+  digitalWrite(5, LOW);
+
+  // select RX to WiWi antenna
+  digitalWrite(6, LOW);
 
 
 
@@ -105,7 +119,9 @@ void esptx_setup()
   pinMode(5, OUTPUT);
   pinMode(6, OUTPUT);
   // default, set TX and RX to their own chip antennas
-  esptx_set_independent_antenna(true,true); 
+  esptx_set_independent_antenna(false,false); 
+
+  //esptx_disconnect_txrx_wiwi();
 
   WiFi.mode(WIFI_STA);
   WiFi.disconnect();
