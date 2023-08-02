@@ -198,13 +198,16 @@ func startIOWorker(cfg *ClientGenConfig) {
 					}
 
 					if err := ptp.IoctlTimestamp(fdTS, cfg.Iface); err != nil {
-						log.Errorf("Failed to ioctl timestamp tx worker %v", i)
-						return
+						log.Errorf("Failed to ioctl timestamp tx worker %v, will use SW timestamp", i)
 					}
-					// Enable hardware timestamp capabilities on socket
+					// Enable hardware timestamp capabilities on socket if possible
 					flags := unix.SOF_TIMESTAMPING_TX_HARDWARE |
 						unix.SOF_TIMESTAMPING_RX_HARDWARE |
 						unix.SOF_TIMESTAMPING_RAW_HARDWARE
+					if err != nil {
+						flags = unix.SOF_TIMESTAMPING_TX_SOFTWARE |
+							unix.SOF_TIMESTAMPING_RX_SOFTWARE
+					}
 					if err := unix.SetsockoptInt(fdTS, unix.SOL_SOCKET, ptp.Timestamping(), flags); err != nil {
 						log.Errorf("Failed to set flags tx worker %v err %v", i, err)
 						return
