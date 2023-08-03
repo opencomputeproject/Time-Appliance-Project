@@ -51,7 +51,7 @@ Follow these videos to Fabricate Time Cards with PCBWay, and purchase the access
 
 The 2rd option is of course to source and produce the Time Card with the manufacturers you seek out yourself.
 
-The 3rd option is to purchase the Time Card are available on the [OCP Marketplace](https://www.opencompute.org/products?refinementList%5Bhardware.categories.Cards%5D%5B0%5D=Time%20Cards). Of course, this is the most conveniet way to get your hands on a Time Card, yet the most expensive one. There is a cost associated with the vendors manufacturing the card and providing you all kinds of support in addition to their profit margins. It is good to know how much you are paying for parts and how much you are paying for covenience.
+The 3rd option is to purchase the Time Card are available on the [OCP Marketplace](https://www.opencompute.org/products?refinementList%5Bhardware.categories.Cards%5D%5B0%5D=Time%20Cards). Of course, this is the most conveniet way to get your hands on a Time Card. There is a cost associated with the vendors manufacturing the card and providing you all kinds of support in addition to their profit margins. It is good to know how much you are paying for parts and how much you are paying for covenience.
 
 ## What is the price for parts of a Time Card
 
