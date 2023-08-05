@@ -208,6 +208,7 @@ Julian St.James  | Hardware Upgrade
 Vadim Fedorenko  | Driver Upgrade
 Spencer Burns    | PCIe Bracket Design
 Collin Richardson| Placement Optimization
+Nhan Hoang       | PCIe Bracket Upgrade
 Ahmad Byagowi    | Idea and Architecture
 
 # License
