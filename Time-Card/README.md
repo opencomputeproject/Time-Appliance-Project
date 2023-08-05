@@ -206,6 +206,8 @@ Joyce Hsu      | Logo Design
 Armando Pinales| GNSS Receiver
 Julian St.James| HW Upgrade
 Vadim Fedorenko| Driver Upgrade
+Spencer Burns  | Mechanical Design
+Collin Richardson| Placement Optimization
 Ahmad Byagowi  | Initial Idea 
 
 # License
