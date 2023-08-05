@@ -53,6 +53,10 @@ The 2rd option is of course to source and produce the Time Card with the manufac
 
 The 3rd option is to purchase a Time Card available on the [OCP Marketplace](https://www.opencompute.org/products?refinementList%5Bhardware.categories.Cards%5D%5B0%5D=Time%20Cards) or other compatible Time Card from 3rd parties. Of course, this is the conveniet way to get your hands on a Time Card. Keep in mind, there is a cost associated with the vendors manufacturing the card and providing you all kinds of support in addition to their profit margins. It is good to know how much you are paying for parts and how much you are paying for the covenience.
 
+## Time Card Derivatives
+These are Time Cards made by other companies that are developed with different hardware yet compatible with the architecure and the driver of the Time Card:
+* 
+
 ## What is the price for parts of a Time Card
 
 There are various parts that can sit on the Time Card as options and can change the total price. 
