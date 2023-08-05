@@ -194,6 +194,19 @@ Using a Calnex Sentinel device are comparing various things. Here we are compari
 * Driver (Kernel Module) CentOS 8
 * CAD files for the custom PCIe bracket 
 
+# Credits
+Hereby we would like to thank these individuals who helped with the initiative, archirecture, design, software development, hardware issue maintanance and upgrades.
+Individual | Main Contribution
+-------------- | -------------
+Mike Lambeta   | Layout Design
+Oleg Obleukhov | Software Design
+Jonathan Lemon | Linux Driver
+Thomas Schaub  | RTL Design
+Joyce Hsu      | Logo Design
+Armando Pinales| GNSS Receiver
+Julian St.James| HW Upgrade
+Vadim Fedorenko| Driver Upgrade
+Ahmad Byagowi  | Initial Idea 
 
 # License
 Contributions to this Specification are made under the terms and conditions set forth in Open Web Foundation Contributor License Agreement (“OWF CLA 1.0”) (“Contribution License”) by: 
