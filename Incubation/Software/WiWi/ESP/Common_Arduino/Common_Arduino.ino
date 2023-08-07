@@ -56,7 +56,7 @@ SW4 , TX to WiWi or RX to WiWi -> Controlled by ESPTX GPIO6: high for output1 (T
 
 void esptx_disconnect_txrx_wiwi() {
   sprintf(print_buffer, "ESP TX disable antenna connections for tx and rx modules\n");
-  USBSerial.write(print_buffer);
+  Serial.write(print_buffer);
   // turn on attenuators 
   digitalWrite(1, LOW);
   // select TX path
@@ -78,7 +78,7 @@ void esptx_disconnect_txrx_wiwi() {
 
 void esptx_set_independent_antenna(bool tx_sma, bool rx_sma) {
   sprintf(print_buffer, "ESP TX set independent antenna, tx_sma=%d, rx_sma=%d\n", tx_sma, rx_sma);
-  USBSerial.write(print_buffer);
+  Serial.write(print_buffer);
   // turn off attenuators 
   digitalWrite(1, HIGH);
   // select TX path
@@ -152,8 +152,8 @@ void espmgmt_setup()
     Wire.write(0x0); // LSB, default to zero
     i2c_status = Wire.endTransmission();
     sprintf(print_buffer, "DCTCXO Enable I2c status: 0x%x\n", i2c_status);
-    USBSerial.write(print_buffer);
-    USBSerial.write("\n");
+    Serial.write(print_buffer);
+    Serial.write("\n");
     delay(500);
   } while (i2c_status != 0);
   // DCTCXO is enabled, let WiWi ESPs out of reset
@@ -168,7 +168,7 @@ void espmgmt_setup()
 
 
 void setup() { 
-  USBSerial.begin(115200);
+  Serial.begin(115200);
   pinMode(36,INPUT);
   pinMode(37,INPUT);
   int i2c_status = 0;
@@ -178,7 +178,7 @@ void setup() {
   if ( !digitalRead(36) && !digitalRead(37) ) {
     // both zero , only true for ESP TX
     esp_id = ESPTX_ID;
-  } else if ( !digitalRead(36) && digitalRead(37) ) {
+  } else if ( digitalRead(36) && !digitalRead(37) ) {
     esp_id = ESPRX_ID;
   } else {
     esp_id = ESPMGMT_ID;
@@ -186,15 +186,15 @@ void setup() {
    
 
   if ( esp_id == ESPMGMT_ID ) {
-    USBSerial.write("Found management ID!\n");
+    Serial.write("Found management ID!\n");
     led_pin = 4;
     espmgmt_setup();
   } else if ( esp_id == ESPTX_ID ) {
-    USBSerial.write("Found TX ID!\n");
+    Serial.write("Found TX ID!\n");
     led_pin = 38;
     esptx_setup();
   } else if ( esp_id == ESPRX_ID ) {
-    USBSerial.write("Found RX ID!\n");
+    Serial.write("Found RX ID!\n");
     led_pin = 21;
     esprx_setup();
   }
@@ -223,22 +223,22 @@ void setup() {
 void do_wifi_scan() {
 
   if ( esp_id == ESPMGMT_ID ) {
-    USBSerial.write("Mgmt wifi scan start\n");
+    Serial.write("Mgmt wifi scan start\n");
   } else if ( esp_id == ESPTX_ID ) {
-    USBSerial.write("TX wifi scan start\n");
+    Serial.write("TX wifi scan start\n");
   } else if ( esp_id == ESPRX_ID ) {
-    USBSerial.write("RX wifi scan start\n");
+    Serial.write("RX wifi scan start\n");
   }
 
   int n = WiFi.scanNetworks();
   if ( n == 0 ) {
-    USBSerial.write("No networks found!\n");
+    Serial.write("No networks found!\n");
   } else {
     sprintf(print_buffer, "%d networks found\n", n);
-    USBSerial.write(print_buffer);
+    Serial.write(print_buffer);
     for ( int i = 0; i < n; ++i) {
       sprintf(print_buffer, "%d: %s ( RSSI=%d )\n", i+1, WiFi.SSID(i), WiFi.RSSI(i));
-      USBSerial.write(print_buffer);
+      Serial.write(print_buffer);
     }
   }
 
@@ -249,7 +249,7 @@ void do_wifi_scan() {
 int loop_counter = 0;
 
 void exptx_loop() {
-  USBSerial.write("tx loop5\n");
+  Serial.write("tx loop5\n");
   leds[0] = CRGB::Red;
   
   FastLED.show();
@@ -264,7 +264,7 @@ void exptx_loop() {
   }
 }
 void exprx_loop() {
-  USBSerial.write("rx loop5\n");
+  Serial.write("rx loop5\n");
 
   leds[0] = CRGB::Yellow;
   
