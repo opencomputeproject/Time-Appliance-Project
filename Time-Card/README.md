@@ -55,7 +55,7 @@ The 3rd option is to purchase a Time Card available on the [OCP Marketplace](htt
 
 ## Time Card Derivatives
 These are Time Cards made by other companies that are developed with different hardware yet compatible with the architecure and the driver of the Time Card:
-* [Safran ART2](https://safran-navigation-timing.com/about-the-atomic-reference-time-card-art-card/) (Fully open source and available on this [link](https://github.com/Orolia2s/art-card-board))
+* [Safran ART2](https://safran-navigation-timing.com/about-the-atomic-reference-time-card-art-card/) (fully open sourced and available on this [link](https://github.com/Orolia2s/art-card-board))
 * [ADVA OSA5400](https://urldefense.com/v3/__https://www.oscilloquartz.com/en/products-and-services/embedded-timing-solutions/osa-5400-timecard__;!!Bt8RZUm9aw!74Qc6wh6_yFfgOhGUCr-rX5q6hd1NxC9HwjI7CwVO24C2SXXuzDXk4W3NjlSOZtTBWtvV11UzSicxA$)
 
 ## What is the price for parts of a Time Card
