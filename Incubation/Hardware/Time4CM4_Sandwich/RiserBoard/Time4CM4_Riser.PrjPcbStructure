@@ -1,0 +1,4 @@
+Record=TopLevelDocument|FileName=CM4_Conn.SchDoc|SheetNumber=1
+Record=NoMainPathDocument|SourceDocument=CM4_Conn.SchDoc|FileName=CM4_IO_Conn.SchDoc|SheetNumber=2
+Record=NoMainPathDocument|SourceDocument=CM4_Conn.SchDoc|FileName=GNSS.SchDoc|SheetNumber=4
+Record=NoMainPathDocument|SourceDocument=CM4_Conn.SchDoc|FileName=Modular_BO.SchDoc|SheetNumber=3
