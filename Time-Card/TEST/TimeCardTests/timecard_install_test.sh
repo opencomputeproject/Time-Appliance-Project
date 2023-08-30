@@ -38,10 +38,10 @@ else
 fi
 
 
-ubx_log=$(ubxtool -f $gnss_tty -s 115200 -w 2 | grep TIMELS | wc -l)
+ubx_log=$(ubxtool -f $gnss_tty -s 115200 -p MON-VER | grep extension | wc -l)
 
 echo "Test Time Card GNSS TimeLS Start"
-if [ "$ubx_log" -ge "1" ];
+if [ "$ubx_log" -ge "2" ];
 then
 	echo "Test Time Card GNSS TimeLS: Pass!"
 else
