@@ -45,7 +45,7 @@ if [ "$ubx_log" -ge "2" ];
 then
 	echo "Test Time Card GNSS TimeLS: Pass!"
 else
-	result=$(ubxtool -h)
+	result=$(ubxtool -f $gnss_tty -s 115200 -p MON-VER)
 	echo $result
 	echo "Test Time Card GNSS TimeLS: FAIL!!!"
 	exit
