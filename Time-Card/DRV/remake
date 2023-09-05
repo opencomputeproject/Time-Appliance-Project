@@ -1,8 +1,9 @@
+#!/usr/bin/env bash
 set -euo pipefail
 
 DIST="$(awk -F= '/^NAME/{print tolower($2)}' /etc/os-release|awk 'gsub(/[" ]/,x) + 1')"
 
-KVER=`uname -r`
+KVER=$(uname -r)
 default_install=1
 
 if [ "$*" == "install" ]; then
@@ -28,10 +29,10 @@ if [ ! -d "${KDIR:-}" ]; then
     exit 1
 fi
 
-make -C $KDIR M=$PWD
+make -C "${KDIR}" M="${PWD}"
 
-if [ ${INSTALL:-$default_install} == 1 ]; then
+if [ "${INSTALL:-$default_install}" == 1 ]; then
     echo "installing module"
-    ln -sf ${PWD}/ptp_ocp.ko /lib/modules/${KVER}
+    ln -sf "${PWD}"/ptp_ocp.ko /lib/modules/"${KVER}"
     depmod -a
 fi
