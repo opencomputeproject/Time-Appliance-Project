@@ -14,6 +14,8 @@ read_SA53_int_value() {
 SA53_start_disc() {
 	echo "Start disciplining"
 	val=$($oscpy set PhaseMetering 0)
+	# Phase Limit can have big impact 
+	val=$($oscpy set PhaseLimit 20000)
 	val=$($oscpy set Disciplining 1)
 }
 
@@ -147,6 +149,29 @@ degrade_sa53_method1() {
 	echo "Done degrading SA53"
 }
 
+
+
+fix_degrade_sa53_method1() {
+	######## Degrade method 1
+	# disable disciplining, force max digitaltuning
+	# will work eventually but not that quickly
+
+	# 1. Disable disciplining
+	SA53_stop_disc
+	# 2. Force a bad DigitalTuning 
+	echo "Purposefully degrading SA53 disciplining method 1"
+	for (( i = 0; i <= 30; i++ ))
+	do
+		val=$($oscpy set DigitalTuning -20000000)
+		val=$($oscpy set latch 1)
+		echo "Fix Degrade digital tuning $i"
+	done
+	SA53_start_disc
+
+	echo "Done fix degrading SA53"
+}
+
+
 degrade_sa53_method2() {
 	echo "Purposefully degrading SA53 disciplining method 2"
 	# I think this method isn't as good. It will degrade the phase
@@ -194,6 +219,10 @@ short_read_phase() {
 
 }
 
+fix_test() {
+	fix_degrade_sa53_method1
+}
+
 converge_test() {
 	echo "Starting converge test!"
 	write_csv_header
@@ -205,21 +234,56 @@ converge_test() {
 	# Phase has degraded to threshold, test different methods
 	# of recovering it
 
+	# 1. 600 seconds at tau=50
+	# 1. 7200 seconds at Tau=500
+	# 2. 5 Tau at Tau=10000
+	val=$($oscpy set TauPps0 50)
+	SA53_start_disc
+	timed_read_sa53_status 600
+
+
+	val=$($oscpy set TauPps0 500)
+	timed_read_sa53_status 7200
+
+
+	val=$($oscpy set TauPps0 10000)
+	timed_read_sa53_status 50000
+	sa53_holdover_test 86400
+
+	####### This test completed 8-31-2023, passed with around 540ns
+	# after changing phase limit to 20uS
+	# 1. 600 seconds at tau=50
+	# 1. 7200 seconds at Tau=500
+	# 2. 10 Tau at Tau=10000
+	return 0
+
+	# Theory 2: 
+	# 1. 600 seconds at Tau=50
+	# 2. 4 Tau at Tau=10000
+	val=$($oscpy set TauPps0 50)
+	SA53_start_disc
+	timed_read_sa53_status 600
+	val=$($oscpy set TauPps0 10000)
+	timed_read_sa53_status 40000
+	sa53_holdover_test 86400
+
+
+	return 0
 
 	# Just monitor how long until it stabilizes
 	val=$($oscpy set TauPps0 7000)
 	SA53_start_disc
 	timed_read_sa53_status 140000
 	short_read_phase
-	timed_read_sa53_status 14000
+	timed_read_sa53_status 140000
 	short_read_phase
-	timed_read_sa53_status 14000
+	timed_read_sa53_status 140000
 	short_read_phase
-	timed_read_sa53_status 14000
+	timed_read_sa53_status 140000
 	short_read_phase
-	timed_read_sa53_status 14000
+	timed_read_sa53_status 140000
 	short_read_phase
-	timed_read_sa53_status 14000
+	timed_read_sa53_status 140000
 	short_read_phase
 	timed_read_sa53_status 14000
 	short_read_phase
@@ -257,6 +321,18 @@ converge_test() {
 
 	return 0
 
+	# Theory 2: 
+	# 1. 2000 seconds at Tau=50
+	# 2. 10 Tau at Tau=10000
+	val=$($oscpy set TauPps0 50)
+	SA53_start_disc
+	timed_read_sa53_status 2000
+	val=$($oscpy set TauPps0 10000)
+	timed_read_sa53_status 100000
+	#sa53_holdover_test 86400
+
+	return 0
+
 	# Theory 1: Leave tau at 10000 for 10 tau
 	val=$($oscpy set TauPps0 10000)
 	SA53_start_disc
@@ -264,20 +340,6 @@ converge_test() {
 	sa53_holdover_test 86400
 
 
-	# RESET BETWEEN TESTS
-	read_SA53_status
-	degrade_sa53_method1
-	read_SA53_status
-
-	# Theory 2: 
-	# 1. 600 seconds at Tau=50
-	# 2. 10 Tau at Tau=10000
-	val=$($oscpy set TauPps0 50)
-	SA53_start_disc
-	timed_read_sa53_status 600
-	val=$($oscpy set TauPps0 10000)
-	timed_read_sa53_status 100000
-	sa53_holdover_test 86400
 
 
 	# RESET BETWEEN TESTS
@@ -342,5 +404,11 @@ converge_test() {
 	#sa53_holdover_test 86400
 
 }
+
+
+#fix_test
+
+#degrade_sa53_method1
+
 
 converge_test
