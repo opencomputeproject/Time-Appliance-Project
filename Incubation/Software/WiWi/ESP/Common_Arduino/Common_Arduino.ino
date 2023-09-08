@@ -129,6 +129,8 @@ void esptx_setup()
 
 }
 
+
+
 void esprx_setup()
 {
   WiFi.mode(WIFI_STA);
@@ -245,6 +247,34 @@ void do_wifi_scan() {
 }
 
 
+char ssid[] = "S&JHome";
+char pass[] = "zxcASD123[]{}";
+
+
+void do_wifi_connect_test() {
+  int connect_count = 0;
+  Serial.print("Starting wifi connect test!\n");
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, pass);
+  Serial.print("Connecting to WiFi ..");
+  while ( (WiFi.status() != WL_CONNECTED) && (connect_count < 40) ) {
+    Serial.print('.');
+    delay(250);
+    connect_count++;
+  }
+  if ( WiFi.status() != WL_CONNECTED ) {
+    Serial.print("Failed to connect to wifi! ");
+    Serial.print(WiFi.status());
+    Serial.print("\n");
+  } else {
+    Serial.println(WiFi.localIP());
+    WiFi.disconnect();
+  }
+  
+
+}
+
+
 
 int loop_counter = 0;
 
@@ -260,7 +290,8 @@ void exptx_loop() {
   FastLED.show();
   delay(500);
   if ( (loop_counter % 10) == 0) {
-    do_wifi_scan();    
+    do_wifi_scan();   
+    do_wifi_connect_test();  
   }
 }
 void exprx_loop() {
@@ -276,7 +307,8 @@ void exprx_loop() {
   FastLED.show();
   delay(500);
   if ( (loop_counter % 10) == 0) {
-    do_wifi_scan();    
+    do_wifi_scan();  
+    do_wifi_connect_test();  
   }
 
 }
@@ -292,7 +324,8 @@ void expmgmt_loop() {
   delay(500);
 
   if ( (loop_counter % 10) == 0) {
-    do_wifi_scan();    
+    do_wifi_scan();   
+    do_wifi_connect_test(); 
   }
 
 
