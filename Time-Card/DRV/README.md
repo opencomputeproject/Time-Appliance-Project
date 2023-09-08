@@ -53,7 +53,7 @@ After successfully loading the driver, one will see:
 * NMEA Master serial `/dev/ttyS7`
 * i2c (`/dev/i2c-*`) device
 
-Now, once can use standard `linuxptp` tools such as `phc2sys` or `ts2phc` to copy, sync, tune, etc... See more in [software](/Software) section
+Now, one can use standard `linuxptp` tools such as `phc2sys` or `ts2phc` to copy, sync, tune, etc... See more in [software](/Software) section
 
 ## Driver is included in the mainstream Linux Kernel
 * Initial primitive version ([5.2](https://git.kernel.org/pub/scm/linux/kernel/git/netdev/net-next.git/commit/?id=a7e1abad13f3f0366ee625831fecda2b603cdc17))
