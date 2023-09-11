@@ -1,7 +1,14 @@
 import serial
+import platform
 
 class RP2040I2C:
-    def __init__(self, port='/dev/ttyUSB0', baudrate=9600):
+    def __init__(self, port=None, baudrate=115200):
+        if port is None:
+            if platform.system() == "Windows":
+                port = "COM3"  # Change this to the appropriate COM port on Windows
+            elif platform.system() == "Linux":
+                port = "/dev/ttyUSB0"  # Change this to the appropriate serial port on Linux
+
         self.ser = serial.Serial(port, baudrate)
         self.ser.flush()
 
