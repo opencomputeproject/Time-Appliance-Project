@@ -412,8 +412,8 @@ proc create_root_design { parentCell } {
   # Create instance: TC_FpgaVersion_0, and set properties
   set TC_FpgaVersion_0 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_FpgaVersion TC_FpgaVersion_0 ]
   set_property -dict [ list \
-   CONFIG.VersionNumber_Gen {0x0006} \
-   CONFIG.VersionNumber_Golden_Gen {0x0006} \
+   CONFIG.VersionNumber_Gen {0x0007} \
+   CONFIG.VersionNumber_Golden_Gen {0x0007} \
  ] $TC_FpgaVersion_0
 
   # Create instance: TC_FrequencyCounter_1, and set properties
@@ -802,6 +802,9 @@ proc create_root_design { parentCell } {
 
   # Create instance: xlconstant_5, and set properties
   set xlconstant_5 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant xlconstant_5 ]
+  set_property -dict [ list \
+   CONFIG.CONST_VAL {0} \
+ ] $xlconstant_5
 
   # Create instance: xlconstant_6, and set properties
   set xlconstant_6 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant xlconstant_6 ]
