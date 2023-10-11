@@ -314,7 +314,7 @@ architecture TodSlave_Arch of TodSlave is
     -- TOD Slave version
     constant TodSlaveMajorVersion_Con               : std_logic_vector(7 downto 0) := std_logic_vector(to_unsigned(0, 8));
     constant TodSlaveMinorVersion_Con               : std_logic_vector(7 downto 0) := std_logic_vector(to_unsigned(2, 8));
-    constant TodSlaveBuildVersion_Con               : std_logic_vector(15 downto 0) := std_logic_vector(to_unsigned(2, 16));
+    constant TodSlaveBuildVersion_Con               : std_logic_vector(15 downto 0) := std_logic_vector(to_unsigned(3, 16));
     constant TodSlaveVersion_Con                    : std_logic_vector(31 downto 0) := TodSlaveMajorVersion_Con & TodSlaveMinorVersion_Con & TodSlaveBuildVersion_Con;
 
     -- TAI conversion 
@@ -1018,13 +1018,16 @@ begin
                             UtcOffsetInfo_DatReg.SrcOfCurLeapSecond <= MsgData_DatReg; -- offset of the Sat system to UTC
                         -- get the TAI-UTC offset, since TAI is used by the adjustable clock 
                         elsif (UbxPayloadCount_CntReg = UbxNavTimeLs_OffsetCurrLs_Con) then 
-                            if ((UtcOffsetInfo_DatReg.SrcOfCurLeapSecond = x"01") or (UtcOffsetInfo_DatReg.SrcOfCurLeapSecond = x"02") or (UtcOffsetInfo_DatReg.SrcOfCurLeapSecond = x"04") or (UtcOffsetInfo_DatReg.SrcOfCurLeapSecond = x"05")) then -- GPS, or derived from dif GPS to Glonass, or Beidou or Galileo
+                            if ((UtcOffsetInfo_DatReg.SrcOfCurLeapSecond = x"01") or        -- derived from dif GPS to Glonass
+                                (UtcOffsetInfo_DatReg.SrcOfCurLeapSecond = x"02") or        -- GPS
+                                (UtcOffsetInfo_DatReg.SrcOfCurLeapSecond = x"04") or        -- Beidou
+                                (UtcOffsetInfo_DatReg.SrcOfCurLeapSecond = x"05") or        -- Galileo
+                                (UtcOffsetInfo_DatReg.SrcOfCurLeapSecond = x"FF")) then     -- Unknown
                                 UtcOffsetInfo_DatReg.CurrentUtcOffset <= std_logic_vector(unsigned(MsgData_DatReg) + 19); -- add the GPS-TAI offset to UTC-GPS offset
                                 UtcOffsetInfo_DatReg.CurrentTaiGnssOffset <= std_logic_vector(unsigned(MsgData_DatReg) + 19); -- add the GPS-TAI offset to UTC-GPS offset
-                            else -- else assume that the utc offset is provided directly
-                                UtcOffsetInfo_DatReg.CurrentUtcOffset <= MsgData_DatReg;
-                                UtcOffsetInfo_DatReg.CurrentTaiGnssOffset <= MsgData_DatReg;
                             end if;
+                            -- else retain the last value which was accepted, valid is taken from the receiver directly
+                            
                         elsif (UbxPayloadCount_CntReg = UbxNavTimeLs_SrcLsChange_Con) then
                             -- if the src of the leap second change is GPS, GAL, GLO, or Beidou, then we can trust the leap second info
                             if ((MsgData_DatReg = x"02") or (MsgData_DatReg = x"04") or (MsgData_DatReg = x"05") or (MsgData_DatReg = x"06")) then 
