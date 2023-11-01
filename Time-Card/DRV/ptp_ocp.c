@@ -71,7 +71,9 @@
 #endif
 
 static struct class timecard_class = {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 3, 0)
 	.owner		= THIS_MODULE,
+#endif
 	.name		= "timecard",
 };
 
@@ -1733,9 +1735,11 @@ ptp_ocp_devlink_info_get(struct devlink *devlink, struct devlink_info_req *req,
 	char buf[32];
 	int err;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 0)
 	err = devlink_info_driver_name_put(req, KBUILD_MODNAME);
 	if (err)
 		return err;
+#endif
 
 	fw_image = bp->fw_loader ? "loader" : "fw";
 	sprintf(buf, "%d.%d", bp->fw_tag, bp->fw_version);
@@ -4171,7 +4175,7 @@ _signal_summary_show(struct seq_file *s, struct ptp_ocp *bp, int nr)
 	char label[8];
 	bool on;
 	u32 val;
-	
+
 	if (!bp->signal_out[nr])
 		return;
 
