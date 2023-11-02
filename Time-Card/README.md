@@ -42,7 +42,9 @@ Time Server is a critical part of a PTP enabled network. It provides accurate ti
 
 ## Getting a Time Card
 
-Here are 3 options to get your hands on this Time Card.
+Here are 4 options to get your hands on this Time Card.
+
+You can purchase the Time Card with the OCXO daughter card, the NEO-M9N RCB, fully programmed and assembled from Makerfabs. [Makerfabs Time Card](https://www.makerfabs.com/ocp-tap-time-card.html)
 
 You have all necessary source code, BOM, Gerber files and binaries to build it yourself.
 Follow these videos to Fabricate Time Cards with PCBWay, and purchase the accessories to assemble them.
