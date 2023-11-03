@@ -6,7 +6,7 @@
 **!!! The current driver does not support this version !!!**
 
 
-The Version with LitePCIe has different Memory-Mapped Offsets as well as different MSI-Numbers.
+The Version with LitePCIe has different Memory-Mapped Offsets (+ 0x0200_0000) as well as different MSI-Numbers.
 Check the differences in:
 
 [2. Address Mapping](#2-address-mapping)
@@ -104,45 +104,45 @@ The AXI Slave interfaces have the following addresses:
 
 |Slave|AXI Slave interface|Offset Address|High Address|
 |-----|-------------------|--------------|------------|
-|AXI PCIe Control|S_AXI_CTL|0x2001_0000|0x2001_0FFF|
-|TC FPGA Version|axi4l_slave|0x2002_0000|0x2002_0FFF|
-|AXI GPIO Ext|S_AXI|0x2010_0000|0x2010_0FFF|
-|AXI GPIO GNSS/MAC|S_AXI|0x2011_0000|0x2011_0FFF|
-|TC Clock Detector|axi4l_slave|0x2013_0000|0x2013_0FFF|
-|TC SMA Selector|axi4l_slave1|0x2014_0000|0x2014_3FFF|
-|AXI I2C|S_AXI|0x2015_0000|0x2015_FFFF|
-|AXI UART 16550 GNSS1|S_AXI|0x2016_0000|0x2016_FFFF|
-|AXI UART 16550 GNSS2|S_AXI|0x2017_0000|0x2017_FFFF|
-|AXI UART 16550 MAC|S_AXI|0x2018_0000|0x2018_FFFF|
-|AXI UART 16550 ΕΧΤ|S_AXI|0x201Α_0000|0x201Α_FFFF|
-|AXI I2C Clock|S_AXI|0x2020_0000|0x2020_FFFF|
-|TC SMA Selector|axi4l_slave2|0x2022_0000|0x2022_3FFF|
-|AXI HWICAP|S_AXI_LITE|0x2030_0000|0x2030_FFFF|
-|AXI Quad SPI Flash|AXI_LITE|0x2031_0000|0x2031_FFFF|
-|TC Adj. Clock|axi4l_slave|0x2100_0000|0x2100_FFFF|
-|TC Signal TS GNSS1 PPS|axi4l_slave|0x2101_0000|0x2101_FFFF|
-|TC Signal TS1|axi4l_slave|0x2102_0000|0x2102_FFFF|
-|TC PPS Generator|axi4l_slave|0x2103_0000|0x2103_FFFF|
-|TC PPS Slave|axi4l_slave|0x2104_0000|0x2104_FFFF|
-|TC ToD Slave|axi4l_slave|0x2105_0000|0x2105_FFFF|
-|TC Signal TS2|axi4l_slave|0x2106_0000|0x2106_FFFF|
-|TC Dummy Axi Slave1|axi4l_slave|0x2107_0000|0x2107_FFFF|
-|TC Dummy Axi Slave2|axi4l_slave|0x2108_0000|0x2108_FFFF|
-|TC Dummy Axi Slave3|axi4l_slave|0x2109_0000|0x2109_FFFF|
-|TC Dummy Axi Slave4|axi4l_slave|0x210A_0000|0x210A_FFFF|
-|TC Dummy Axi Slave5|axi4l_slave|0x210B_0000|0x210B_FFFF|
-|TC Signal TS FPGA PPS|axi4l_slave|0x210C_0000|0x210C_FFFF|
-|TC Signal Generator1|axi4l_slave|0x210D_0000|0x210D_FFFF|
-|TC Signal Generator2|axi4l_slave|0x210E_0000|0x210E_FFFF|
-|TC Signal Generator3|axi4l_slave|0x210F_0000|0x210F_FFFF|
-|TC Signal Generator4|axi4l_slave|0x2110_0000|0x2110_FFFF|
-|TC Signal TS3|axi4l_slave|0x2111_0000|0x2111_FFFF|
-|TC Signal TS4|axi4l_slave|0x2112_0000|0x2112_FFFF|
-|TC Frequency Counter 1|axi4l_slave|0x2120_0000|0x2120_FFFF|
-|TC Frequency Counter 2|axi4l_slave|0x2121_0000|0x2121_FFFF|
-|TC Frequency Counter 3|axi4l_slave|0x2122_0000|0x2122_FFFF|
-|TC Frequency Counter 4|axi4l_slave|0x2123_0000|0x2123_FFFF|
-|TC CoreList|axi4l_slave|0x2130_0000|0x2130_FFFF|
+|AXI PCIe Control|S_AXI_CTL|0x0201_0000|0x0201_0FFF|
+|TC FPGA Version|axi4l_slave|0x0202_0000|0x0202_0FFF|
+|AXI GPIO Ext|S_AXI|0x0210_0000|0x0210_0FFF|
+|AXI GPIO GNSS/MAC|S_AXI|0x0211_0000|0x0211_0FFF|
+|TC Clock Detector|axi4l_slave|0x0213_0000|0x0213_0FFF|
+|TC SMA Selector|axi4l_slave1|0x0214_0000|0x0214_3FFF|
+|AXI I2C|S_AXI|0x0215_0000|0x0215_FFFF|
+|AXI UART 16550 GNSS1|S_AXI|0x0216_0000|0x0216_FFFF|
+|AXI UART 16550 GNSS2|S_AXI|0x0217_0000|0x0217_FFFF|
+|AXI UART 16550 MAC|S_AXI|0x0218_0000|0x0218_FFFF|
+|AXI UART 16550 ΕΧΤ|S_AXI|0x021Α_0000|0x021Α_FFFF|
+|AXI I2C Clock|S_AXI|0x0220_0000|0x0220_FFFF|
+|TC SMA Selector|axi4l_slave2|0x0222_0000|0x0222_3FFF|
+|AXI HWICAP|S_AXI_LITE|0x0230_0000|0x0230_FFFF|
+|AXI Quad SPI Flash|AXI_LITE|0x0231_0000|0x0231_FFFF|
+|TC Adj. Clock|axi4l_slave|0x0300_0000|0x0300_FFFF|
+|TC Signal TS GNSS1 PPS|axi4l_slave|0x0301_0000|0x0301_FFFF|
+|TC Signal TS1|axi4l_slave|0x0302_0000|0x0302_FFFF|
+|TC PPS Generator|axi4l_slave|0x0303_0000|0x0303_FFFF|
+|TC PPS Slave|axi4l_slave|0x0304_0000|0x0304_FFFF|
+|TC ToD Slave|axi4l_slave|0x0305_0000|0x0305_FFFF|
+|TC Signal TS2|axi4l_slave|0x0306_0000|0x0306_FFFF|
+|TC Dummy Axi Slave1|axi4l_slave|0x0307_0000|0x0307_FFFF|
+|TC Dummy Axi Slave2|axi4l_slave|0x0308_0000|0x0308_FFFF|
+|TC Dummy Axi Slave3|axi4l_slave|0x0309_0000|0x0309_FFFF|
+|TC Dummy Axi Slave4|axi4l_slave|0x030A_0000|0x030A_FFFF|
+|TC Dummy Axi Slave5|axi4l_slave|0x030B_0000|0x030B_FFFF|
+|TC Signal TS FPGA PPS|axi4l_slave|0x030C_0000|0x030C_FFFF|
+|TC Signal Generator1|axi4l_slave|0x030D_0000|0x030D_FFFF|
+|TC Signal Generator2|axi4l_slave|0x030E_0000|0x030E_FFFF|
+|TC Signal Generator3|axi4l_slave|0x030F_0000|0x030F_FFFF|
+|TC Signal Generator4|axi4l_slave|0x0310_0000|0x0310_FFFF|
+|TC Signal TS3|axi4l_slave|0x0311_0000|0x0311_FFFF|
+|TC Signal TS4|axi4l_slave|0x0312_0000|0x0312_FFFF|
+|TC Frequency Counter 1|axi4l_slave|0x0320_0000|0x0320_FFFF|
+|TC Frequency Counter 2|axi4l_slave|0x0321_0000|0x0321_FFFF|
+|TC Frequency Counter 3|axi4l_slave|0x0322_0000|0x0322_FFFF|
+|TC Frequency Counter 4|axi4l_slave|0x0323_0000|0x0323_FFFF|
+|TC CoreList|axi4l_slave|0x0330_0000|0x0330_FFFF|
 
 The detailed register description of each instance is available at the corresponding core description document (see links at [Chapter 1](#1-design-overview)). 
 
