@@ -410,8 +410,8 @@ proc create_root_design { parentCell } {
   # Create instance: TC_FpgaVersion_0, and set properties
   set TC_FpgaVersion_0 [ create_bd_cell -type ip -vlnv nettimelogic.com:TimeCardLib:TC_FpgaVersion TC_FpgaVersion_0 ]
   set_property -dict [ list \
-   CONFIG.VersionNumber_Gen {0x8004} \
-   CONFIG.VersionNumber_Golden_Gen {0x8004} \
+   CONFIG.VersionNumber_Gen {0x8009} \
+   CONFIG.VersionNumber_Golden_Gen {0x8009} \
  ] $TC_FpgaVersion_0
 
   # Create instance: TC_FrequencyCounter_1, and set properties
