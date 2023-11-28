@@ -2,6 +2,10 @@ Here is testptp for configuring the PPS pins on the a NIC
 
 Use the following command for compiling:
 ```
+make
+```
+or use the full command
+```
 gcc -Wall -lrt testptp.c -o testptp
 ```
 For installation use:
