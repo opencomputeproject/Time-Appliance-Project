@@ -10,7 +10,11 @@ gcc -Wall -lrt testptp.c -o testptp
 ```
 For installation use:
 ```
-mv testptp /root/bin/
+sudo make install
+```
+or simply use
+```
+sudo mv testptp /usr/bin/
 ```
 To enabled PPS out for eth0 use the following command:
 ```
