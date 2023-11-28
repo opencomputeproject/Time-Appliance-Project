@@ -1,10 +1,10 @@
 #  Makefile to build testptp
 #  Ahmad Byagowi
 #
-GCC = gcc
+CC = gcc
 CFLAGS = -Wall -lrt 
 
 testptp: testptp.c
-	$(GCC) $(CFLAGS) $^ -o $@ 
+	$(CC) $(CFLAGS) $^ -o $@ 
 clean:
 	-rm -f testptp
