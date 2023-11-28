@@ -7,6 +7,6 @@ CFLAGS = -Wall -lrt
 testptp: testptp.c
 	$(CC) $(CFLAGS) $^ -o $@ 
 install: 
-	mv testptp /root/bin/
+	mv testptp /usr/bin/
 clean:
 	-rm -f testptp
