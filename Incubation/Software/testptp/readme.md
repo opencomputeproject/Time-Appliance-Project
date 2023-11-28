@@ -15,5 +15,5 @@ ptp_dev=`ethtool -T eth0 | awk '/PTP Hardware Clock:/ {print $4}'` && testptp -d
 ```
 To enable PPS in for eth0 use the following command:
 ```
-ptp_dev=`ethtool -T eth0 | awk '/PTP Hardware Clock:/ {print $4}'` && testptp -d /dev/ptp$ptp_dev -e 1000
+ptp_dev=`ethtool -T eth0 | awk '/PTP Hardware Clock:/ {print $4}'` && testptp -d /dev/ptp$ptp_dev -e -1
 ```
