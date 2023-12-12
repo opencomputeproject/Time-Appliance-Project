@@ -1,0 +1,12 @@
+===================================
+Configuration Memory information
+===================================
+File Format        BIN
+Interface          SPIX4
+Size               16M
+Start Address      0x00000000
+End Address        0x00FFFFFF
+
+Addr1         Addr2         Date                    File(s)
+0x00000000    0x002C405F    Dec 11 18:55:54 2023    C:/NetTimeLogic/Customers/Facebook/GitRepo/TimeCard/ImplementationPLitePcie/Binaries/Golden_TimeCardProduction.bit
+0x00400000    0x006C522F    Dec 11 19:05:55 2023    C:/NetTimeLogic/Customers/Facebook/GitRepo/TimeCard/ImplementationPLitePcie/Binaries/TimeCardProduction.bit
