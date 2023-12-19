@@ -78,18 +78,14 @@ static struct class timecard_class = {
 };
 
 #define CSR_BASE 0x0L
+/* msi_base */
+#define CSR_PCIE_MSI_BASE (CSR_BASE + 0x1800L)
 /* ptm_requester */
 #define CSR_PTM_REQUESTER_BASE (CSR_BASE + 0x3000L)
 #define CSR_PTM_REQUESTER_CONTROL_ENABLE_OFFSET 0
 #define CSR_PTM_REQUESTER_CONTROL_TRIGGER_OFFSET 1
 #define CSR_PTM_REQUESTER_STATUS_VALID_OFFSET 0
 #define CSR_PTM_REQUESTER_STATUS_BUSY_OFFSET 1
-
-/* time_generator */
-#define CSR_TIME_GENERATOR_BASE (CSR_BASE + 0x3800L)
-#define CSR_TIME_GENERATOR_CONTROL_ENABLE_OFFSET 0
-#define CSR_TIME_GENERATOR_CONTROL_READ_OFFSET 1
-#define CSR_TIME_GENERATOR_CONTROL_WRITE_OFFSET 2
 
 struct ptm_reg {
 	u32 ctrl;
@@ -197,6 +193,10 @@ struct pps_reg {
 
 struct img_reg {
 	u32	version;
+};
+
+struct msi_reg {
+	u32 	enable;
 };
 
 struct gpio_reg {
@@ -382,6 +382,7 @@ struct ptp_ocp {
 	struct dcf_slave_reg	__iomem *dcf_in;
 	struct tod_reg		__iomem *nmea_out;
 	struct frequency_reg	__iomem *freq_in[4];
+	struct msi_reg __iomem	*msi;
 	struct ptp_ocp_ext_src	*ptm;
 	struct ptp_ocp_ext_src	*signal_out[4];
 	struct ptp_ocp_ext_src	*pps;
@@ -431,6 +432,7 @@ struct ptp_ocp {
 	u64			ptm_t1_prev;
 	u64			ptm_t4_prev;
 	bool		has_ptm_support;
+	bool		has_msix_support;
 };
 
 #define OCP_REQ_TIMESTAMP	BIT(0)
@@ -451,6 +453,7 @@ struct ocp_driver_data {
 	u8 max_revision;
 	struct ocp_resource *ocp_resource;
 	bool ptm_support;
+	bool msix_support;
 };
 
 static int ptp_ocp_register_mem(struct ptp_ocp *bp, struct ocp_resource *r);
@@ -790,6 +793,10 @@ static struct ocp_resource ocp_fb_resource_rev1[] = {
 
 static struct ocp_resource ocp_fb_resource_rev2[] = {
 	{
+		OCP_MEM_RESOURCE(msi),
+		.offset = CSR_PCIE_MSI_BASE, .size = 0x4,
+	},
+	{
 		OCP_EXT_RESOURCE(ptm),
 		.offset = CSR_PTM_REQUESTER_BASE, .size = 0x800, .irq_vec = 0,
 		.extra = &(struct ptp_ocp_ext_info) {
@@ -1031,12 +1038,14 @@ static struct ocp_driver_data ocp_fb_driver_data[] = {
 		.max_revision = 1,
 		.ocp_resource = (struct ocp_resource *) (&ocp_fb_resource_rev1),
 		.ptm_support = false,
+		.msix_support = false,
 	},
 	{
 		.min_revision = 2,
 		.max_revision = 2,
 		.ocp_resource = (struct ocp_resource *) (&ocp_fb_resource_rev2),
 		.ptm_support = true,
+		.msix_support = true,
 	},
 	{ }
 };
@@ -1068,15 +1077,6 @@ struct ocp_art_osc_reg {
 
 #define OCP_ART_CONFIG_SIZE		144
 #define OCP_ART_TEMP_TABLE_SIZE	368
-
-/* time */
-#define TIME_CONTROL_WRITE_TIME_L (CSR_TIME_GENERATOR_WRITE_TIME_ADDR + (4))
-#define TIME_CONTROL_WRITE_TIME_H (CSR_TIME_GENERATOR_WRITE_TIME_ADDR + (0))
-#define TIME_CONTROL_READ_TIME_L  (CSR_TIME_GENERATOR_READ_TIME_ADDR + (4))
-#define TIME_CONTROL_READ_TIME_H  (CSR_TIME_GENERATOR_READ_TIME_ADDR + (0))
-#define TIME_CONTROL_ENABLE       (1 << CSR_TIME_GENERATOR_CONTROL_ENABLE_OFFSET)
-#define TIME_CONTROL_READ         (1 << CSR_TIME_GENERATOR_CONTROL_READ_OFFSET)
-#define TIME_CONTROL_WRITE        (1 << CSR_TIME_GENERATOR_CONTROL_WRITE_OFFSET)
 
 /* PTM */
 #define PTM_CONTROL_ENABLE  (1 << CSR_PTM_REQUESTER_CONTROL_ENABLE_OFFSET)
@@ -1228,6 +1228,7 @@ static struct ocp_driver_data ocp_art_driver_data[] = {
 		.max_revision = 255,
 		.ocp_resource = (struct ocp_resource *) (&ocp_art_resource),
 		.ptm_support = false,
+		.msix_support = false,
 	},
 	{ }
 };
@@ -3041,6 +3042,7 @@ ptp_ocp_get_resources(struct ptp_ocp *bp, kernel_ulong_t driver_data, struct ocp
 		if (d->min_revision <= rev_id && d->max_revision >= rev_id) {
 			*table = d->ocp_resource;
 			bp->has_ptm_support = d->ptm_support;
+			bp->has_msix_support = d->msix_support;
 			err = 0;
 		}
 	}
@@ -5433,7 +5435,7 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 		dev_err(&pdev->dev, "alloc_irq_vectors err: %d\n", err);
 		goto out;
 	} else {
-		dev_info(&pdev->dev, "MSI-X info: %d\n", err);
+		dev_info(&pdev->dev, "MSI/MSI-X info: %d\n", err);
 	}
 	
 	bp->n_irqs = err;
@@ -5463,6 +5465,13 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	}
 	ptp_ocp_info(bp);
 	ptp_ocp_devlink_register(devlink, &pdev->dev);
+	
+	if(bp->has_msix_support) {
+		/* Enable MSI-X Irq in LitePCIe*/
+		iowrite32(0xFF, &bp->msi->enable);
+		dev_info(&pdev->dev, "Enabled MSI-X 0xFF\n");
+	}
+	
 	return 0;
 
 out:
