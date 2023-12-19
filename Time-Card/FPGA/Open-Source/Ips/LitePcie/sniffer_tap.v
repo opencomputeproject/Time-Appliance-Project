@@ -1,4 +1,4 @@
-module pcie_ptm_sniffer_tap (
+module sniffer_tap (
     (* mark_debug = "true" *)
     input wire         rst_n_in,
     (* mark_debug = "true" *)

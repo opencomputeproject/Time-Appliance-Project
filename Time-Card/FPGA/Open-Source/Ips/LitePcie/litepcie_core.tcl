@@ -9,8 +9,8 @@ set_msg_config -id {Common 17-55} -new_severity {Warning}
 
 # Add Sources
 
-read_verilog {/media/sf_litepcie_ptm/gateware/pcie_ptm_sniffer_tap.v}
-read_verilog {/media/sf_litepcie_ptm/build/gateware/litepcie_core.v}
+read_verilog {/home/thomas/Litex/litepcie/litepcie/frontend/ptm/sniffer_tap.v}
+read_verilog {/media/sf_litepcie/litepcie/build/gateware/litepcie_core.v}
 
 # Add EDIFs
 

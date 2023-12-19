@@ -201,74 +201,61 @@ architecture TimeCardTop_Arch of TimeCardTop is
 
     component litepcie_core is
     port (
-        clk                         : out STD_LOGIC;
-        rst                         : out STD_LOGIC;
-        
-        ptm_time_clk                : in STD_LOGIC;
-        ptm_time_rst                : in STD_LOGIC;
-        ptm_time_ns                 : in STD_LOGIC_VECTOR ( 63 downto 0 );
-        
-        pcie_rst_n                  : in STD_LOGIC;
-        pcie_clk_p                  : in STD_LOGIC;
-        pcie_clk_n                  : in STD_LOGIC;
-        pcie_rx_p                   : in STD_LOGIC;
-        pcie_rx_n                   : in STD_LOGIC;
-        pcie_tx_p                   : out STD_LOGIC;
-        pcie_tx_n                   : out STD_LOGIC;
-                    
-        mmap_axi_lite_awvalid       : out STD_LOGIC;
-        mmap_axi_lite_awready       : in STD_LOGIC;
-        mmap_axi_lite_awaddr        : out STD_LOGIC_VECTOR ( 31 downto 0 );
-        mmap_axi_lite_awprot        : out STD_LOGIC_VECTOR ( 2 downto 0 );
-        mmap_axi_lite_wvalid        : out STD_LOGIC;
-        mmap_axi_lite_wready        : in STD_LOGIC;
-        mmap_axi_lite_wdata         : out STD_LOGIC_VECTOR ( 31 downto 0 );
-        mmap_axi_lite_wstrb         : out STD_LOGIC_VECTOR ( 3 downto 0 );
-        mmap_axi_lite_bvalid        : in STD_LOGIC;
-        mmap_axi_lite_bready        : out STD_LOGIC;
-        mmap_axi_lite_bresp         : in STD_LOGIC_VECTOR ( 1 downto 0 );
-        mmap_axi_lite_arvalid       : out STD_LOGIC;
-        mmap_axi_lite_arready       : in STD_LOGIC;
-        mmap_axi_lite_araddr        : out STD_LOGIC_VECTOR ( 31 downto 0 );
-        mmap_axi_lite_arprot        : out STD_LOGIC_VECTOR ( 2 downto 0 );
-        mmap_axi_lite_rvalid        : in STD_LOGIC;
-        mmap_axi_lite_rready        : out STD_LOGIC;
-        mmap_axi_lite_rresp         : in STD_LOGIC_VECTOR ( 1 downto 0 );
-        mmap_axi_lite_rdata         : in STD_LOGIC_VECTOR ( 31 downto 0 );
-        mmap_slave_axi_lite_awvalid: in  STD_LOGIC;
-        mmap_slave_axi_lite_awready: out STD_LOGIC;
-        mmap_slave_axi_lite_awaddr : in  STD_LOGIC_VECTOR ( 31 downto 0 );
-        mmap_slave_axi_lite_awprot : in  STD_LOGIC_VECTOR ( 2 downto 0 );
-        mmap_slave_axi_lite_wvalid : in  STD_LOGIC;
-        mmap_slave_axi_lite_wready : out STD_LOGIC;
-        mmap_slave_axi_lite_wdata  : in  STD_LOGIC_VECTOR ( 31 downto 0 );
-        mmap_slave_axi_lite_wstrb  : in  STD_LOGIC_VECTOR ( 3 downto 0 );
-        mmap_slave_axi_lite_bvalid : out STD_LOGIC;
-        mmap_slave_axi_lite_bready : in  STD_LOGIC;
-        mmap_slave_axi_lite_bresp  : out STD_LOGIC_VECTOR ( 1 downto 0 );
-        mmap_slave_axi_lite_arvalid: in  STD_LOGIC;
-        mmap_slave_axi_lite_arready: out STD_LOGIC;
-        mmap_slave_axi_lite_araddr : in  STD_LOGIC_VECTOR ( 31 downto 0 );
-        mmap_slave_axi_lite_arprot : in  STD_LOGIC_VECTOR ( 2 downto 0 );
-        mmap_slave_axi_lite_rvalid : out STD_LOGIC;
-        mmap_slave_axi_lite_rready : in  STD_LOGIC;
-        mmap_slave_axi_lite_rresp  : out STD_LOGIC_VECTOR ( 1 downto 0 );
-        mmap_slave_axi_lite_rdata  : out STD_LOGIC_VECTOR ( 31 downto 0 );
-
-        dma0_status_writer_enable  : out STD_LOGIC;
-        dma0_status_reader_enable  : out STD_LOGIC;
-        dma0_writer_axi_tvalid     : in  STD_LOGIC;
-        dma0_writer_axi_tready     : out STD_LOGIC;
-        dma0_writer_axi_tlast      : in  STD_LOGIC;
-        dma0_writer_axi_tdata      : in STD_LOGIC_VECTOR ( 63 downto 0 );
-        dma0_writer_axi_tuser      : in  STD_LOGIC;
-        dma0_reader_axi_tvalid     : out STD_LOGIC;
-        dma0_reader_axi_tready     : in  STD_LOGIC;
-        dma0_reader_axi_tlast      : out STD_LOGIC;
-        dma0_reader_axi_tdata      : out STD_LOGIC_VECTOR ( 63 downto 0 );
-        dma0_reader_axi_tuser      : out STD_LOGIC;
-
-        msi_irqs                    : in STD_LOGIC_VECTOR ( 31 downto 0 )
+        clk                         	: out 	std_logic;
+        rst                         	: out 	std_logic;
+			
+        ptm_time_clk                	: in	std_logic;
+        ptm_time_rst                	: in	std_logic;
+        ptm_time_ns                 	: in	std_logic_vector(63 downto 0);
+			
+        pcie_rst_n                  	: in	std_logic;
+        pcie_clk_p                  	: in	std_logic;
+        pcie_clk_n                  	: in	std_logic;
+        pcie_rx_p                   	: in	std_logic;
+        pcie_rx_n                   	: in	std_logic;
+        pcie_tx_p                   	: out 	std_logic;
+        pcie_tx_n                   	: out 	std_logic;
+						
+        mmap_axi_lite_awvalid       	: out 	std_logic;
+        mmap_axi_lite_awready       	: in 	std_logic;
+        mmap_axi_lite_awaddr        	: out 	std_logic_vector(31 downto 0);
+        mmap_axi_lite_awprot        	: out 	std_logic_vector(2 downto 0);
+        mmap_axi_lite_wvalid        	: out 	std_logic;
+        mmap_axi_lite_wready        	: in 	std_logic;
+        mmap_axi_lite_wdata         	: out 	std_logic_vector(31 downto 0);
+        mmap_axi_lite_wstrb         	: out 	std_logic_vector(3 downto 0);
+        mmap_axi_lite_bvalid        	: in 	std_logic;
+        mmap_axi_lite_bready        	: out 	std_logic;
+        mmap_axi_lite_bresp         	: in 	std_logic_vector(1 downto 0);
+        mmap_axi_lite_arvalid       	: out 	std_logic;
+        mmap_axi_lite_arready       	: in 	std_logic;
+        mmap_axi_lite_araddr        	: out 	std_logic_vector(31 downto 0);
+        mmap_axi_lite_arprot        	: out 	std_logic_vector(2 downto 0);
+        mmap_axi_lite_rvalid        	: in 	std_logic;
+        mmap_axi_lite_rready        	: out 	std_logic;
+        mmap_axi_lite_rresp         	: in 	std_logic_vector(1 downto 0);
+        mmap_axi_lite_rdata         	: in 	std_logic_vector(31 downto 0);
+        mmap_slave_axi_lite_awvalid		: in	std_logic;
+        mmap_slave_axi_lite_awready		: out 	std_logic;
+        mmap_slave_axi_lite_awaddr 		: in	std_logic_vector(31 downto 0);
+        mmap_slave_axi_lite_awprot 		: in	std_logic_vector(2 downto 0);
+        mmap_slave_axi_lite_wvalid 		: in	std_logic;
+        mmap_slave_axi_lite_wready 		: out 	std_logic;
+        mmap_slave_axi_lite_wdata  		: in	std_logic_vector(31 downto 0);
+        mmap_slave_axi_lite_wstrb  		: in	std_logic_vector(3 downto 0);
+        mmap_slave_axi_lite_bvalid 		: out 	std_logic;
+        mmap_slave_axi_lite_bready 		: in	std_logic;
+        mmap_slave_axi_lite_bresp  		: out 	std_logic_vector(1 downto 0);
+        mmap_slave_axi_lite_arvalid		: in	std_logic;
+        mmap_slave_axi_lite_arready		: out 	std_logic;
+        mmap_slave_axi_lite_araddr 		: in	std_logic_vector(31 downto 0);
+        mmap_slave_axi_lite_arprot 		: in	std_logic_vector(2 downto 0);
+        mmap_slave_axi_lite_rvalid 		: out 	std_logic;
+        mmap_slave_axi_lite_rready 		: in	std_logic;
+        mmap_slave_axi_lite_rresp  		: out 	std_logic_vector(1 downto 0);
+        mmap_slave_axi_lite_rdata  		: out 	std_logic_vector(31 downto 0);
+		
+        msi_irqs                    	: in	std_logic_vector(31 downto 0 )
     );
     end component litepcie_core;
 
@@ -284,7 +271,8 @@ architecture TimeCardTop_Arch of TimeCardTop is
     --*************************************************************************************
     -- Constant Definitions
     --*************************************************************************************
-    constant ClkPeriodNanosecond_Con    :       natural := 20;   
+    constant ClkPeriodNanosecond_Con    : natural := 20;
+	
     --*************************************************************************************
     -- Type Definitions
     --*************************************************************************************
@@ -373,49 +361,49 @@ architecture TimeCardTop_Arch of TimeCardTop is
     signal Msi_Dat                      : std_logic_vector(31 downto 0) := (others => '0');
 
     -- AXI  
-    signal mmap_axi_lite_awvalid        : STD_LOGIC_VECTOR ( 0 downto 0 );
-    signal awvalid                      : STD_LOGIC_VECTOR ( 0 downto 0 );
-    signal mmap_axi_lite_awready        : STD_LOGIC_VECTOR ( 0 downto 0 );
-    signal mmap_axi_lite_awaddr         : STD_LOGIC_VECTOR ( 31 downto 0 );
-    signal awaddr                       : STD_LOGIC_VECTOR ( 31 downto 0 );
-    signal mmap_axi_lite_awprot         : STD_LOGIC_VECTOR ( 2 downto 0 );
-    signal mmap_axi_lite_wvalid         : STD_LOGIC_VECTOR ( 0 downto 0 );
-    signal mmap_axi_lite_wready         : STD_LOGIC_VECTOR ( 0 downto 0 );
-    signal mmap_axi_lite_wdata          : STD_LOGIC_VECTOR ( 31 downto 0 );
-    signal mmap_axi_lite_wstrb          : STD_LOGIC_VECTOR ( 3 downto 0 );
-    signal mmap_axi_lite_bvalid         : STD_LOGIC_VECTOR ( 0 downto 0 );
-    signal mmap_axi_lite_bready         : STD_LOGIC_VECTOR ( 0 downto 0 );
-    signal mmap_axi_lite_bresp          : STD_LOGIC_VECTOR ( 1 downto 0 );
-    signal mmap_axi_lite_arvalid        : STD_LOGIC_VECTOR ( 0 downto 0 );
-    signal arvalid                      : STD_LOGIC_VECTOR ( 0 downto 0 );
-    signal mmap_axi_lite_arready        : STD_LOGIC_VECTOR ( 0 downto 0 );
-    signal mmap_axi_lite_araddr         : STD_LOGIC_VECTOR ( 31 downto 0 );
-    signal araddr                       : STD_LOGIC_VECTOR ( 31 downto 0 );
-    signal mmap_axi_lite_arprot         : STD_LOGIC_VECTOR ( 2 downto 0 );
-    signal mmap_axi_lite_rvalid         : STD_LOGIC_VECTOR ( 0 downto 0 );
-    signal mmap_axi_lite_rready         : STD_LOGIC_VECTOR ( 0 downto 0 );
-    signal mmap_axi_lite_rresp          : STD_LOGIC_VECTOR ( 1 downto 0 );
-    signal mmap_axi_lite_rdata          : STD_LOGIC_VECTOR ( 31 downto 0 );
+    signal mmap_axi_lite_awvalid        : std_logic_vector(0 downto 0);
+    signal awvalid                      : std_logic_vector(0 downto 0);
+    signal mmap_axi_lite_awready        : std_logic_vector(0 downto 0);
+    signal mmap_axi_lite_awaddr         : std_logic_vector(31 downto 0);
+    signal awaddr                       : std_logic_vector(31 downto 0);
+    signal mmap_axi_lite_awprot         : std_logic_vector(2 downto 0);
+    signal mmap_axi_lite_wvalid         : std_logic_vector(0 downto 0);
+    signal mmap_axi_lite_wready         : std_logic_vector(0 downto 0);
+    signal mmap_axi_lite_wdata          : std_logic_vector(31 downto 0);
+    signal mmap_axi_lite_wstrb          : std_logic_vector(3 downto 0);
+    signal mmap_axi_lite_bvalid         : std_logic_vector(0 downto 0);
+    signal mmap_axi_lite_bready         : std_logic_vector(0 downto 0);
+    signal mmap_axi_lite_bresp          : std_logic_vector(1 downto 0);
+    signal mmap_axi_lite_arvalid        : std_logic_vector(0 downto 0);
+    signal arvalid                      : std_logic_vector(0 downto 0);
+    signal mmap_axi_lite_arready        : std_logic_vector(0 downto 0);
+    signal mmap_axi_lite_araddr         : std_logic_vector(31 downto 0);
+    signal araddr                       : std_logic_vector(31 downto 0);
+    signal mmap_axi_lite_arprot         : std_logic_vector(2 downto 0);
+    signal mmap_axi_lite_rvalid         : std_logic_vector(0 downto 0);
+    signal mmap_axi_lite_rready         : std_logic_vector(0 downto 0);
+    signal mmap_axi_lite_rresp          : std_logic_vector(1 downto 0);
+    signal mmap_axi_lite_rdata          : std_logic_vector(31 downto 0);
     
-    signal mmap_slave_axi_lite_awvalid  : STD_LOGIC_VECTOR ( 0 downto 0 );
-    signal mmap_slave_axi_lite_awready  : STD_LOGIC_VECTOR ( 0 downto 0 );
-    signal mmap_slave_axi_lite_awaddr   : STD_LOGIC_VECTOR ( 31 downto 0 );
-    signal mmap_slave_axi_lite_awprot   : STD_LOGIC_VECTOR ( 2 downto 0 );
-    signal mmap_slave_axi_lite_wvalid   : STD_LOGIC_VECTOR ( 0 downto 0 );
-    signal mmap_slave_axi_lite_wready   : STD_LOGIC_VECTOR ( 0 downto 0 );
-    signal mmap_slave_axi_lite_wdata    : STD_LOGIC_VECTOR ( 31 downto 0 );
-    signal mmap_slave_axi_lite_wstrb    : STD_LOGIC_VECTOR ( 3 downto 0 );
-    signal mmap_slave_axi_lite_bvalid   : STD_LOGIC_VECTOR ( 0 downto 0 );
-    signal mmap_slave_axi_lite_bready   : STD_LOGIC_VECTOR ( 0 downto 0 );
-    signal mmap_slave_axi_lite_bresp    : STD_LOGIC_VECTOR ( 1 downto 0 );
-    signal mmap_slave_axi_lite_arvalid  : STD_LOGIC_VECTOR ( 0 downto 0 );
-    signal mmap_slave_axi_lite_arready  : STD_LOGIC_VECTOR ( 0 downto 0 );
-    signal mmap_slave_axi_lite_araddr   : STD_LOGIC_VECTOR ( 31 downto 0 );
-    signal mmap_slave_axi_lite_arprot   : STD_LOGIC_VECTOR ( 2 downto 0 );
-    signal mmap_slave_axi_lite_rvalid   : STD_LOGIC_VECTOR ( 0 downto 0 );
-    signal mmap_slave_axi_lite_rready   : STD_LOGIC_VECTOR ( 0 downto 0 );
-    signal mmap_slave_axi_lite_rresp    : STD_LOGIC_VECTOR ( 1 downto 0 );
-    signal mmap_slave_axi_lite_rdata    : STD_LOGIC_VECTOR ( 31 downto 0 );
+    signal mmap_slave_axi_lite_awvalid  : std_logic_vector(0 downto 0);
+    signal mmap_slave_axi_lite_awready  : std_logic_vector(0 downto 0);
+    signal mmap_slave_axi_lite_awaddr   : std_logic_vector(31 downto 0);
+    signal mmap_slave_axi_lite_awprot   : std_logic_vector(2 downto 0);
+    signal mmap_slave_axi_lite_wvalid   : std_logic_vector(0 downto 0);
+    signal mmap_slave_axi_lite_wready   : std_logic_vector(0 downto 0);
+    signal mmap_slave_axi_lite_wdata    : std_logic_vector(31 downto 0);
+    signal mmap_slave_axi_lite_wstrb    : std_logic_vector(3 downto 0);
+    signal mmap_slave_axi_lite_bvalid   : std_logic_vector(0 downto 0);
+    signal mmap_slave_axi_lite_bready   : std_logic_vector(0 downto 0);
+    signal mmap_slave_axi_lite_bresp    : std_logic_vector(1 downto 0);
+    signal mmap_slave_axi_lite_arvalid  : std_logic_vector(0 downto 0);
+    signal mmap_slave_axi_lite_arready  : std_logic_vector(0 downto 0);
+    signal mmap_slave_axi_lite_araddr   : std_logic_vector(31 downto 0);
+    signal mmap_slave_axi_lite_arprot   : std_logic_vector(2 downto 0);
+    signal mmap_slave_axi_lite_rvalid   : std_logic_vector(0 downto 0);
+    signal mmap_slave_axi_lite_rready   : std_logic_vector(0 downto 0);
+    signal mmap_slave_axi_lite_rresp    : std_logic_vector(1 downto 0);
+    signal mmap_slave_axi_lite_rdata    : std_logic_vector(31 downto 0);
     
 --*****************************************************************************************
 -- Architecture Implementation
@@ -573,7 +561,7 @@ begin
 
     ptm_time_clk <= Mhz50Clk_Clk;
     ptm_time_rst <= not Mhz50RstN_Rst;
-    ptm_time_ns <= time_out_clock_second & time_out_clock_nanosecond;
+    ptm_time_ns <= std_logic_vector(resize(unsigned(time_out_clock_second(31 downto 0)) * to_unsigned(SecondNanoseconds_Con, 32) + unsigned(time_out_clock_nanosecond), 64));
 
     PciE: litepcie_core
     port map (
@@ -632,19 +620,6 @@ begin
         mmap_slave_axi_lite_rready      => mmap_slave_axi_lite_rready(0),   
         mmap_slave_axi_lite_rresp       => mmap_slave_axi_lite_rresp,       
         mmap_slave_axi_lite_rdata       => mmap_slave_axi_lite_rdata,       
-        
-        dma0_status_writer_enable       => open,
-        dma0_status_reader_enable       => open,
-        dma0_writer_axi_tvalid          => '0', 
-        dma0_writer_axi_tready          => open,
-        dma0_writer_axi_tlast           => '0',
-        dma0_writer_axi_tdata           => (others => '0'),
-        dma0_writer_axi_tuser           => '0',
-        dma0_reader_axi_tvalid          => open,
-        dma0_reader_axi_tready          => '1',
-        dma0_reader_axi_tlast           => open,
-        dma0_reader_axi_tdata           => open,
-        dma0_reader_axi_tuser           => open,
 
         msi_irqs                        => Msi_Dat
     );

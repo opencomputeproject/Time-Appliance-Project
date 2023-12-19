@@ -1,10 +1,6 @@
 **IMPORTANT**
 
-
 **This is a preliminary version of the TimeCard with the [LitePcie](https://github.com/enjoy-digital/litepcie) core as the PCIe to AXIMM bridge.**
-
-**!!! The current driver does not support this version !!!**
-
 
 The Version with LitePCIe has different Memory-Mapped Offsets (+ 0x0200_0000) as well as different MSI-Numbers (+ 32).
 Check the differences in:
@@ -15,10 +11,7 @@ and
 
 [3. Interrupt Mapping](#3-interrupt-mapping)
 
-Interrupts must be enabled: 0xFF to register 0x1800:
-[csr.h](https://github.com/opencomputeproject/Time-Appliance-Project/blob/c1beb991008c8410d31bb13e4aadf1443c65d549/Time-Card/FPGA/Open-Source/Ips/LitePcie/software/include/generated/csr.h#L154C9-L154C34)
-
-
+Interrupts must be enabled: 0xFF to register 0x1800 (done in the latest driver)
 
 
 The LitePCIe Core supports MSI-X as well as PTM (with a correct driver).

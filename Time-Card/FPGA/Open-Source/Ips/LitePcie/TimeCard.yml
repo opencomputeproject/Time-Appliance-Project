@@ -33,11 +33,11 @@
     "mmap_slave_axi_full"     : False,
 
     # DMA channels -------------------------------------------------------------
-    "dma_channels"            : 1,    # Number of DMA channels
+    "dma_channels"            : 0,    # Number of DMA channels
     "dma_buffering"           : 8192, # Buffering for each channel (in bytes)
-    "dma_loopback"            : True, # Enable DMA loopback capability
-    "dma_synchronizer"        : True, # Enable DMA synchronizer capability
-    "dma_monitor"             : True, # Enable DMA monitoring capability
+    "dma_loopback"            : False, # Enable DMA loopback capability
+    "dma_synchronizer"        : False, # Enable DMA synchronizer capability
+    "dma_monitor"             : False, # Enable DMA monitoring capability
 
     # MSI IRQs -----------------------------------------------------------------
     "msi_x"                   : True,

@@ -10,8 +10,8 @@ create_clock -period 8.000 -name Mhz125Clk -waveform {0.000 4.000} [get_ports {M
 create_clock -period 10.000 -name PcieClk [get_ports {PcieRefClkP_ClkIn}]
 
 # Clock Wiz0
-create_generated_clock -name PllFixMhz50Clk -source [get_pins Bd_Inst/TimeCard_i/clk_wiz_0/inst/mmcm_adv_inst/CLKIN1] -master_clock [get_clocks Mhz200Clk] [get_pins Bd_Inst/TimeCard_i/clk_wiz_0/inst/mmcm_adv_inst/CLKOUT0]
-create_generated_clock -name InternalMhz200Clk -source [get_pins Bd_Inst/TimeCard_i/clk_wiz_0/inst/mmcm_adv_inst/CLKIN1] -master_clock [get_clocks Mhz200Clk] [get_pins Bd_Inst/TimeCard_i/clk_wiz_0/inst/mmcm_adv_inst/CLKOUT1]
+create_generated_clock -name PllFixMhz50Clk -source [get_pins Bd_Inst/TimeCard_i/clk_wiz_0/inst/mmcm_adv_inst/CLKIN1] -master_clock Mhz200Clk [get_pins Bd_Inst/TimeCard_i/clk_wiz_0/inst/mmcm_adv_inst/CLKOUT0]
+create_generated_clock -name InternalMhz200Clk -source [get_pins Bd_Inst/TimeCard_i/clk_wiz_0/inst/mmcm_adv_inst/CLKIN1] -master_clock Mhz200Clk [get_pins Bd_Inst/TimeCard_i/clk_wiz_0/inst/mmcm_adv_inst/CLKOUT1]
 
 # Clock Mux1, 2 and 3
 create_generated_clock -name clk1mux -divide_by 1 -add -master_clock Mhz10ClkExt -source [get_pins Bd_Inst/TimeCard_i/BufgMux_IPI_0/U0/BufgMux_Inst/I0] [get_pins Bd_Inst/TimeCard_i/BufgMux_IPI_0/U0/BufgMux_Inst/O]
@@ -44,7 +44,7 @@ create_generated_clock -name PllMhz200Clk_Src3 -source [get_pins Bd_Inst/TimeCar
 create_generated_clock -name PllMhz200Clk_Src4 -source [get_pins Bd_Inst/TimeCard_i/clk_wiz_2/inst/mmcm_adv_inst/CLKIN2] -master_clock InternalMhz200Clk_Src3 [get_pins Bd_Inst/TimeCard_i/clk_wiz_2/inst/mmcm_adv_inst/CLKOUT1]
 set_clock_groups -logically_exclusive -group {PllMhz200Clk_Src1 PllDynMhz50Clk_Src1} -group {PllMhz200Clk_Src2 PllDynMhz50Clk_Src2} -group {PllMhz200Clk_Src3 PllDynMhz50Clk_Src3} -group {PllMhz200Clk_Src4 PllDynMhz50Clk_Src4} -group {PllFixMhz50Clk InternalMhz200Clk}
 
-set_clock_groups -logically_exclusive -group DummyClk -group Mhz10Clk -group Mhz10ClkExt -group Mhz10ClkDcxo1
+set_clock_groups -logically_exclusive -group DummyClk -group Mhz10Clk -group Mhz10ClkExt -group Mhz10ClkDcxo1 -group Mhz125ClkP_ClkIn -group Mhz125Clk -group PcieClk
 
 # Clock Mux LitePcie
 set_clock_groups -logically_exclusive -group s7pciephy_clkout0 -group s7pciephy_clkout1
@@ -242,8 +242,8 @@ set_output_delay -clock [get_clocks DummyClk] -max 0.000 [get_ports {Gnss1RstN_R
 set_input_delay -clock [get_clocks DummyClk] -min 0.000 [get_ports {Gnss1Tp_DatIn[*] Gnss2Tp_DatIn[*]}]
 set_input_delay -clock [get_clocks DummyClk] -max 5.000 [get_ports {Gnss1Tp_DatIn[*] Gnss2Tp_DatIn[*]}]
 
-set_input_delay -clock [get_clocks DummyClk] -min 0.000 [get_ports {SmaIn1_DatIn SmaIn2_DatIn SmaIn3_DatIn SmaIn4_DatIn}]
-set_input_delay -clock [get_clocks DummyClk] -max 5.000 [get_ports {SmaIn1_DatIn SmaIn2_DatIn SmaIn3_DatIn SmaIn4_DatIn}]
+set_input_delay -clock [get_clocks DummyClk] -min 0.000 [get_ports {SmaIn2_DatIn SmaIn3_DatIn SmaIn4_DatIn}]
+set_input_delay -clock [get_clocks DummyClk] -max 5.000 [get_ports {SmaIn2_DatIn SmaIn3_DatIn SmaIn4_DatIn}]
 
 set_output_delay -clock [get_clocks DummyClk] -min 5.000 [get_ports {SmaOut1_DatOut SmaOut2_DatOut SmaOut3_DatOut SmaOut4_DatOut}]
 set_output_delay -clock [get_clocks DummyClk] -max 0.000 [get_ports {SmaOut1_DatOut SmaOut2_DatOut SmaOut3_DatOut SmaOut4_DatOut}]

@@ -74,7 +74,7 @@ set files [list \
  "[file normalize "$origin_dir/../../../Modules/Irq/LevelMsiIrq.vhd"]"\
  "[file normalize "$origin_dir/../../../Modules/Irq/SinglePulseIrq.vhd"]"\
  "[file normalize "$origin_dir/../../../Modules/BufgMux/BufgMux_IPI.vhd"]"\
- "[file normalize "$origin_dir/../../../Ips/LitePcie/pcie_ptm_sniffer_tap.v"]"\
+ "[file normalize "$origin_dir/../../../Ips/LitePcie/sniffer_tap.v"]"\
  "[file normalize "$origin_dir/../../../Ips/LitePcie/litepcie_core.v"]"\
  "[file normalize "$origin_dir/Top/TimeCardTop.vhd"]"\
 ]
@@ -139,7 +139,7 @@ set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
 set_property "file_type" "VHDL" $file_obj
 set_property "library" "xil_defaultlib" $file_obj
 
-set file "$origin_dir/../../../Ips/LitePcie/pcie_ptm_sniffer_tap.v"
+set file "$origin_dir/../../../Ips/LitePcie/sniffer_tap.v"
 set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
 set_property "file_type" "verilog" $file_obj
