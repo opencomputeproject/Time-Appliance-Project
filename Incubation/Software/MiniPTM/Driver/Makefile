@@ -1,4 +1,4 @@
-obj-m += basic_module.o
+obj-m += miniptm_module.o
 
 all:
 	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
@@ -10,5 +10,5 @@ clean:
 full_test:
 	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
 	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
-	insmod basic_module.ko miniptm_device="02:00.0"
+	insmod miniptm_module.ko
 	dmesg | tail -n 10
