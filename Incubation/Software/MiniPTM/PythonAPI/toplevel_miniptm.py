@@ -49,6 +49,13 @@ class MiniPTM:
         for board in self.boards:
             board.set_led_id_code()
 
+        self.print_full_dpll_status()
+
+
+    def print_full_dpll_status(self):
+        for board in self.boards:
+            print(f"****************** BOARD {board.board_num} STATUS REGISTERS *************")
+            board.dpll.modules["Status"].print_all_registers_all_modules()
 
     def close(self):
         pass

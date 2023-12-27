@@ -270,6 +270,147 @@ PWM_SYNC_DECODER_LAYOUT = {
 }
 
 
+
+
+
+
+
+
+
+
+# Common field structures
+MON_STATUS_FIELDS = {
+    "TRANS_DETECT_STICKY": BitField(7, 1),
+    "FREQ_OFFS_LIM_STICKY": BitField(6, 1),
+    "NO_ACTIVITY_STICKY": BitField(5, 1),
+    "LOS_STICKY": BitField(4, 1),
+    "TRANS_DETECT_LIVE": BitField(3, 1),
+    "FREQ_OFFS_LIM_LIVE": BitField(2, 1),
+    "NO_ACTIVITY_LIVE": BitField(1, 1),
+    "LOS_LIVE": BitField(0, 1)
+}
+
+DPLL_STATUS_FIELDS = {
+    "RESERVED": BitField(6, 2),
+    "HOLDOVER_STATE_CHANGE_STICKY": BitField(5, 1),
+    "LOCK_STATE_CHANGE_STICKY": BitField(4, 1),
+    "DPLL_STATE": BitField(0, 4)
+}
+
+SYS_APLL_STATUS_FIELDS = {
+    "RESERVED_1": BitField(5, 3),
+    "LOSS_LOCK_STICKY": BitField(4, 1),
+    "RESERVED_2": BitField(1, 3),
+    "LOSS_LOCK_LIVE": BitField(0, 1)
+}
+
+DPLL_REF_STATUS_FIELDS = {
+    "RESERVED": BitField(5, 3),
+    "DPLL_INPUT": BitField(0, 5)
+}
+
+
+
+
+# STATUS module layout structure
+STATUS_LAYOUT = {
+    # I2CM and SER statuses
+    "I2CM_STATUS": {"offset": 0x000, "fields": {"RESERVED": BitField(4, 4), "I2CM_SPEED": BitField(2, 2), "I2CM_PORT_SEL": BitField(0, 2)}},
+    "SER0_STATUS": {"offset": 0x002, "fields": {"RESERVED": BitField(3, 5), "ADDRESS_SIZE": BitField(2, 1), "MODE": BitField(0, 2)}},
+    "SER0_SPI_STATUS": {"offset": 0x003, "fields": {"RESERVED": BitField(5, 3), "SPI_SDO_DELAY": BitField(4, 1), "SPI_CLOCK_SELECTION": BitField(3, 1), "SPI_DUPLEX_MODE": BitField(2, 1), "RESERVED_0": BitField(0, 2)}},
+    "SER0_I2C_STATUS": {"offset": 0x004, "fields": {"RESERVED": BitField(7, 1), "DEVICE_ADDRESS": BitField(0, 7)}},
+    "SER1_STATUS": {"offset": 0x005, "fields": {"RESERVED": BitField(3, 5), "ADDRESS_SIZE": BitField(2, 1), "MODE": BitField(0, 2)}},
+    "SER1_SPI_STATUS": {"offset": 0x006, "fields": {"RESERVED": BitField(5, 3), "SPI_SDO_DELAY": BitField(4, 1), "SPI_CLOCK_SELECTION": BitField(3, 1), "SPI_DUPLEX_MODE": BitField(2, 1), "RESERVED_0": BitField(0, 2)}},
+    "SER1_I2C_STATUS": {"offset": 0x007, "fields": {"RESERVED": BitField(7, 1), "DEVICE_ADDRESS": BitField(0, 7)}},
+
+    # IN_MON_STATUS for inputs 0 to 15
+    **{f"IN{num}_MON_STATUS": {"offset": 0x008 + num, "fields": MON_STATUS_FIELDS} for num in range(16)},
+
+
+    # SYS_DPLL
+    "SYS_DPLL": {"offset": 0x020, "fields": {"RESERVED": BitField(6, 2), "DPLL_SYS_HOLDOVER_STATE_CHANGE_STICKY": BitField(5, 1), "DPLL_SYS_LOCK_STATE_CHANGE_STICKY": BitField(4, 1), "DPLL_SYS_STATE": BitField(0, 4)}},
+
+    # DPLL_REF_STATUS for each DPLL and DPLL_SYS
+    **{f"DPLL{num}_REF_STATUS": {"offset": 0x022 + num, "fields": {"RESERVED": BitField(5, 3), f"DPLL{num}_INPUT": BitField(0, 5)}}
+       for num in range(8)},
+    "DPLL_SYS_REF_STATUS": {"offset": 0x02A, "fields": {"RESERVED": BitField(5, 3), "DPLL_SYS_INPUT": BitField(0, 5)}},
+
+    # DPLL_FILTER_STATUS registers for DPLL0 to DPLL7 and DPLL_SYS
+    **{f"DPLL{num}_FILTER_STATUS_{7 + i*8}_{i*8}": {"offset": 0x044 + num * 8 + i, "fields": {f"FILTER_STATUS_{7 + i*8}_{i*8}": BitField(0, 8)}}
+       for num in range(8) for i in range(6)},
+    **{f"DPLL_SYS_FILTER_STATUS_{7 + i*8}_{i*8}": {"offset": 0x084 + i, "fields": {f"FILTER_STATUS_{7 + i*8}_{i*8}": BitField(0, 8)}}
+       for i in range(6)},
+
+    # GPIO STATUS registers
+    "USER_GPIO0_TO_7_STATUS": {"offset": 0x08A, "fields": {f"GPIO{i}_LEVEL": BitField(i, 1) for i in range(8)}},
+    "USER_GPIO8_TO_15_STATUS": {"offset": 0x08B, "fields": {f"GPIO{i + 8}_LEVEL": BitField(i, 1) for i in range(8)}},
+
+    # IN_MON_FREQ_STATUS registers
+    **{f"IN{num}_MON_FREQ_STATUS_0": {"offset": 0x08C + num * 2, "fields": {"FFO_7_0": BitField(0, 8)} }
+       for num in range(16)},
+    **{f"IN{num}_MON_FREQ_STATUS_1": {"offset": 0x08D + num * 2, "fields": {"FFO_UNIT": BitField(6, 2), f"FFO_13:8": BitField(0, 6)}}
+       for num in range(16)},
+
+
+}
+# Continuing STATUS module layout structure
+STATUS_LAYOUT.update({
+    # DPLL_PHASE_STATUS registers
+    **{f"DPLL{num}_PHASE_STATUS_{35 + i*8}_{i*8}": {"offset": 0x0DC + num * 8 + i, "fields": {f"DPLL{num}_PHASE_STATUS_{35 + i*8}_{i*8}": BitField(0, 8)}}
+       for num in range(8) for i in range(5)},
+
+    # DPLL_PHASE_PULL_IN_STATUS registers
+    **{f"DPLL{num}_PHASE_PULL_IN_STATUS": {"offset": 0x11C + num, "fields": {"REMAINING_TIME": BitField(0, 8)}}
+       for num in range(8)},
+
+    # OUTPUT_TDC_CFG_STATUS and OUTPUT_TDCn_STATUS registers
+    "OUTPUT_TDC_CFG_STATUS": {"offset": 0x0AC, "fields": {"RESERVED": BitField(2, 6), "STATE": BitField(0, 2)}},
+    **{f"OUTPUT_TDC{num}_STATUS": {"offset": 0x0AD + num, "fields": {"VALID": BitField(7, 1), "RESERVED": BitField(4, 3), "STATUS": BitField(0, 4)}}
+       for num in range(4)},
+
+    # DPLL status registers from 0x18 to 0x1f
+    **{f"DPLL{num}_STATUS": {"offset": 0x018 + num, "fields": DPLL_STATUS_FIELDS} for num in range(8)},
+
+    # SYS_APLL_STATUS
+    "SYS_APLL_STATUS": {"offset": 0x021, "fields": SYS_APLL_STATUS_FIELDS},
+
+    # OUTPUT_TDC_MEASUREMENT blocks
+    **{f"OUTPUT_TDC{num}_MEASUREMENT_{7 + i*8}_{i*8}": {"offset": 0x0B4 + num * 16 + i, "fields": {f"PHASE_{7 + i*8}_{i*8}": BitField(0, 8)}}
+       for num in range(4) for i in range(6)},
+
+})
+
+
+
+# Additional registers and fields can be added as needed
+# Adjusted DPLL_PHASE_STATUS and DPLL_PHASE_PULL_IN_STATUS registers
+
+# DPLL_PHASE_STATUS registers
+for num in range(8):
+    STATUS_LAYOUT.update({
+        f"DPLL{num}_PHASE_STATUS_7_0": {"offset": 0x0DC + num * 8, "fields": {"PHASE_7_0": BitField(0, 8)}},
+        f"DPLL{num}_PHASE_STATUS_15_8": {"offset": 0x0DD + num * 8, "fields": {"PHASE_15_8": BitField(0, 8)}},
+        f"DPLL{num}_PHASE_STATUS_23_16": {"offset": 0x0DE + num * 8, "fields": {"PHASE_23_16": BitField(0, 8)}},
+        f"DPLL{num}_PHASE_STATUS_31_24": {"offset": 0x0DF + num * 8, "fields": {"PHASE_31_24": BitField(0, 8)}},
+        f"DPLL{num}_PHASE_STATUS_35_32": {"offset": 0x0E0 + num * 8, "fields": {"PHASE_35_32": BitField(0, 4)}},
+    })
+
+# DPLL_PHASE_PULL_IN_STATUS registers
+for num in range(8):
+    STATUS_LAYOUT.update({
+        f"DPLL{num}_PHASE_PULL_IN_STATUS": {"offset": 0x11C + num, "fields": {"REMAINING_TIME": BitField(0, 8)}}
+    })
+
+
+
+
+
+
+
+
+
+
+
 class Module:
     def __init__(self, name, layout, read_func, write_func, base_addresses):
         self.name = name
@@ -326,6 +467,20 @@ class Module:
         for register in self.layout:
             self.print_register(module_num, register, True)
 
+    def print_all_registers_all_modules(self):
+        for i in self.BASE_ADDRESSES.keys():
+            for register in self.layout:
+                self.print_register(i, register, True)
+
+
+
+class Status(Module):
+    BASE_ADDRESSES = {0: 0xC03C}
+    LAYOUT = STATUS_LAYOUT
+
+    def __init__(self, read_func, write_func):
+        super().__init__("Status", Status.LAYOUT,
+                         read_func, write_func, Status.BASE_ADDRESSES)
 
 class PWMEncoder(Module):
     BASE_ADDRESSES = {0: 0xCB00, 1: 0xCB08, 2: 0xCB10,
@@ -467,7 +622,7 @@ class DPLL():
         # make modules inside the dpll
         self.modules = {}
 
-        modules_to_use = [PWMEncoder, PWMDecoder, TOD, TODWrite, TODReadPrimary,
+        modules_to_use = [Status, PWMEncoder, PWMDecoder, TOD, TODWrite, TODReadPrimary,
                           TODReadSecondary, Input, REFMON, PWM_USER_DATA,
                           OUTPUT_TDC_CFG, OUTPUT_TDC, INPUT_TDC, PWM_SYNC_ENCODER,
                           PWM_SYNC_DECODER]

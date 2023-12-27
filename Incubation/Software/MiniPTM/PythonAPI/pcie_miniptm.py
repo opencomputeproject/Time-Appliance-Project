@@ -42,11 +42,11 @@ class PCIeDevice:
             raise ValueError("Read exceeds BAR size")
         self.mm.seek(offset)
         data = self.mm.read(4)
-        print(f"PCIe read32 0x{offset:x}=0x{struct.unpack('I', data)[0]:x}")
+        #print(f"PCIe read32 0x{offset:x}=0x{struct.unpack('I', data)[0]:x}")
         return struct.unpack('I', data)[0]
 
     def write32(self, offset, value):
-        print(f"PCIe write32 0x{offset:x}=0x{value:x}")
+        #print(f"PCIe write32 0x{offset:x}=0x{value:x}")
         if self.mm is None:
             raise Exception("Memory not mapped")
         if offset + 4 > self.bar_size:

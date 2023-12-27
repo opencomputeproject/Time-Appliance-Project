@@ -56,7 +56,7 @@ class miniptm_i2c:
             self.cur_base_addr = base_addr
 
         self.bus.write_byte_data(self.DPLL_ADDRESS, baseaddr_lower, value)
-        print(f"Write DPLL register, module {base_addr:#04x}, addr {offset:#02x} = {value:#02x}")
+        #print(f"Write DPLL register, module {base_addr:#04x}, addr {offset:#02x} = {value:#02x}")
 
     def write_dpll_reg_direct(self, addr, value):
         self.open_i2c_dpll() 
@@ -65,7 +65,7 @@ class miniptm_i2c:
 
         self.bus.write_i2c_block_data(self.DPLL_ADDRESS, 0xfc, [baseaddr_lower, baseaddr_upper, 0x10, 0x20])
         self.bus.write_byte_data(self.DPLL_ADDRESS, baseaddr_lower, value)
-        print(f"Write DPLL register direct, addr {addr:#02x} = {value:#02x}")
+        #print(f"Write DPLL register direct, addr {addr:#02x} = {value:#02x}")
 
 
     def write_dpll_multiple(self, addr, data_bytes):
@@ -88,7 +88,7 @@ class miniptm_i2c:
             self.cur_base_addr = base_addr
 
         val = self.bus.read_byte_data(self.DPLL_ADDRESS, baseaddr_lower)
-        print(f"Read dpll reg {full_addr:#02x} = {val:#02x}")
+        #print(f"Read dpll reg {full_addr:#02x} = {val:#02x}")
         return val 
 
     def read_dpll_reg_direct(self, addr):
@@ -96,7 +96,6 @@ class miniptm_i2c:
         baseaddr_lower = addr & 0xff
         baseaddr_upper = (addr >> 8) & 0xff
         self.bus.write_i2c_block_data(self.DPLL_ADDRESS, 0xfc, [baseaddr_lower, baseaddr_upper, 0x10, 0x20])
-        self.cur_base_addr = base_addr
 
         return self.bus.read_byte_data(self.DPLL_ADDRESS, baseaddr_lower)
    

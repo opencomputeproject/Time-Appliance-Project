@@ -25,7 +25,7 @@ class cm_gpios:
     def configure_pin(self, pin_num: int, mode: int, value: bool):
         if pin_num not in self.valid_num:
             return
-        print(f"Configure DPLL GPIO{pin_num} mode {mode} value {value}")
+        #print(f"Configure DPLL GPIO{pin_num} mode {mode} value {value}")
         # write gpio enable function and cmos 
         if ( mode == gpiomode.INPUT ):
             # 0x10 in programming guide v4.9, 0x11 in 5.3 , assume 4.9
