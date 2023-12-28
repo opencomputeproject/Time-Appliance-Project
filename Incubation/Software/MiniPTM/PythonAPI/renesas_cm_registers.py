@@ -404,8 +404,69 @@ for num in range(8):
 
 
 
+def int_to_signed_nbit(number, n_bits):
+    """
+    Interpret an integer as an n-bit signed integer and return its decimal equivalent.
+
+    :param number: The integer to be interpreted
+    :param n_bits: The bit size of the signed integer
+    :return: Decimal equivalent of the n-bit signed integer
+    """
+    # Mask to extract n_bits
+    mask = (1 << n_bits) - 1
+    number = number & mask
+
+    # Check if negative (if MSB is 1)
+    is_negative = (number >> (n_bits - 1)) & 1
+
+    # Function to calculate two's complement for negative numbers
+    def twos_complement(binary_str):
+        # Invert the bits
+        inverted = ''.join('1' if b == '0' else '0' for b in binary_str)
+        # Add 1
+        decimal = int(inverted, 2) + 1
+        return -decimal
+
+    binary_n_bit = format(number, f'0{n_bits}b')
+
+    # Convert to decimal
+    if is_negative:
+        return twos_complement(binary_n_bit)
+    else:
+        return int(binary_n_bit, 2)
 
 
+def hex_to_signed_nbit(hex_value, n_bits):
+    """
+    Convert a hexadecimal string value assumed to be an n-bit signed integer
+    to its decimal equivalent.
+
+    :param hex_value: String representing a hexadecimal number
+    :param n_bits: The bit size of the signed integer
+    :return: Decimal equivalent of the n-bit signed integer
+    """
+    # Convert to binary (full length)
+    full_binary = bin(int(hex_value, 16))[2:].zfill(n_bits)
+
+    # Extracting the relevant bits (considering n_bits)
+    binary_n_bit = full_binary[-n_bits:]
+
+    # Check if negative (if MSB is 1)
+    is_negative = binary_n_bit[0] == '1'
+
+    # Function to calculate two's complement for negative numbers
+    def twos_complement(binary_str):
+        # Invert the bits
+        inverted = ''.join('1' if b == '0' else '0' for b in binary_str)
+        # Add 1
+        decimal = int(inverted, 2) + 1
+        return -decimal
+
+    # Convert to decimal
+    if is_negative:
+        return twos_complement(binary_n_bit)
+    else:
+        return int(binary_n_bit, 2)
 
 
 
@@ -433,6 +494,7 @@ class Module:
     def write_field(self, module_num, register_name, field_name, field_value):
         self._validate_module_num(module_num)
         base_address = self.base_addresses[module_num]
+        reg_info = self.layout[register_name]
         reg_addr = base_address + reg_info['offset']
         reg_value = self.read_func(reg_addr)
         new_reg_value = reg_info['fields'][field_name].set_value(
@@ -460,7 +522,7 @@ class Module:
         if detail:
             for field_name, bit_field in reg_info['fields'].items():
                 field_value = bit_field.get_value(reg_value)
-                print(f" - {field_name}: {field_value}")
+                print(f" - {field_name}: 0x{field_value:x}")
 
     def print_all_registers(self, module_num):
         self._validate_module_num(module_num)
