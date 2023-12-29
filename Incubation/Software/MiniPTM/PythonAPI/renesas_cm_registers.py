@@ -401,6 +401,41 @@ for num in range(8):
         f"DPLL{num}_PHASE_PULL_IN_STATUS": {"offset": 0x11C + num, "fields": {"REMAINING_TIME": BitField(0, 8)}}
     })
 
+EEPROM_LAYOUT = {
+    "EEPROM_I2C_ADDR": {"offset": 0x000, "fields": {"RESERVED": BitField(7, 1), "I2C_ADDR": BitField(0, 7)}},
+    "EEPROM_SIZE": {"offset": 0x001, "fields": {"BYTES": BitField(0, 8)}},
+    "EEPROM_OFFSET_LOW": {"offset": 0x002, "fields": {"EEPROM_OFFSET": BitField(0, 8)}},
+    "EEPROM_OFFSET_HIGH": {"offset": 0x003, "fields": {"EEPROM_OFFSET": BitField(0, 8)}},
+    "EEPROM_CMD_LOW": {"offset": 0x004, "fields": {"EEPROM_CMD": BitField(0, 8)}},
+    "EEPROM_CMD_HIGH": {"offset": 0x005, "fields": {"EEPROM_CMD": BitField(0, 8)}}
+}
+
+BYTE_BUFFER_LAYOUT = {
+    **{f"BYTE_OTP_EEPROM_PWM_BUFF_{i}": {"offset": 0x000 + i, "fields": {"DATA": BitField(0, 8)}}
+       for i in range(128)}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -500,6 +535,22 @@ class Module:
         new_reg_value = reg_info['fields'][field_name].set_value(
             reg_value, field_value)
         self.write_func(reg_addr, new_reg_value)
+
+    def write_reg(self, module_num, register_name, value):
+        self._validate_module_num(module_num)
+        base_address = self.base_addresses[module_num]
+        reg_info = self.layout[register_name]
+        reg_addr = base_address + reg_info['offset']
+        self.write_func(reg_addr, value)
+
+
+    def read_reg(self, module_num, register_name):
+        self._validate_module_num(module_num)
+        base_address = self.base_addresses[module_num]
+        reg_info = self.layout[register_name]
+        reg_value = self.read_func(base_address + reg_info['offset'])
+        return self.read_func(reg_addr)
+
 
     def print_configuration(self, module_num):
         self._validate_module_num(module_num)
@@ -626,6 +677,24 @@ class PWM_USER_DATA(Module):
                          read_func, write_func, PWM_USER_DATA.BASE_ADDRESSES)
 
 
+class EEPROM(Module):
+    BASE_ADDRESSES = {0: 0xCF68}  # Only one base address for PWM_USER_DATA
+    LAYOUT = EEPROM_LAYOUT
+
+    def __init__(self, read_func, write_func):
+        super().__init__("EEPROM", EEPROM.LAYOUT,
+                         read_func, write_func, EEPROM.BASE_ADDRESSES)
+
+
+class EEPROM_DATA(Module):
+    BASE_ADDRESSES = {0: 0xCF80}  # Only one base address for PWM_USER_DATA
+    LAYOUT = BYTE_BUFFER_LAYOUT
+
+    def __init__(self, read_func, write_func):
+        super().__init__("EEPROM_DATA", EEPROM_DATA.LAYOUT,
+                         read_func, write_func, EEPROM_DATA.BASE_ADDRESSES)
+
+
 class OUTPUT_TDC_CFG(Module):
     BASE_ADDRESSES = {0: 0xCCD0}  # Example of multiple base addresses
     LAYOUT = OUTPUT_TDC_CFG_LAYOUT
@@ -687,7 +756,7 @@ class DPLL():
         modules_to_use = [Status, PWMEncoder, PWMDecoder, TOD, TODWrite, TODReadPrimary,
                           TODReadSecondary, Input, REFMON, PWM_USER_DATA,
                           OUTPUT_TDC_CFG, OUTPUT_TDC, INPUT_TDC, PWM_SYNC_ENCODER,
-                          PWM_SYNC_DECODER]
+                          PWM_SYNC_DECODER, EEPROM, EEPROM_DATA ]
 
         for mod in modules_to_use:
             self.modules[mod.__name__] = mod(read_func, write_func)

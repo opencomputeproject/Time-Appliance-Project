@@ -4,6 +4,8 @@ from i2c_miniptm import find_i2c_buses
 from board_miniptm import Single_MiniPTM
 from renesas_cm_configfiles import *
 import concurrent.futures
+import time
+import argparse
 
 
 class MiniPTM:
@@ -30,28 +32,54 @@ class MiniPTM:
         for board in self.boards:
             board.set_led_id_code()
 
+    def program_one_board(self, board, data):
+        for [address, value] in data:
+            print(
+                f"Board {board.adap_num} 0x{address:x}=0x{value:x}")
+            board.i2c.write_dpll_reg_direct(address, value)
+        return board.adap_num
+
     def program_all_boards(self, config_file="8A34002_MiniPTMV3_12-24-2023_Julian.tcs", check_first=False):
         # now lets do some initialization if needed. Do a simple check on each board
         # if the GPIOs for LEDs are set for output, then assume the board is configured
         parsed_config_tcs = parse_dpll_tcs_config_file(config_file)
         # print(f"First few tcs lines: {parsed_config_tcs[:10]}")
 
-        for board in self.boards:
-            if (check_first):
-                if not board.is_configured():
-                    print(
-                        f"Board {board.adap_num} not configured, configuring!")
-                    for [address, value] in parsed_config_tcs:
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = []
+            for board in self.boards:
+                if (check_first):
+                    if not board.is_configured():
                         print(
-                            f"Board {board.adap_num} 0x{address:x}=0x{value:x}")
-                        board.i2c.write_dpll_reg_direct(address, value)
+                            f"Board {board.adap_num} not configured, configuring!")
+                        futures.append(executor.submit(
+                            self.program_one_board, board, parsed_config_tcs))
+                        # self.program_one_board(board, parsed_config_tcs)
+                    else:
+                        print(f"Board {board.adap_num} already configured!")
                 else:
-                    print(f"Board {board.adap_num} already configured!")
-            else:
-                print(f"Board {board.adap_num} configuring!")
-                for [address, value] in parsed_config_tcs:
-                    print(f"Board {board.adap_num} 0x{address:x}=0x{value:x}")
-                    board.i2c.write_dpll_reg_direct(address, value)
+                    print(f"Board {board.adap_num} configuring!")
+                    futures.append(executor.submit(
+                        self.program_one_board, board, parsed_config_tcs))
+                    # self.program_one_board(board, parsed_config_tcs)
+            print(futures)
+            for future in concurrent.futures.as_completed(futures):
+                pass
+
+    def flash_eeprom_one_board(self, board, eeprom_file="8A34002_MiniPTMV3_12-29-2023_Julian_AllPhaseMeas_EEPROM.hex"):
+        print(f"Start flash board {board.board_num} EEPROM = {eeprom_file}")
+        board.write_eeprom_file(eeprom_file)
+        print(f"DONE flash board {board.board_num} EEPROM = {eeprom_file}")
+
+    def flash_all_boards_eeprom(self, eeprom_file="8A34002_MiniPTMV3_12-29-2023_Julian_AllPhaseMeas_EEPROM.hex"):
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = []
+            for board in self.boards:
+                futures.append(executor.submit(
+                    self.flash_eeprom_one_board, board, eeprom_file))
+
+            for future in concurrent.futures.as_completed(futures):
+                pass
 
     def board_led_blink_test(self):
         # do ID test with GPIOs, toggle DPLL GPIO, then toggle I225 LEDs
@@ -128,9 +156,55 @@ class MiniPTM:
         # simple algorithm, measure both phase values, and
 
         # hack , use first board as "reference"
-        phase_ref = self.boards[0].read_pcie_clk_phase_measurement()
-        for board in self.boards[1:]:
-            pass
+
+        # doesn't quite work , since phase measurement value fluctuates
+        for i in range(100):
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                futures = [executor.submit(self.boards[i].read_pcie_clk_phase_measurement, False)
+                           for i in range(len(self.boards))]
+
+                results = [future.result()
+                           for future in futures]  # get them in order
+                for result in results:
+                    print(result)
+                print(results[0] - results[1])
+
+            time.sleep(0.5)
+            continue
+
+            phase_ref = self.boards[0].read_pcie_clk_phase_measurement(False)
+            print(f"Phase_ref = {phase_ref}")
+            phase_meas = []
+            for board in self.boards[1:]:
+                phase_meas.append(board.read_pcie_clk_phase_measurement(False))
+
+            print(f"Phase measurements = {phase_meas}")
+            phase_err = [x - phase_ref for x in phase_meas]
+            print(f"Measured phase error {phase_err}")
+            time.sleep(0.5)
+
+    def do_dpll_over_fiber(self):
+        for board in self.boards:
+            # print(f"\n************** Board {board.board_num} SFP Status *************\n")
+            # board.print_sfps_info()
+            print(
+                f"\n************** Board {board.board_num} PWM Status *************\n")
+            board.print_pwm_channel_status()
+            print(
+                f"\n************** Board {board.board_num} Init DPOF **************\n")
+            board.init_pwm_dplloverfiber()
+            print(
+                f"\n************** Board {board.board_num} Print PWM Config *******\n")
+            if (board.board_num == 0):
+                board.pwm_switch_listen_channel(0)
+            board.dpll.modules["PWMEncoder"].print_all_registers(0)
+            board.dpll.modules["PWMDecoder"].print_all_registers(0)
+
+        # hard code just for bring-up
+        for i in range(10):
+            for j in range(1):
+                self.boards[j].read_pwm_tod_incoming()
+            time.sleep(0.25)
 
     def close(self):
         pass
@@ -143,10 +217,47 @@ class MiniPTM:
 
 
 if __name__ == "__main__":
-    top = MiniPTM()
-    #top.program_all_boards(config_file="8A34002_MiniPTMV3_12-27-2023_Julian_AllPhaseMeas.tcs")
-    top.set_all_boards_leds_idcode()
-    #top.print_all_pcie_clock_info()
-    top.do_pfm_use_input_tdc()
 
+    parser = argparse.ArgumentParser(description="MiniPTM top level debug")
+
+    parser.add_argument('command', type=str,
+                        help='What command to run, program / debug / flash')
+    parser.add_argument('--config_file', type=str,
+                        default="8A34002_MiniPTMV3_12-27-2023_Julian_AllPhaseMeas.tcs", help="File to program")
+    parser.add_argument('--eeprom_file', type=str,
+                        default="8A34002_MiniPTMV3_12-29-2023_Julian_AllPhaseMeas_EEPROM.hex", help="File to flash to EEPROM")
+    parser.add_argument('--board_id', type=int, help="Board number to program")
+
+    args = parser.parse_args()
+    if args.command == "program":
+        top = MiniPTM()
+        if args.board_id is not None:
+            parsed_config_tcs = parse_dpll_tcs_config_file(args.config_file)
+            top.program_one_board(top.boards[args.board_id], parsed_config_tcs)
+        else:
+            top.program_all_boards(config_file=args.config_file)
+
+        top.set_all_boards_leds_idcode()
+    elif args.command == "debug":
+        top = MiniPTM()
+        # top.print_all_full_dpll_status()
+        # DPLL over fiber stuff
+        top.do_dpll_over_fiber()
+
+    elif args.command == "flash":
+        top = MiniPTM()
+        if args.board_id is not None:
+            top.flash_eeprom_one_board(
+                top.boards[args.board_id], args.eeprom_file)
+        else:
+            top.program_all_boards(args.eeprom_file)
+
+    else:
+        print(f"Invalid command, must be program or debug")
+
+    # PFM STUFF
+    # top.print_all_pcie_clock_info()
+    # top.do_pfm_use_input_tdc()
+
+    # BIG REGISTER DUMP
     # top.print_all_full_dpll_status()

@@ -2,7 +2,7 @@ Software Version: 1.17.0.14687
 Personality: ClockMatrix [34.4]
 PersonalitySemanticVersion: V10.10.0
 Part#: 8A34002
-Modification Time: 12/27/2023 4:17:39 PM
+Modification Time: 12/29/2023 9:02:27 AM
 Port: 
 FunctionalBlocks: B0,B6
 FunctionalBlocksProtocolType: OneByteAddresses
@@ -469,9 +469,9 @@ C1.AD                                01000000       40 C1.AD
 C1.AE                                00000000       00 C1.AE
 C1.AF                                00000000       00 C1.AF
 C1.B0                                01000000       40 C1.B0
-C1.B1                                01111000       78 C1.B1
-C1.B2                                01111101       7d C1.B2
-C1.B3                                00000001       01 C1.B3
+C1.B1                                01000010       42 C1.B1
+C1.B2                                00001111       0f C1.B2
+C1.B3                                00000000       00 C1.B3
 C1.B4                                00000000       00 C1.B4
 C1.B5                                00000000       00 C1.B5
 C1.B6                                00000000       00 C1.B6
@@ -513,7 +513,7 @@ C1.D9                                00000000       00 C1.D9
 C1.DA                                00000000       00 C1.DA
 C1.DB                                00000000       00 C1.DB
 C1.DC                                00000010       02 C1.DC
-C1.DD                                00100001       21 C1.DD
+C1.DD                                00000001       01 C1.DD
 C1.DE                                00000000       00 C1.DE
 C1.DF                                00000000       00 C1.DF
 C1.E0                                00000000       00 C1.E0
@@ -577,7 +577,7 @@ C2.19                                00000000       00 C2.19
 C2.1A                                00000000       00 C2.1A
 C2.1B                                00000000       00 C2.1B
 C2.1C                                00000100       04 C2.1C
-C2.1D                                00100001       21 C2.1D
+C2.1D                                00000001       01 C2.1D
 C2.1E                                00000000       00 C2.1E
 C2.1F                                00000000       00 C2.1F
 C2.20                                10000000       80 C2.20
@@ -772,18 +772,18 @@ C2.DC                                00001111       0f C2.DC
 C2.DD                                00000000       00 C2.DD
 C2.DE                                00000000       00 C2.DE
 C2.DF                                00000000       00 C2.DF
-C2.E0                                00000000       00 C2.E0
+C2.E0                                00001111       0f C2.E0
 C2.E1                                00000000       00 C2.E1
 C2.E2                                00000000       00 C2.E2
 C2.E3                                00000000       00 C2.E3
 C2.E4                                00000000       00 C2.E4
 C2.E5                                00000000       00 C2.E5
-C2.E6                                00000000       00 C2.E6
+C2.E6                                00111000       38 C2.E6
 C2.E7                                00000000       00 C2.E7
 C2.E8                                00000000       00 C2.E8
 C2.E9                                00000000       00 C2.E9
 C2.EA                                00000000       00 C2.EA
-C2.EB                                00011111       1f C2.EB
+C2.EB                                00001111       0f C2.EB
 C2.EC                                00000000       00 C2.EC
 C2.ED                                00000000       00 C2.ED
 C2.EE                                00000000       00 C2.EE
@@ -804,18 +804,18 @@ C2.FC                                00000000       00 C2.FC
 C2.FD                                00000000       00 C2.FD
 C2.FE                                00000000       00 C2.FE
 C2.FF                                00000000       00 C2.FF
-C3.00                                00000000       00 C3.00
+C3.00                                00000111       07 C3.00
 C3.01                                00000000       00 C3.01
 C3.02                                00000000       00 C3.02
 C3.03                                00000000       00 C3.03
 C3.04                                00000000       00 C3.04
 C3.05                                00000000       00 C3.05
-C3.06                                00000000       00 C3.06
+C3.06                                00111000       38 C3.06
 C3.07                                00000000       00 C3.07
 C3.08                                00000000       00 C3.08
 C3.09                                00000000       00 C3.09
 C3.0A                                00000000       00 C3.0A
-C3.0B                                00011011       1b C3.0B
+C3.0B                                00001111       0f C3.0B
 C3.0C                                00000000       00 C3.0C
 C3.0D                                00000000       00 C3.0D
 C3.0E                                00000000       00 C3.0E
@@ -828,18 +828,18 @@ C3.14                                00000000       00 C3.14
 C3.15                                00000000       00 C3.15
 C3.16                                00000000       00 C3.16
 C3.17                                00000011       03 C3.17
-C3.18                                00000000       00 C3.18
+C3.18                                00000111       07 C3.18
 C3.19                                00000000       00 C3.19
 C3.1A                                00000000       00 C3.1A
 C3.1B                                00000000       00 C3.1B
 C3.1C                                00000000       00 C3.1C
 C3.1D                                00000000       00 C3.1D
-C3.1E                                00000000       00 C3.1E
+C3.1E                                00111000       38 C3.1E
 C3.1F                                00000000       00 C3.1F
 C3.20                                00000000       00 C3.20
 C3.21                                00000000       00 C3.21
 C3.22                                00000000       00 C3.22
-C3.23                                00011111       1f C3.23
+C3.23                                00001111       0f C3.23
 C3.24                                00000000       00 C3.24
 C3.25                                00000000       00 C3.25
 C3.26                                00000000       00 C3.26
@@ -852,18 +852,18 @@ C3.2C                                00000000       00 C3.2C
 C3.2D                                00000000       00 C3.2D
 C3.2E                                00000000       00 C3.2E
 C3.2F                                00000011       03 C3.2F
-C3.30                                00000000       00 C3.30
+C3.30                                00000111       07 C3.30
 C3.31                                00000000       00 C3.31
 C3.32                                00000000       00 C3.32
 C3.33                                00000000       00 C3.33
 C3.34                                00000000       00 C3.34
 C3.35                                00000000       00 C3.35
-C3.36                                00000000       00 C3.36
+C3.36                                00111000       38 C3.36
 C3.37                                00000000       00 C3.37
 C3.38                                00000000       00 C3.38
 C3.39                                00000000       00 C3.39
 C3.3A                                00000000       00 C3.3A
-C3.3B                                00011111       1f C3.3B
+C3.3B                                00001111       0f C3.3B
 C3.3C                                00000000       00 C3.3C
 C3.3D                                00000000       00 C3.3D
 C3.3E                                00000000       00 C3.3E
@@ -991,14 +991,14 @@ C3.B7                                00000000       00 C3.B7
 C3.B8                                00000000       00 C3.B8
 C3.B9                                00000000       00 C3.B9
 C3.BA                                00000001       01 C3.BA
-C3.BB                                10000001       81 C3.BB
-C3.BC                                00000010       02 C3.BC
+C3.BB                                00000000       00 C3.BB
+C3.BC                                00000000       00 C3.BC
 C3.BD                                00000000       00 C3.BD
 C3.BE                                00000000       00 C3.BE
 C3.BF                                00000001       01 C3.BF
-C3.C0                                00000101       05 C3.C0
-C3.C1                                00001001       09 C3.C1
-C3.C2                                00001101       0d C3.C2
+C3.C0                                00000100       04 C3.C0
+C3.C1                                00001000       08 C3.C1
+C3.C2                                00001100       0c C3.C2
 C3.C3                                00010100       14 C3.C3
 C3.C4                                00000000       00 C3.C4
 C3.C5                                00000000       00 C3.C5
@@ -1075,7 +1075,7 @@ C4.0B                                00000000       00 C4.0B
 C4.0C                                00000000       00 C4.0C
 C4.0D                                00000000       00 C4.0D
 C4.0E                                00000000       00 C4.0E
-C4.0F                                00000000       00 C4.0F
+C4.0F                                00000001       01 C4.0F
 C4.10                                00000000       00 C4.10
 C4.11                                00000000       00 C4.11
 C4.12                                00000000       00 C4.12
@@ -2616,15 +2616,15 @@ CA.10                                00000000       00 CA.10
 CA.11                                00000000       00 CA.11
 CA.12                                00000000       00 CA.12
 CA.13                                00000000       00 CA.13
-CA.14                                00010100       14 CA.14
-CA.15                                00000000       00 CA.15
+CA.14                                11110100       f4 CA.14
+CA.15                                00000001       01 CA.15
 CA.16                                00000000       00 CA.16
 CA.17                                00000000       00 CA.17
 CA.18                                00000000       00 CA.18
 CA.19                                00000000       00 CA.19
 CA.1A                                00000000       00 CA.1A
 CA.1B                                00000000       00 CA.1B
-CA.1C                                01000001       41 CA.1C
+CA.1C                                00111001       39 CA.1C
 CA.1D                                00100100       24 CA.1D
 CA.1E                                00000000       00 CA.1E
 CA.1F                                00000000       00 CA.1F
@@ -2656,7 +2656,7 @@ CA.38                                00000000       00 CA.38
 CA.39                                00000000       00 CA.39
 CA.3A                                00000000       00 CA.3A
 CA.3B                                00000000       00 CA.3B
-CA.3C                                01000001       41 CA.3C
+CA.3C                                00011011       1b CA.3C
 CA.3D                                00100100       24 CA.3D
 CA.3E                                00000000       00 CA.3E
 CA.3F                                00000000       00 CA.3F
@@ -2688,7 +2688,7 @@ CA.58                                00000000       00 CA.58
 CA.59                                00000000       00 CA.59
 CA.5A                                00000000       00 CA.5A
 CA.5B                                00000000       00 CA.5B
-CA.5C                                01000001       41 CA.5C
+CA.5C                                00011011       1b CA.5C
 CA.5D                                00100100       24 CA.5D
 CA.5E                                00000000       00 CA.5E
 CA.5F                                00000000       00 CA.5F
@@ -2732,7 +2732,7 @@ CA.84                                00000000       00 CA.84
 CA.85                                00000000       00 CA.85
 CA.86                                00000000       00 CA.86
 CA.87                                00000000       00 CA.87
-CA.88                                01000001       41 CA.88
+CA.88                                01111001       79 CA.88
 CA.89                                00100100       24 CA.89
 CA.8A                                00000000       00 CA.8A
 CA.8B                                00000000       00 CA.8B
@@ -2864,7 +2864,7 @@ CB.08                                00000000       00 CB.08
 CB.09                                00000001       01 CB.09
 CB.0A                                00000000       00 CB.0A
 CB.0B                                00000000       00 CB.0B
-CB.0C                                00001101       0d CB.0C
+CB.0C                                00001100       0c CB.0C
 CB.0D                                00000000       00 CB.0D
 CB.0E                                00000000       00 CB.0E
 CB.0F                                00000000       00 CB.0F
@@ -2872,7 +2872,7 @@ CB.10                                00000000       00 CB.10
 CB.11                                00000010       02 CB.11
 CB.12                                00000000       00 CB.12
 CB.13                                00000000       00 CB.13
-CB.14                                00001101       0d CB.14
+CB.14                                00001100       0c CB.14
 CB.15                                00000000       00 CB.15
 CB.16                                00000000       00 CB.16
 CB.17                                00000000       00 CB.17
@@ -2880,7 +2880,7 @@ CB.18                                00000000       00 CB.18
 CB.19                                00000011       03 CB.19
 CB.1A                                00000000       00 CB.1A
 CB.1B                                00000000       00 CB.1B
-CB.1C                                00001101       0d CB.1C
+CB.1C                                00001100       0c CB.1C
 CB.1D                                00000000       00 CB.1D
 CB.1E                                00000000       00 CB.1E
 CB.1F                                00000000       00 CB.1F
@@ -2921,7 +2921,7 @@ CB.41                                10000000       80 CB.41
 CB.42                                00000000       00 CB.42
 CB.43                                00000000       00 CB.43
 CB.44                                00000000       00 CB.44
-CB.45                                00000100       04 CB.45
+CB.45                                00000101       05 CB.45
 CB.46                                00000000       00 CB.46
 CB.47                                00000000       00 CB.47
 CB.48                                00000010       02 CB.48
@@ -3396,11 +3396,11 @@ CD.1C                                00000000       00 CD.1C
 CD.1D                                00000000       00 CD.1D
 CD.1E                                00000000       00 CD.1E
 CD.1F                                00000000       00 CD.1F
-CD.20                                00000000       00 CD.20
-CD.21                                00000000       00 CD.21
-CD.22                                00000001       01 CD.22
-CD.23                                00000000       00 CD.23
-CD.24                                00000001       01 CD.24
+CD.20                                11111111       ff CD.20
+CD.21                                01111111       7f CD.21
+CD.22                                11111110       fe CD.22
+CD.23                                11111111       ff CD.23
+CD.24                                00111110       3e CD.24
 CD.25                                00000001       01 CD.25
 CD.26                                00000000       00 CD.26
 CD.27                                00000000       00 CD.27
@@ -4665,12 +4665,12 @@ DPLL0_LOCK_FFO_UNIT: 0|*
 DPLL0_LOCK_FFO_UNIT__dflt: 0
 DPLL0_LOCK_MASK: 0|*
 DPLL0_LOCK_MASK__dflt: 0
-DPLL0_LOCK_PHASE_LOCK_MAX_ERROR: 1|*
-DPLL0_LOCK_PHASE_LOCK_MAX_ERROR__dflt: 1
-DPLL0_LOCK_PHASE_MON_DUR: 2|*
-DPLL0_LOCK_PHASE_MON_DUR__dflt: 2
-DPLL0_LOCK_PHASE_UNIT: 2|*
-DPLL0_LOCK_PHASE_UNIT__dflt: 2
+DPLL0_LOCK_PHASE_LOCK_MAX_ERROR: 0|*
+DPLL0_LOCK_PHASE_LOCK_MAX_ERROR__dflt: 0
+DPLL0_LOCK_PHASE_MON_DUR: 0|*
+DPLL0_LOCK_PHASE_MON_DUR__dflt: 0
+DPLL0_LOCK_PHASE_UNIT: 0|*
+DPLL0_LOCK_PHASE_UNIT__dflt: 0
 DPLL0_LOCK_STATE_CHANGE_STICKY: 0|*
 DPLL0_LOCK_STATE_CHANGE_STICKY__dflt: 0
 DPLL0_LOCKACQ_TYPE: 0|*
@@ -4739,7 +4739,7 @@ DPLL0_PRI_COMBO_SRC_ID: 8|*
 DPLL0_PRI_COMBO_SRC_ID__dflt: 8
 DPLL0_PRIORITY_EN_0: 1|L
 DPLL0_PRIORITY_EN_0__dflt: 0
-DPLL0_PRIORITY_EN_1: 1|L
+DPLL0_PRIORITY_EN_1: 0|L
 DPLL0_PRIORITY_EN_1__dflt: 0
 DPLL0_PRIORITY_EN_10: 0|*
 DPLL0_PRIORITY_EN_10__dflt: 0
@@ -4759,9 +4759,9 @@ DPLL0_PRIORITY_EN_17: 0|*
 DPLL0_PRIORITY_EN_17__dflt: 0
 DPLL0_PRIORITY_EN_18: 0|*
 DPLL0_PRIORITY_EN_18__dflt: 0
-DPLL0_PRIORITY_EN_2: 1|L
+DPLL0_PRIORITY_EN_2: 0|L
 DPLL0_PRIORITY_EN_2__dflt: 0
-DPLL0_PRIORITY_EN_3: 1|L
+DPLL0_PRIORITY_EN_3: 0|L
 DPLL0_PRIORITY_EN_3__dflt: 0
 DPLL0_PRIORITY_EN_4: 0|L
 DPLL0_PRIORITY_EN_4__dflt: 0
@@ -5101,7 +5101,7 @@ DPLL1_PRI_COMBO_SRC_FILTERED_CNFG: 0|L
 DPLL1_PRI_COMBO_SRC_FILTERED_CNFG__dflt: 0
 DPLL1_PRI_COMBO_SRC_ID: 8|L
 DPLL1_PRI_COMBO_SRC_ID__dflt: 8
-DPLL1_PRIORITY_EN_0: 0|*
+DPLL1_PRIORITY_EN_0: 1|L
 DPLL1_PRIORITY_EN_0__dflt: 0
 DPLL1_PRIORITY_EN_1: 0|*
 DPLL1_PRIORITY_EN_1__dflt: 0
@@ -7997,7 +7997,7 @@ GoalDCOFrequency7: |*
 GoalDCOFrequency7__dflt: 
 GoalDCOFrequencySYS: |*
 GoalDCOFrequencySYS__dflt: 
-GoalInputTdcFrequency: 10M|L
+GoalInputTdcFrequency: 625|L
 GoalInputTdcFrequency__dflt: 
 GoalPhaseOffsetDpll0: 0|*
 GoalPhaseOffsetDpll0__dflt: 0
@@ -10695,7 +10695,7 @@ IN0_DIV_OR_NON_DIV_CLK_SELECT: 0|*
 IN0_DIV_OR_NON_DIV_CLK_SELECT__dflt: 0
 IN0_DPLL_PRED: 0|*
 IN0_DPLL_PRED__dflt: 0
-IN0_DSQUAL_TIMER: 0|*
+IN0_DSQUAL_TIMER: 3|L
 IN0_DSQUAL_TIMER__dflt: 0
 IN0_EN: 1|*
 IN0_EN__dflt: 1
@@ -10711,11 +10711,11 @@ IN0_FRAME_SYNC_RESAMPLE_EDGE: 0|*
 IN0_FRAME_SYNC_RESAMPLE_EDGE__dflt: 0
 IN0_FRAME_SYNC_RESAMPLE_EN: 0|*
 IN0_FRAME_SYNC_RESAMPLE_EN__dflt: 0
-IN0_FREQ_M: 25000000|*
-IN0_FREQ_M__dflt: 25000000
+IN0_FREQ_M: 1000000|*
+IN0_FREQ_M__dflt: 1000000
 IN0_FREQ_N: 0|*
 IN0_FREQ_N__dflt: 0
-IN0_FREQ_OFFS_LIM: 0|*
+IN0_FREQ_OFFS_LIM: 7|L
 IN0_FREQ_OFFS_LIM__dflt: 0
 IN0_FREQ_OFFS_LIM_LIVE: 0|*
 IN0_FREQ_OFFS_LIM_LIVE__dflt: 0
@@ -10723,11 +10723,11 @@ IN0_FREQ_OFFS_LIM_MASK: 0|*
 IN0_FREQ_OFFS_LIM_MASK__dflt: 0
 IN0_FREQ_OFFS_LIM_STICKY: 0|*
 IN0_FREQ_OFFS_LIM_STICKY__dflt: 0
-IN0_Frequency: 25M|L
+IN0_Frequency: 1M|L
 IN0_Frequency__dflt: 
 IN0_InputGroup: |*
 IN0_InputGroup__dflt: 
-IN0_INVERSE: 0|*
+IN0_INVERSE: 0|L
 IN0_INVERSE__dflt: 0
 IN0_Label: SFP0 Input|L
 IN0_Label__dflt: 
@@ -10777,7 +10777,7 @@ IN0_PHASE: 0|*
 IN0_PHASE__dflt: 0
 IN0_PNMODE: 0|*
 IN0_PNMODE__dflt: 0
-IN0_QUAL_TIMER: 0|*
+IN0_QUAL_TIMER: 1|L
 IN0_QUAL_TIMER__dflt: 0
 IN0_TRANS_DETECT_LIVE: 0|*
 IN0_TRANS_DETECT_LIVE__dflt: 0
@@ -10785,9 +10785,9 @@ IN0_TRANS_DETECT_MASK: 1|L
 IN0_TRANS_DETECT_MASK__dflt: 0
 IN0_TRANS_DETECT_STICKY: 0|*
 IN0_TRANS_DETECT_STICKY__dflt: 0
-IN0_TRANS_DETECTOR_EN: 1|L
+IN0_TRANS_DETECTOR_EN: 0|L
 IN0_TRANS_DETECTOR_EN__dflt: 0
-IN0_VLD_INTERVAL: 0|*
+IN0_VLD_INTERVAL: 1|L
 IN0_VLD_INTERVAL__dflt: 0
 IN0_VLD_INTERVAL_SHORT: 0|*
 IN0_VLD_INTERVAL_SHORT__dflt: 0
@@ -11535,15 +11535,15 @@ IN15_VLD_INTERVAL_SHORT: 0|*
 IN15_VLD_INTERVAL_SHORT__dflt: 0
 IN2_ACT_LIMIT: 0|*
 IN2_ACT_LIMIT__dflt: 0
-IN2_DIFF: 1|*
-IN2_DIFF__dflt: 1
+IN2_DIFF: 0|*
+IN2_DIFF__dflt: 0
 IN2_DIV: 1|*
 IN2_DIV__dflt: 1
 IN2_DIV_OR_NON_DIV_CLK_SELECT: 0|*
 IN2_DIV_OR_NON_DIV_CLK_SELECT__dflt: 0
 IN2_DPLL_PRED: 0|*
 IN2_DPLL_PRED__dflt: 0
-IN2_DSQUAL_TIMER: 0|*
+IN2_DSQUAL_TIMER: 3|L
 IN2_DSQUAL_TIMER__dflt: 0
 IN2_EN: 1|*
 IN2_EN__dflt: 1
@@ -11563,7 +11563,7 @@ IN2_FREQ_M: 25000000|*
 IN2_FREQ_M__dflt: 25000000
 IN2_FREQ_N: 0|*
 IN2_FREQ_N__dflt: 0
-IN2_FREQ_OFFS_LIM: 0|*
+IN2_FREQ_OFFS_LIM: 7|L
 IN2_FREQ_OFFS_LIM__dflt: 0
 IN2_FREQ_OFFS_LIM_LIVE: 0|*
 IN2_FREQ_OFFS_LIM_LIVE__dflt: 0
@@ -11593,7 +11593,7 @@ IN2_LOS_TOLERANCE: 0|*
 IN2_LOS_TOLERANCE__dflt: 0
 IN2_MASK_ACTIVITY: 1|L
 IN2_MASK_ACTIVITY__dflt: 0
-IN2_MASK_FREQ: 0|*
+IN2_MASK_FREQ: 1|L
 IN2_MASK_FREQ__dflt: 0
 IN2_MASK_LOS: 1|*
 IN2_MASK_LOS__dflt: 1
@@ -11625,7 +11625,7 @@ IN2_PHASE: 0|*
 IN2_PHASE__dflt: 0
 IN2_PNMODE: 0|*
 IN2_PNMODE__dflt: 0
-IN2_QUAL_TIMER: 0|*
+IN2_QUAL_TIMER: 1|L
 IN2_QUAL_TIMER__dflt: 0
 IN2_TRANS_DETECT_LIVE: 0|*
 IN2_TRANS_DETECT_LIVE__dflt: 0
@@ -11633,7 +11633,7 @@ IN2_TRANS_DETECT_MASK: 1|L
 IN2_TRANS_DETECT_MASK__dflt: 0
 IN2_TRANS_DETECT_STICKY: 0|*
 IN2_TRANS_DETECT_STICKY__dflt: 0
-IN2_TRANS_DETECTOR_EN: 1|L
+IN2_TRANS_DETECTOR_EN: 0|L
 IN2_TRANS_DETECTOR_EN__dflt: 0
 IN2_VLD_INTERVAL: 0|*
 IN2_VLD_INTERVAL__dflt: 0
@@ -11747,15 +11747,15 @@ IN3_VLD_INTERVAL_SHORT: 0|*
 IN3_VLD_INTERVAL_SHORT__dflt: 0
 IN4_ACT_LIMIT: 0|*
 IN4_ACT_LIMIT__dflt: 0
-IN4_DIFF: 1|*
-IN4_DIFF__dflt: 1
+IN4_DIFF: 0|*
+IN4_DIFF__dflt: 0
 IN4_DIV: 1|*
 IN4_DIV__dflt: 1
 IN4_DIV_OR_NON_DIV_CLK_SELECT: 0|*
 IN4_DIV_OR_NON_DIV_CLK_SELECT__dflt: 0
 IN4_DPLL_PRED: 0|*
 IN4_DPLL_PRED__dflt: 0
-IN4_DSQUAL_TIMER: 0|*
+IN4_DSQUAL_TIMER: 3|L
 IN4_DSQUAL_TIMER__dflt: 0
 IN4_EN: 1|*
 IN4_EN__dflt: 1
@@ -11775,7 +11775,7 @@ IN4_FREQ_M: 25000000|*
 IN4_FREQ_M__dflt: 25000000
 IN4_FREQ_N: 0|*
 IN4_FREQ_N__dflt: 0
-IN4_FREQ_OFFS_LIM: 0|*
+IN4_FREQ_OFFS_LIM: 7|L
 IN4_FREQ_OFFS_LIM__dflt: 0
 IN4_FREQ_OFFS_LIM_LIVE: 0|*
 IN4_FREQ_OFFS_LIM_LIVE__dflt: 0
@@ -11837,7 +11837,7 @@ IN4_PHASE: 0|*
 IN4_PHASE__dflt: 0
 IN4_PNMODE: 0|*
 IN4_PNMODE__dflt: 0
-IN4_QUAL_TIMER: 0|*
+IN4_QUAL_TIMER: 1|L
 IN4_QUAL_TIMER__dflt: 0
 IN4_TRANS_DETECT_LIVE: 0|*
 IN4_TRANS_DETECT_LIVE__dflt: 0
@@ -11845,7 +11845,7 @@ IN4_TRANS_DETECT_MASK: 1|L
 IN4_TRANS_DETECT_MASK__dflt: 0
 IN4_TRANS_DETECT_STICKY: 0|*
 IN4_TRANS_DETECT_STICKY__dflt: 0
-IN4_TRANS_DETECTOR_EN: 1|L
+IN4_TRANS_DETECTOR_EN: 0|L
 IN4_TRANS_DETECTOR_EN__dflt: 0
 IN4_VLD_INTERVAL: 0|*
 IN4_VLD_INTERVAL__dflt: 0
@@ -11967,7 +11967,7 @@ IN6_DIV_OR_NON_DIV_CLK_SELECT: 0|*
 IN6_DIV_OR_NON_DIV_CLK_SELECT__dflt: 0
 IN6_DPLL_PRED: 0|*
 IN6_DPLL_PRED__dflt: 0
-IN6_DSQUAL_TIMER: 0|*
+IN6_DSQUAL_TIMER: 3|L
 IN6_DSQUAL_TIMER__dflt: 0
 IN6_EN: 1|*
 IN6_EN__dflt: 1
@@ -11987,7 +11987,7 @@ IN6_FREQ_M: 25000000|*
 IN6_FREQ_M__dflt: 25000000
 IN6_FREQ_N: 0|*
 IN6_FREQ_N__dflt: 0
-IN6_FREQ_OFFS_LIM: 0|*
+IN6_FREQ_OFFS_LIM: 7|L
 IN6_FREQ_OFFS_LIM__dflt: 0
 IN6_FREQ_OFFS_LIM_LIVE: 0|*
 IN6_FREQ_OFFS_LIM_LIVE__dflt: 0
@@ -12049,7 +12049,7 @@ IN6_PHASE: 0|*
 IN6_PHASE__dflt: 0
 IN6_PNMODE: 0|*
 IN6_PNMODE__dflt: 0
-IN6_QUAL_TIMER: 0|*
+IN6_QUAL_TIMER: 1|L
 IN6_QUAL_TIMER__dflt: 0
 IN6_TRANS_DETECT_LIVE: 0|*
 IN6_TRANS_DETECT_LIVE__dflt: 0
@@ -12057,7 +12057,7 @@ IN6_TRANS_DETECT_MASK: 1|L
 IN6_TRANS_DETECT_MASK__dflt: 0
 IN6_TRANS_DETECT_STICKY: 0|*
 IN6_TRANS_DETECT_STICKY__dflt: 0
-IN6_TRANS_DETECTOR_EN: 1|L
+IN6_TRANS_DETECTOR_EN: 0|L
 IN6_TRANS_DETECTOR_EN__dflt: 0
 IN6_VLD_INTERVAL: 0|*
 IN6_VLD_INTERVAL__dflt: 0
@@ -12383,16 +12383,16 @@ IN9_VLD_INTERVAL_SHORT: 0|*
 IN9_VLD_INTERVAL_SHORT__dflt: 0
 INPUT_TDC_CTRL_UNASSIGNED: 0|*
 INPUT_TDC_CTRL_UNASSIGNED__dflt: 0
-INPUT_TDC_FBD_INTEGER: 1|*
-INPUT_TDC_FBD_INTEGER__dflt: 1
+INPUT_TDC_FBD_INTEGER: 62|*
+INPUT_TDC_FBD_INTEGER__dflt: 62
 INPUT_TDC_FBD_USER_CONFIG_EN: 0|L
 INPUT_TDC_FBD_USER_CONFIG_EN__dflt: 0
 INPUT_TDC_REF_SEL: 1|L
 INPUT_TDC_REF_SEL__dflt: 0
-INPUT_TDC_SDM_FRAC: 0|*
-INPUT_TDC_SDM_FRAC__dflt: 0
-INPUT_TDC_SDM_MOD: 1|*
-INPUT_TDC_SDM_MOD__dflt: 1
+INPUT_TDC_SDM_FRAC: 32767|*
+INPUT_TDC_SDM_FRAC__dflt: 32767
+INPUT_TDC_SDM_MOD: 65534|*
+INPUT_TDC_SDM_MOD__dflt: 65534
 INPUT_TDC_SDM_ORDER: 0|*
 INPUT_TDC_SDM_ORDER__dflt: 0
 InputFrequency0: |*
@@ -12443,11 +12443,11 @@ InputProtocol14: CMOS|*
 InputProtocol14__dflt: CMOS
 InputProtocol15: CMOS|*
 InputProtocol15__dflt: CMOS
-InputProtocol2: LVDS|L
+InputProtocol2: CMOS|L
 InputProtocol2__dflt: CMOS
 InputProtocol3: CMOS|*
 InputProtocol3__dflt: CMOS
-InputProtocol4: LVDS|L
+InputProtocol4: CMOS|L
 InputProtocol4__dflt: CMOS
 InputProtocol5: CMOS|*
 InputProtocol5__dflt: CMOS
@@ -12479,8 +12479,8 @@ OUT_DIV11_MUX_UNASSIGNED: 0|*
 OUT_DIV11_MUX_UNASSIGNED__dflt: 0
 OUT_DIV8_MUX_UNASSIGNED: 0|*
 OUT_DIV8_MUX_UNASSIGNED__dflt: 0
-OUT0_DIV: 20|*
-OUT0_DIV__dflt: 20
+OUT0_DIV: 500|*
+OUT0_DIV__dflt: 500
 OUT0_DUTY_CYCLE_HIGH: 0|*
 OUT0_DUTY_CYCLE_HIGH__dflt: 0
 OUT0_Label: SFP0 Output|L
@@ -12493,9 +12493,9 @@ OUT0_PAD_MODE: 1|L
 OUT0_PAD_MODE__dflt: 1
 OUT0_PAD_VDDO: 1|L
 OUT0_PAD_VDDO__dflt: 0
-OUT0_PAD_VOS: 2|*
+OUT0_PAD_VOS: 1|L
 OUT0_PAD_VOS__dflt: 2
-OUT0_PAD_VSWING: 0|*
+OUT0_PAD_VSWING: 3|L
 OUT0_PAD_VSWING__dflt: 0
 OUT0_PHASE_ADJ: 0|*
 OUT0_PHASE_ADJ__dflt: 0
@@ -12503,12 +12503,12 @@ OUT0_SQUELCH_DISABLE: 1|*
 OUT0_SQUELCH_DISABLE__dflt: 1
 OUT0_SQUELCH_VALUE: 0|*
 OUT0_SQUELCH_VALUE__dflt: 0
-OUT0DesiredFrequency: 25M|L
+OUT0DesiredFrequency: 1M|L
 OUT0DesiredFrequency__dflt: 
 OUT0DesiredPhaseAdjust: 0|*
 OUT0DesiredPhaseAdjust__dflt: 0
-OUT0DifferentialType: LVDS|*
-OUT0DifferentialType__dflt: LVDS
+OUT0DifferentialType: User-Defined|L
+OUT0DifferentialType__dflt: User-Defined
 Out0OutputGroup: |*
 Out0OutputGroup__dflt: 
 OUT1_DIV: 50|*
@@ -12617,13 +12617,13 @@ OUT2_OUT_SYNC_DISABLE: 0|*
 OUT2_OUT_SYNC_DISABLE__dflt: 0
 OUT2_PAD_CMOSDRV: 0|*
 OUT2_PAD_CMOSDRV__dflt: 0
-OUT2_PAD_MODE: 1|L
+OUT2_PAD_MODE: 3|L
 OUT2_PAD_MODE__dflt: 1
 OUT2_PAD_VDDO: 1|L
 OUT2_PAD_VDDO__dflt: 0
-OUT2_PAD_VOS: 2|*
-OUT2_PAD_VOS__dflt: 2
-OUT2_PAD_VSWING: 0|*
+OUT2_PAD_VOS: 0|L
+OUT2_PAD_VOS__dflt: 0
+OUT2_PAD_VSWING: 3|L
 OUT2_PAD_VSWING__dflt: 0
 OUT2_PHASE_ADJ: 0|*
 OUT2_PHASE_ADJ__dflt: 0
@@ -12635,8 +12635,8 @@ OUT2DesiredFrequency: 25M|L
 OUT2DesiredFrequency__dflt: 
 OUT2DesiredPhaseAdjust: 0|*
 OUT2DesiredPhaseAdjust__dflt: 0
-OUT2DifferentialType: LVDS|*
-OUT2DifferentialType__dflt: LVDS
+OUT2DifferentialType: User-Defined|L
+OUT2DifferentialType__dflt: User-Defined
 Out2OutputGroup: |*
 Out2OutputGroup__dflt: 
 OUT3_DIV: 500000000|*
@@ -12681,13 +12681,13 @@ OUT4_OUT_SYNC_DISABLE: 0|*
 OUT4_OUT_SYNC_DISABLE__dflt: 0
 OUT4_PAD_CMOSDRV: 0|*
 OUT4_PAD_CMOSDRV__dflt: 0
-OUT4_PAD_MODE: 1|L
+OUT4_PAD_MODE: 3|L
 OUT4_PAD_MODE__dflt: 1
 OUT4_PAD_VDDO: 1|L
 OUT4_PAD_VDDO__dflt: 0
-OUT4_PAD_VOS: 2|*
-OUT4_PAD_VOS__dflt: 2
-OUT4_PAD_VSWING: 0|*
+OUT4_PAD_VOS: 0|L
+OUT4_PAD_VOS__dflt: 0
+OUT4_PAD_VSWING: 3|L
 OUT4_PAD_VSWING__dflt: 0
 OUT4_PHASE_ADJ: 0|*
 OUT4_PHASE_ADJ__dflt: 0
@@ -12699,8 +12699,8 @@ OUT4DesiredFrequency: 25M|L
 OUT4DesiredFrequency__dflt: 
 OUT4DesiredPhaseAdjust: 0|*
 OUT4DesiredPhaseAdjust__dflt: 0
-OUT4DifferentialType: LVDS|*
-OUT4DifferentialType__dflt: LVDS
+OUT4DifferentialType: User-Defined|L
+OUT4DifferentialType__dflt: User-Defined
 Out4OutputGroup: |*
 Out4OutputGroup__dflt: 
 OUT5_DIV: 500000000|*
@@ -12749,9 +12749,9 @@ OUT6_PAD_MODE: 1|L
 OUT6_PAD_MODE__dflt: 1
 OUT6_PAD_VDDO: 1|L
 OUT6_PAD_VDDO__dflt: 0
-OUT6_PAD_VOS: 2|*
+OUT6_PAD_VOS: 3|L
 OUT6_PAD_VOS__dflt: 2
-OUT6_PAD_VSWING: 0|*
+OUT6_PAD_VSWING: 3|L
 OUT6_PAD_VSWING__dflt: 0
 OUT6_PHASE_ADJ: 0|*
 OUT6_PHASE_ADJ__dflt: 0
@@ -12763,8 +12763,8 @@ OUT6DesiredFrequency: 25M|L
 OUT6DesiredFrequency__dflt: 
 OUT6DesiredPhaseAdjust: 0|*
 OUT6DesiredPhaseAdjust__dflt: 0
-OUT6DifferentialType: LVDS|*
-OUT6DifferentialType__dflt: LVDS
+OUT6DifferentialType: User-Defined|L
+OUT6DifferentialType__dflt: User-Defined
 Out6OutputGroup: |*
 Out6OutputGroup__dflt: 
 OUT7_DIV: 50|*
@@ -14407,7 +14407,7 @@ PWM_USER_DATA_COMMAND_STATUS: 0|*
 PWM_USER_DATA_COMMAND_STATUS__dflt: 0
 PWM_USER_DATA_SIZE_BYTES: 0|*
 PWM_USER_DATA_SIZE_BYTES__dflt: 0
-PWM0_DECODER_CMD_ENABLE: 0|L
+PWM0_DECODER_CMD_ENABLE: 1|L
 PWM0_DECODER_CMD_ENABLE__dflt: 0
 PWM0_DECODER_CMD_SIGNATURE_MODE: 0|*
 PWM0_DECODER_CMD_SIGNATURE_MODE__dflt: 0
@@ -14511,7 +14511,7 @@ PWM1_DECODER_SIGNATURE_UNASSIGNED: 0|*
 PWM1_DECODER_SIGNATURE_UNASSIGNED__dflt: 0
 PWM1_ENCODER_CFG_UNASSIGNED: 0|*
 PWM1_ENCODER_CFG_UNASSIGNED__dflt: 0
-PWM1_ENCODER_CMD_ENABLE: 1|L
+PWM1_ENCODER_CMD_ENABLE: 0|L
 PWM1_ENCODER_CMD_ENABLE__dflt: 0
 PWM1_ENCODER_CMD_SIGNATURE_MODE: 0|*
 PWM1_ENCODER_CMD_SIGNATURE_MODE__dflt: 0
@@ -14773,7 +14773,7 @@ PWM2_DECODER_SIGNATURE_UNASSIGNED: 0|*
 PWM2_DECODER_SIGNATURE_UNASSIGNED__dflt: 0
 PWM2_ENCODER_CFG_UNASSIGNED: 0|*
 PWM2_ENCODER_CFG_UNASSIGNED__dflt: 0
-PWM2_ENCODER_CMD_ENABLE: 1|L
+PWM2_ENCODER_CMD_ENABLE: 0|L
 PWM2_ENCODER_CMD_ENABLE__dflt: 0
 PWM2_ENCODER_CMD_SIGNATURE_MODE: 0|*
 PWM2_ENCODER_CMD_SIGNATURE_MODE__dflt: 0
@@ -14843,7 +14843,7 @@ PWM3_DECODER_SIGNATURE_UNASSIGNED: 0|*
 PWM3_DECODER_SIGNATURE_UNASSIGNED__dflt: 0
 PWM3_ENCODER_CFG_UNASSIGNED: 0|*
 PWM3_ENCODER_CFG_UNASSIGNED__dflt: 0
-PWM3_ENCODER_CMD_ENABLE: 1|L
+PWM3_ENCODER_CMD_ENABLE: 0|L
 PWM3_ENCODER_CMD_ENABLE__dflt: 0
 PWM3_ENCODER_CMD_SIGNATURE_MODE: 0|*
 PWM3_ENCODER_CMD_SIGNATURE_MODE__dflt: 0
@@ -15413,8 +15413,8 @@ SER1_UNASSIGNED: 0|*
 SER1_UNASSIGNED__dflt: 0
 SM_RESET: 0|*
 SM_RESET__dflt: 0
-SummaryText: Device Information Block Contents#n##n#GPIO Usage at Reset#n##n#  GPIO0       GPIO1       GPIO2       GPIO3#n#----------  ----------  ----------  ----------#n#(not used)  (not used)  (not used)  (not used)#n##n#  GPIO4       GPIO5#n#----------  ----------#n#(not used)  (not used)#n##n#  GPIO8       GPIO9#n#----------  ----------#n#(not used)  (not used)#n##n#Voltage Level used on VDDA_BG_LC supply:	3.3#n#Voltage Level used on VDDA_PDCP_XTAL:	3.3#n##n#           Serial Port Mode Main#n#-------------------------------------------#n#Selected by GPIO9 58h (7b base I2C address)#n##n#Inputs#n##n# Crystal Frequency (MHz)    XO_DPLL Input (MHz)    CLK0 (MHz)    CLK1 (MHz)    CLK2 (MHz)    CLK3 (MHz)    CLK4 (MHz)    CLK5 (MHz)    CLK6 (MHz)    CLK8 (MHz)#n#-------------------------  ---------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------#n#          40MHz                    10MHz             25MHz         10MHz         25MHz          1PPS         25MHz         10MHz         25MHz         100MHz#n#                                                      LVDS          CMOS          LVDS          CMOS          LVDS          CMOS          LVDS          CMOS#n##n# CLK9 (MHz)    CLK10 (MHz)    CLK11 (MHz)    CLK12 (MHz)    CLK13 (MHz)    CLK14 (MHz)    CLK15 (MHz)#n#------------  -------------  -------------  -------------  -------------  -------------  -------------#n#    1PPS                         1PPS                          1PPS#n#    CMOS                         CMOS                          CMOS#n##n##n##n#Outputs#n##n#  Output   Frequency(MHz)    Type    Enable    Source     Divider   VDDO_Q#n#--------  ----------------  ------  --------  --------  ---------  --------#n#       0       25MHz         LVDS   Enabled    DPLL0           20    3.3V#n#       1       10MHz         CMOS   Enabled    DPLL0           50    3.3V#n#       2       25MHz         LVDS   Enabled    DPLL1           20    3.3V#n#       3        1PPS         CMOS   Enabled    DPLL1    500000000    3.3V#n#       4       25MHz         LVDS   Enabled    DPLL2           20    3.3V#n#       5        1PPS         CMOS   Enabled    DPLL2    500000000    3.3V#n#       6       25MHz         LVDS   Enabled    DPLL3           20    3.3V#n#       7       10MHz         CMOS   Enabled    DPLL3           50    3.3V#n##n#PLL Channel Configuration#n##n#  Channel          Mode          Frequency(MHz)    LockBW    Dampening Factor    Primary Source     Reference Selection#n#-----------  -----------------  ----------------  --------  ------------------  -----------------  ---------------------#n#System APLL     Synthesizer         13600.0                                     Crystal (doubled)#n#System DPLL     Synthesizer                                                           CLK0#n#   DPLL0     Phase Measurement       500MHz         0uHz          <0.1dB                                 automatic#n#   DPLL1     Phase Measurement       500MHz         0uHz         overdamp                                automatic#n#   DPLL2     Jitter Attenuator       500MHz         25Hz         overdamp                                automatic#n#   DPLL3     Jitter Attenuator       500MHz         25Hz         overdamp                                automatic#n##n#GPIOs#n##n#                  GPIO0                        GPIO1                             GPIO2                             GPIO3#n#--------  ----------------------  --------------------------------  --------------------------------  --------------------------------#n#Enabled           False                        False                             False                             False#n#  Mode         user control                 user control                      user control                      user control#n#Function  used as input for CLK8  user control (direction: output)  user control (direction: output)  user control (direction: output)#n##n#                       GPIO4                             GPIO5#n#--------  --------------------------------  -------------------------------#n#Enabled                False                             False#n#  Mode              user control                     user control#n#Function  user control (direction: output)  user control (direction: input)#n##n#                       GPIO8                            GPIO9#n#--------  -------------------------------  -------------------------------#n#Enabled                False                            False#n#  Mode             user control                     user control#n#Function  user control (direction: input)  user control (direction: input)|*
-SummaryText__dflt: Device Information Block Contents#n##n#GPIO Usage at Reset#n##n#  GPIO0       GPIO1       GPIO2       GPIO3#n#----------  ----------  ----------  ----------#n#(not used)  (not used)  (not used)  (not used)#n##n#  GPIO4       GPIO5#n#----------  ----------#n#(not used)  (not used)#n##n#  GPIO8       GPIO9#n#----------  ----------#n#(not used)  (not used)#n##n#Voltage Level used on VDDA_BG_LC supply:	3.3#n#Voltage Level used on VDDA_PDCP_XTAL:	3.3#n##n#           Serial Port Mode Main#n#-------------------------------------------#n#Selected by GPIO9 58h (7b base I2C address)#n##n#Inputs#n##n# Crystal Frequency (MHz)    XO_DPLL Input (MHz)    CLK0 (MHz)    CLK1 (MHz)    CLK2 (MHz)    CLK3 (MHz)    CLK4 (MHz)    CLK5 (MHz)    CLK6 (MHz)    CLK8 (MHz)#n#-------------------------  ---------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------#n#          40MHz                    10MHz             25MHz         10MHz         25MHz          1PPS         25MHz         10MHz         25MHz         100MHz#n#                                                      LVDS          CMOS          LVDS          CMOS          LVDS          CMOS          LVDS          CMOS#n##n# CLK9 (MHz)    CLK10 (MHz)    CLK11 (MHz)    CLK12 (MHz)    CLK13 (MHz)    CLK14 (MHz)    CLK15 (MHz)#n#------------  -------------  -------------  -------------  -------------  -------------  -------------#n#    1PPS                         1PPS                          1PPS#n#    CMOS                         CMOS                          CMOS#n##n##n##n#Outputs#n##n#  Output   Frequency(MHz)    Type    Enable    Source     Divider   VDDO_Q#n#--------  ----------------  ------  --------  --------  ---------  --------#n#       0       25MHz         LVDS   Enabled    DPLL0           20    3.3V#n#       1       10MHz         CMOS   Enabled    DPLL0           50    3.3V#n#       2       25MHz         LVDS   Enabled    DPLL1           20    3.3V#n#       3        1PPS         CMOS   Enabled    DPLL1    500000000    3.3V#n#       4       25MHz         LVDS   Enabled    DPLL2           20    3.3V#n#       5        1PPS         CMOS   Enabled    DPLL2    500000000    3.3V#n#       6       25MHz         LVDS   Enabled    DPLL3           20    3.3V#n#       7       10MHz         CMOS   Enabled    DPLL3           50    3.3V#n##n#PLL Channel Configuration#n##n#  Channel          Mode          Frequency(MHz)    LockBW    Dampening Factor    Primary Source     Reference Selection#n#-----------  -----------------  ----------------  --------  ------------------  -----------------  ---------------------#n#System APLL     Synthesizer         13600.0                                     Crystal (doubled)#n#System DPLL     Synthesizer                                                           CLK0#n#   DPLL0     Phase Measurement       500MHz         0uHz          <0.1dB                                 automatic#n#   DPLL1     Phase Measurement       500MHz         0uHz         overdamp                                automatic#n#   DPLL2     Jitter Attenuator       500MHz         25Hz         overdamp                                automatic#n#   DPLL3     Jitter Attenuator       500MHz         25Hz         overdamp                                automatic#n##n#GPIOs#n##n#                  GPIO0                        GPIO1                             GPIO2                             GPIO3#n#--------  ----------------------  --------------------------------  --------------------------------  --------------------------------#n#Enabled           False                        False                             False                             False#n#  Mode         user control                 user control                      user control                      user control#n#Function  used as input for CLK8  user control (direction: output)  user control (direction: output)  user control (direction: output)#n##n#                       GPIO4                             GPIO5#n#--------  --------------------------------  -------------------------------#n#Enabled                False                             False#n#  Mode              user control                     user control#n#Function  user control (direction: output)  user control (direction: input)#n##n#                       GPIO8                            GPIO9#n#--------  -------------------------------  -------------------------------#n#Enabled                False                            False#n#  Mode             user control                     user control#n#Function  user control (direction: input)  user control (direction: input)
+SummaryText: Device Information Block Contents#n##n#GPIO Usage at Reset#n##n#  GPIO0       GPIO1       GPIO2       GPIO3#n#----------  ----------  ----------  ----------#n#(not used)  (not used)  (not used)  (not used)#n##n#  GPIO4       GPIO5#n#----------  ----------#n#(not used)  (not used)#n##n#  GPIO8       GPIO9#n#----------  ----------#n#(not used)  (not used)#n##n#Voltage Level used on VDDA_BG_LC supply:	3.3#n#Voltage Level used on VDDA_PDCP_XTAL:	3.3#n##n#           Serial Port Mode Main#n#-------------------------------------------#n#Selected by GPIO9 58h (7b base I2C address)#n##n#Inputs#n##n# Crystal Frequency (MHz)    XO_DPLL Input (MHz)    CLK0 (MHz)    CLK1 (MHz)    CLK2 (MHz)    CLK3 (MHz)    CLK4 (MHz)    CLK5 (MHz)    CLK6 (MHz)    CLK8 (MHz)#n#-------------------------  ---------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------#n#          40MHz                    10MHz              1MHz         10MHz         25MHz          1PPS         25MHz         10MHz         25MHz         100MHz#n#                                                      LVDS          CMOS          CMOS          CMOS          CMOS          CMOS          LVDS          CMOS#n##n# CLK9 (MHz)    CLK10 (MHz)    CLK11 (MHz)    CLK12 (MHz)    CLK13 (MHz)    CLK14 (MHz)    CLK15 (MHz)#n#------------  -------------  -------------  -------------  -------------  -------------  -------------#n#    1PPS                         1PPS                          1PPS#n#    CMOS                         CMOS                          CMOS#n##n##n##n#Outputs#n##n#  Output   Frequency(MHz)         Type          Enable    Source     Divider   VDDO_Q#n#--------  ----------------  -----------------  --------  --------  ---------  --------#n#       0        1MHz        User Defined: 1|3  Enabled    DPLL0          500    3.3V#n#       1       10MHz              CMOS         Enabled    DPLL0           50    3.3V#n#       2       25MHz              CMOS         Enabled    DPLL1           20    3.3V#n#       3        1PPS              CMOS         Enabled    DPLL1    500000000    3.3V#n#       4       25MHz              CMOS         Enabled    DPLL2           20    3.3V#n#       5        1PPS              CMOS         Enabled    DPLL2    500000000    3.3V#n#       6       25MHz        User Defined: 3|3  Enabled    DPLL3           20    3.3V#n#       7       10MHz              CMOS         Enabled    DPLL3           50    3.3V#n##n#PLL Channel Configuration#n##n#  Channel          Mode          Frequency(MHz)    LockBW    Dampening Factor    Primary Source     Reference Selection#n#-----------  -----------------  ----------------  --------  ------------------  -----------------  ---------------------#n#System APLL     Synthesizer         13600.0                                     Crystal (doubled)#n#System DPLL     Synthesizer                                                           CLK0#n#   DPLL0     Phase Measurement       500MHz         0uHz          <0.1dB                                 automatic#n#   DPLL1     Jitter Attenuator       500MHz         25Hz         overdamp             CLK0               automatic#n#   DPLL2     Phase Measurement       500MHz         0uHz         overdamp                                automatic#n#   DPLL3     Phase Measurement       500MHz         0uHz         overdamp                                automatic#n##n#GPIOs#n##n#                  GPIO0                        GPIO1                             GPIO2                             GPIO3#n#--------  ----------------------  --------------------------------  --------------------------------  --------------------------------#n#Enabled           False                        False                             False                             False#n#  Mode         user control                 user control                      user control                      user control#n#Function  used as input for CLK8  user control (direction: output)  user control (direction: output)  user control (direction: output)#n##n#                       GPIO4                             GPIO5#n#--------  --------------------------------  -------------------------------#n#Enabled                False                             False#n#  Mode              user control                     user control#n#Function  user control (direction: output)  user control (direction: input)#n##n#                       GPIO8                            GPIO9#n#--------  -------------------------------  -------------------------------#n#Enabled                False                            False#n#  Mode             user control                     user control#n#Function  user control (direction: input)  user control (direction: input)|*
+SummaryText__dflt: Device Information Block Contents#n##n#GPIO Usage at Reset#n##n#  GPIO0       GPIO1       GPIO2       GPIO3#n#----------  ----------  ----------  ----------#n#(not used)  (not used)  (not used)  (not used)#n##n#  GPIO4       GPIO5#n#----------  ----------#n#(not used)  (not used)#n##n#  GPIO8       GPIO9#n#----------  ----------#n#(not used)  (not used)#n##n#Voltage Level used on VDDA_BG_LC supply:	3.3#n#Voltage Level used on VDDA_PDCP_XTAL:	3.3#n##n#           Serial Port Mode Main#n#-------------------------------------------#n#Selected by GPIO9 58h (7b base I2C address)#n##n#Inputs#n##n# Crystal Frequency (MHz)    XO_DPLL Input (MHz)    CLK0 (MHz)    CLK1 (MHz)    CLK2 (MHz)    CLK3 (MHz)    CLK4 (MHz)    CLK5 (MHz)    CLK6 (MHz)    CLK8 (MHz)#n#-------------------------  ---------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------#n#          40MHz                    10MHz              1MHz         10MHz         25MHz          1PPS         25MHz         10MHz         25MHz         100MHz#n#                                                      LVDS          CMOS          CMOS          CMOS          CMOS          CMOS          LVDS          CMOS#n##n# CLK9 (MHz)    CLK10 (MHz)    CLK11 (MHz)    CLK12 (MHz)    CLK13 (MHz)    CLK14 (MHz)    CLK15 (MHz)#n#------------  -------------  -------------  -------------  -------------  -------------  -------------#n#    1PPS                         1PPS                          1PPS#n#    CMOS                         CMOS                          CMOS#n##n##n##n#Outputs#n##n#  Output   Frequency(MHz)         Type          Enable    Source     Divider   VDDO_Q#n#--------  ----------------  -----------------  --------  --------  ---------  --------#n#       0        1MHz        User Defined: 1|3  Enabled    DPLL0          500    3.3V#n#       1       10MHz              CMOS         Enabled    DPLL0           50    3.3V#n#       2       25MHz              CMOS         Enabled    DPLL1           20    3.3V#n#       3        1PPS              CMOS         Enabled    DPLL1    500000000    3.3V#n#       4       25MHz              CMOS         Enabled    DPLL2           20    3.3V#n#       5        1PPS              CMOS         Enabled    DPLL2    500000000    3.3V#n#       6       25MHz        User Defined: 3|3  Enabled    DPLL3           20    3.3V#n#       7       10MHz              CMOS         Enabled    DPLL3           50    3.3V#n##n#PLL Channel Configuration#n##n#  Channel          Mode          Frequency(MHz)    LockBW    Dampening Factor    Primary Source     Reference Selection#n#-----------  -----------------  ----------------  --------  ------------------  -----------------  ---------------------#n#System APLL     Synthesizer         13600.0                                     Crystal (doubled)#n#System DPLL     Synthesizer                                                           CLK0#n#   DPLL0     Phase Measurement       500MHz         0uHz          <0.1dB                                 automatic#n#   DPLL1     Jitter Attenuator       500MHz         25Hz         overdamp             CLK0               automatic#n#   DPLL2     Phase Measurement       500MHz         0uHz         overdamp                                automatic#n#   DPLL3     Phase Measurement       500MHz         0uHz         overdamp                                automatic#n##n#GPIOs#n##n#                  GPIO0                        GPIO1                             GPIO2                             GPIO3#n#--------  ----------------------  --------------------------------  --------------------------------  --------------------------------#n#Enabled           False                        False                             False                             False#n#  Mode         user control                 user control                      user control                      user control#n#Function  used as input for CLK8  user control (direction: output)  user control (direction: output)  user control (direction: output)#n##n#                       GPIO4                             GPIO5#n#--------  --------------------------------  -------------------------------#n#Enabled                False                             False#n#  Mode              user control                     user control#n#Function  user control (direction: output)  user control (direction: input)#n##n#                       GPIO8                            GPIO9#n#--------  -------------------------------  -------------------------------#n#Enabled                False                            False#n#  Mode             user control                     user control#n#Function  user control (direction: input)  user control (direction: input)
 SYS_ALERT_MASK_UNASSIGNED: 0|*
 SYS_ALERT_MASK_UNASSIGNED__dflt: 0
 SYS_APLL_CFG_2_RESERVED: 0|*
@@ -15930,6 +15930,6 @@ VoltageVDDO_Q9__dflt: 1.8
 XtalFrequency: 40MHz|L
 XtalFrequency__dflt: 49.152
 
-00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 09 09 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 88 08 08 08 00 00 00 00 00 00 00 00 80 96 98 00 00 00 00 00 00 00 00 00 00 00 00 00 00 a6 9d 57 62 02 ff ff aa 40 00 00 40 78 7d 01 00 00 00 00 01 00 00 00 00 21 00 00 80 96 98 00 00 00 00 00 01 00 00 00 01 01 00 00 40 78 7d 01 00 00 00 00 01 00 00 00 02 21 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00 01 00 00 00 03 01 00 00 40 78 7d 01 00 00 00 00 01 00 00 00 04 21 00 00 80 96 98 00 00 00 00 00 01 00 00 00 05 01 00 00 40 78 7d 01 00 00 00 00 01 00 00 00 06 21 00 00 00 00 00 00 00 00 00 00 00 00 00 00 07 20 00 00 00 e1 f5 05 00 00 00 00 0a 00 00 00 08 41 00 00 01 00 00 00 00 00 00 00 01 00 00 00 09 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00 01 00 00 00 0a 00 00 00 01 00 00 00 00 00 00 00 01 00 00 00 0b 01 00 00 01 00 00 00 00 00 00 00 01 00 00 00 0c 00 00 00 01 00 00 00 00 00 00 00 01 00 00 00 0d 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 0e 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 0f 00 00 00 00 00 00 00 00 00 00 00 00 00 00 1f 00 00 00 00 00 00 00 00 00 00 00 1f 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 1b 00 00 00 00 00 00 00 00 00 00 00 03 00 00 00 00 00 00 00 00 00 00 00 1f 00 00 00 00 00 00 00 00 00 00 00 03 00 00 00 00 00 00 00 00 00 00 00 1f 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 03 00 00 00 00 00 00 00 00 00 00 00 03 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 03 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 03 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 01 02 0b 00 06 00 00 00 01 81 02 00 00 01 05 09 0d 14 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 33 00 01 00 00 00 00 00 00 00 00 00 00 00 00 28 08 00 00 85 28 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 04 00 0a 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 28 20 00 00 85 28 00 00 04 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 28 20 00 00 58 28 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 04 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 28 20 00 00 58 28 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 30 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 30 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 30 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 30 02 00 00 0a 01 00 00 25 24 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 03 00 00 00 0a 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 9b 32 47 cd 1d ff ff 00 65 cd 1d 00 00 00 00 00 00 00 00 00 00 00 00 00 00 a1 2a 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 9b 32 47 cd 1d ff ff 00 65 cd 1d 00 00 00 00 00 00 00 00 00 00 00 00 00 00 a1 2a 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 9b 32 47 cd 1d ff ff 00 65 cd 1d 00 00 00 00 00 00 00 00 00 00 00 00 00 00 a1 2a 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 9b 32 47 cd 1d ff ff 00 65 cd 1d 00 00 00 00 00 00 00 00 00 00 00 00 00 00 a1 2a 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 a1 2a 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 a1 2a 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 a1 2a 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 a1 2a 00 00 00 00 00 00 00 00 00 00 00 00 00 00 04 00 64 80 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 04 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 04 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 04 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 04 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 14 00 00 00 00 00 00 00 41 24 00 00 00 00 00 00 32 00 00 00 00 00 00 00 06 24 00 00 00 00 00 00 14 00 00 00 00 00 00 00 41 24 00 00 00 00 00 00 00 65 cd 1d 00 00 00 00 06 24 00 00 00 00 00 00 14 00 00 00 00 00 00 00 41 24 00 00 00 00 00 00 00 65 cd 1d 00 00 00 00 02 24 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 14 00 00 00 00 00 00 00 41 24 00 00 00 00 00 00 32 00 00 00 00 00 00 00 06 24 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 0d 00 00 00 00 01 00 00 0d 00 00 00 00 02 00 00 0d 00 00 00 00 03 00 00 0d 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 02 80 00 00 00 04 00 00 02 00 00 00 00 00 00 00 02 80 00 00 00 04 00 00 02 00 00 00 00 00 00 00 02 80 00 00 00 04 00 00 00 00 00 00 00 00 00 00 02 80 00 00 00 04 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 03 00 03 00 03 00 03 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 03 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 0e 00 07 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 01 00 01 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 05 35 64 00 77 00 30 60 01 35 05 35 64 00 77 00 00 00 00 00 00 00 00 00 0a 0a 00 00 00 00 00 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 09 09 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 88 08 08 08 00 00 00 00 00 00 00 00 80 96 98 00 00 00 00 00 00 00 00 00 00 00 00 00 00 a6 9d 57 62 02 ff ff aa 40 00 00 40 42 0f 00 00 00 00 00 01 00 00 00 00 21 00 00 80 96 98 00 00 00 00 00 01 00 00 00 01 01 00 00 40 78 7d 01 00 00 00 00 01 00 00 00 02 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00 01 00 00 00 03 01 00 00 40 78 7d 01 00 00 00 00 01 00 00 00 04 01 00 00 80 96 98 00 00 00 00 00 01 00 00 00 05 01 00 00 40 78 7d 01 00 00 00 00 01 00 00 00 06 21 00 00 00 00 00 00 00 00 00 00 00 00 00 00 07 20 00 00 00 e1 f5 05 00 00 00 00 0a 00 00 00 08 41 00 00 01 00 00 00 00 00 00 00 01 00 00 00 09 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00 01 00 00 00 0a 00 00 00 01 00 00 00 00 00 00 00 01 00 00 00 0b 01 00 00 01 00 00 00 00 00 00 00 01 00 00 00 0c 00 00 00 01 00 00 00 00 00 00 00 01 00 00 00 0d 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 0e 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 0f 00 00 00 0f 00 00 00 00 00 38 00 00 00 00 0f 00 00 00 00 00 00 00 00 00 00 00 1f 00 00 00 00 00 00 00 00 07 00 00 00 00 00 38 00 00 00 00 0f 00 00 00 00 00 00 00 00 00 00 00 03 07 00 00 00 00 00 38 00 00 00 00 0f 00 00 00 00 00 00 00 00 00 00 00 03 07 00 00 00 00 00 38 00 00 00 00 0f 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 03 00 00 00 00 00 00 00 00 00 00 00 03 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 03 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 03 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 01 02 0b 00 06 00 00 00 01 00 00 00 00 01 04 08 0c 14 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 33 00 01 00 00 00 00 00 00 00 00 00 00 00 00 28 08 00 00 85 28 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 04 00 0a 00 00 00 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 28 20 00 00 85 28 00 00 04 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 28 20 00 00 58 28 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 04 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 28 20 00 00 58 28 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 30 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 30 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 30 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 30 02 00 00 0a 01 00 00 25 24 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 03 00 00 00 0a 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 9b 32 47 cd 1d ff ff 00 65 cd 1d 00 00 00 00 00 00 00 00 00 00 00 00 00 00 a1 2a 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 9b 32 47 cd 1d ff ff 00 65 cd 1d 00 00 00 00 00 00 00 00 00 00 00 00 00 00 a1 2a 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 9b 32 47 cd 1d ff ff 00 65 cd 1d 00 00 00 00 00 00 00 00 00 00 00 00 00 00 a1 2a 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 9b 32 47 cd 1d ff ff 00 65 cd 1d 00 00 00 00 00 00 00 00 00 00 00 00 00 00 a1 2a 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 a1 2a 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 a1 2a 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 a1 2a 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 a1 2a 00 00 00 00 00 00 00 00 00 00 00 00 00 00 04 00 64 80 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 04 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 04 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 04 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 04 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 f4 01 00 00 00 00 00 00 39 24 00 00 00 00 00 00 32 00 00 00 00 00 00 00 06 24 00 00 00 00 00 00 14 00 00 00 00 00 00 00 1b 24 00 00 00 00 00 00 00 65 cd 1d 00 00 00 00 06 24 00 00 00 00 00 00 14 00 00 00 00 00 00 00 1b 24 00 00 00 00 00 00 00 65 cd 1d 00 00 00 00 02 24 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 14 00 00 00 00 00 00 00 79 24 00 00 00 00 00 00 32 00 00 00 00 00 00 00 06 24 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 0d 00 00 00 00 01 00 00 0c 00 00 00 00 02 00 00 0c 00 00 00 00 03 00 00 0c 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 02 80 00 00 00 05 00 00 02 00 00 00 00 00 00 00 02 80 00 00 00 04 00 00 02 00 00 00 00 00 00 00 02 80 00 00 00 04 00 00 00 00 00 00 00 00 00 00 02 80 00 00 00 04 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 03 00 03 00 03 00 03 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 03 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 02 00 00 00 0e 00 07 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ff 7f fe ff 3e 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 05 35 64 00 77 00 30 60 01 35 05 35 64 00 77 00 00 00 00 00 00 00 00 00 0a 0a 00 00 00 00 00 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 ***
-e21812d5
+15159e2b

@@ -83,6 +83,33 @@ def print_limited_human_readable_hex_data(data, limit=10):
 
 
 
+def parse_intel_hex_file(file_path):
+    data_records = {}
+    non_data_records = {}
+    extended_address = 0
+
+    with open(file_path, 'r') as file:
+        for line_number, line in enumerate(file, start=1):
+            # Each line is a record
+            start_code = line[0:1]
+            byte_count = int(line[1:3], 16)
+            address = int(line[3:7], 16)
+            record_type = int(line[7:9], 16)
+            data = line[9:9+2*byte_count]
+            checksum = line[9+2*byte_count:9+2*byte_count+2]
+
+            # Process the data
+            if record_type == 0:  # Data record
+                full_address = extended_address + address
+                data_bytes = [int(data[i:i+2], 16) for i in range(0, len(data), 2)]
+                data_records[full_address] = data_bytes
+            elif record_type == 4:  # Extended linear address record
+                extended_address = int(data, 16) << 16
+                non_data_records[(line_number, address, record_type)] = data
+            else:  # Other non-data records
+                non_data_records[(line_number, address, record_type)] = data
+
+    return data_records, non_data_records
 
 if __name__ == "__main__":
     # Define the file path
