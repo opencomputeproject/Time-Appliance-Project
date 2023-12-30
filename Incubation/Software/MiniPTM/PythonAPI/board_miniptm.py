@@ -9,7 +9,10 @@ from renesas_cm_registers import *
 import time
 from renesas_cm_gpio import gpiomode
 
+from enum import Enum
 # a single MiniPTM board is characterized by its PCIe info and i2c adapter
+
+from dpll_over_fiber_miniptm import DPOF_Top
 
 
 class Single_MiniPTM:
@@ -25,7 +28,11 @@ class Single_MiniPTM:
         print(f"Register MiniPTM device {devinfo[0]} I2C bus {adap_num}")
 
         self.dpll = DPLL(self.i2c, self.i2c.read_dpll_reg_direct,
-                         self.i2c.write_dpll_reg_direct)
+                         self.i2c.read_dpll_reg_multiple_direct,
+                         self.i2c.write_dpll_reg_direct,
+                         self.i2c.write_dpll_multiple)
+
+        self.dpof = DPOF_Top(self)
 
     def led_visual_test(self):
         for i in range(4):
@@ -115,7 +122,8 @@ class Single_MiniPTM:
             self.init_eeprom_addr(0)
 
         hex_values = [f"{value:02x}" for value in data]
-        print(f"Write Board {self.board_num} EEPROM offset 0x{offset:x} data {hex_values}")
+        print(
+            f"Write Board {self.board_num} EEPROM offset 0x{offset:x} data {hex_values}")
 
         # write offset
         self.dpll.modules["EEPROM"].write_field(0, "EEPROM_OFFSET_LOW", "EEPROM_OFFSET",
@@ -147,10 +155,11 @@ class Single_MiniPTM:
         time.sleep(0.0005 * data_len)
 
     def write_eeprom_file(self, eeprom_file="8A34002_MiniPTMV3_12-29-2023_Julian_AllPhaseMeas_EEPROM.hex"):
-        hex_file_data, non_data_records_debug = parse_intel_hex_file(eeprom_file)
-	self.eeprom_addr = 0 #make sure this gets reset
+        hex_file_data, non_data_records_debug = parse_intel_hex_file(
+            eeprom_file)
+        self.eeprom_addr = 0  # make sure this gets reset
         for addr in hex_file_data.keys():
-            #print(f"Write addr {addr:02x} = {hex_file_data[addr]}")
+            # print(f"Write addr {addr:02x} = {hex_file_data[addr]}")
             self.write_to_eeprom(addr, hex_file_data[addr])
 
     def is_configured(self) -> bool:
@@ -262,13 +271,15 @@ class Single_MiniPTM:
     def init_pwm_dplloverfiber(self):
         # disable all decoders
         for i in range(len(self.dpll.modules["PWMDecoder"].BASE_ADDRESSES)):
+            print(f"Debug PWM Decoder {i}")
             self.dpll.modules["PWMDecoder"].write_field(
                 i, "PWM_DECODER_CMD", "ENABLE", 0)
 
         # initialize all TODs to PWM negotiation flag mode
         for i in range(len(self.dpll.modules["TODWrite"].BASE_ADDRESSES)):
             # using highest part of TOD seconds as PWM flag
-            self.write_tod_absolute(i, 0, 0, 0xff << (8*5))
+            # highest
+            self.write_tod_absolute(i, 0, 0, 0x80 << (8*5))
 
         # enable all encoders to transmit
         for i in range(len(self.dpll.modules["PWMEncoder"].BASE_ADDRESSES)):
@@ -278,10 +289,6 @@ class Single_MiniPTM:
                 i, "PWM_ENCODER_CMD", "TOD_TX", 1)
             self.dpll.modules["PWMEncoder"].write_field(
                 i, "PWM_ENCODER_CMD", "ENABLE", 1)
-
-        # setup to listen on decoder 0 by default
-        # self.pwm_switch_listen_channel(0)
-        self.pwm_state_machine = 0  # a flag for tracking what's going on, init here
 
     def pwm_switch_listen_channel(self, decoder_num=0):
         # disable all decoders
@@ -294,7 +301,18 @@ class Single_MiniPTM:
             self.dpll.modules["PWMDecoder"].write_field(
                 decoder_num, "PWM_DECODER_CMD", "ENABLE", 1)
 
+    # experimental function -> THIS WORKS, global RX buffer
+
     def read_pwm_tod_incoming(self):
+        # read global register set 0xce80, 11 bytes
+        data = self.i2c.read_dpll_reg_multiple(0xce80, 0x0, 11)
+        print(f"Debug pwm incoming, data={data}")
+
+    # This works as per app note and to properly align TOD you need this procedure
+    # However, for DPLL over fiber, using TOD as data channel
+    # this is not necessary
+
+    def read_pwm_tod_incoming_consumes_tod_as_rx(self):
         # following APN ToD over PWM
 
         # 3a. read TOD read primary counter, just use all TOD0 for now
@@ -332,8 +350,15 @@ class Single_MiniPTM:
                 # THIS DOES WORK!!!!!!!!
                 print(f"New TOD from read primary: {new_tod}")
 
-                # read global register set 0xce80, 11 bytes -> THIS DOES NOT WORK
+                # read global register set 0xce80, 11 bytes -> THIS DOES NOT WORK WITHOUT FIRMWARE
                 data = self.i2c.read_dpll_reg_multiple(0xce80, 0x0, 11)
                 print(f"Debug pwm incoming, data={data}")
                 break
             time.sleep(0.25)
+
+    # call this periodically , non blocking "super-loop" function
+    def dpll_over_fiber_loop(self):
+        print(f"Board {self.board_num} dpll_over_fiber_loop")
+        self.dpof.run_loop()
+        #self.dpof.tick()
+        print(f"Board {self.board_num} done dpll_over_fiber_loop")

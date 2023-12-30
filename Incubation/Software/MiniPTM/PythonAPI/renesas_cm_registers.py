@@ -508,11 +508,13 @@ def hex_to_signed_nbit(hex_value, n_bits):
 
 
 class Module:
-    def __init__(self, name, layout, read_func, write_func, base_addresses):
+    def __init__(self, name, layout, base_addresses):
         self.name = name
         self.layout = layout
-        self.read_func = read_func
-        self.write_func = write_func
+        #self.read_func = read_func
+        #self.read_mul_func = read_mul_func
+        #self.write_func = write_func
+        #self.write_mul_func = write_mul_func
         self.base_addresses = base_addresses
 
     def _validate_module_num(self, module_num):
@@ -528,10 +530,14 @@ class Module:
 
     def write_field(self, module_num, register_name, field_name, field_value):
         self._validate_module_num(module_num)
+        #print(f"Write field {module_num} reg {register_name} {field_name} {field_value}")
         base_address = self.base_addresses[module_num]
         reg_info = self.layout[register_name]
         reg_addr = base_address + reg_info['offset']
+
+        #print(f"Read reg_addr {reg_addr:02x}")
         reg_value = self.read_func(reg_addr)
+        #print(f"Read reg_addr {reg_addr:02x} = {reg_value:02x}")
         new_reg_value = reg_info['fields'][field_name].set_value(
             reg_value, field_value)
         self.write_func(reg_addr, new_reg_value)
@@ -543,13 +549,28 @@ class Module:
         reg_addr = base_address + reg_info['offset']
         self.write_func(reg_addr, value)
 
+    def write_reg_mul(self, module_num, register_name, data):
+        self._validate_module_num(module_num)
+        base_address = self.base_addresses[module_num]
+        reg_info = self.layout[register_name]
+        reg_addr = base_address + reg_info['offset']
+        self.write_mul_func(reg_addr, data)
+
 
     def read_reg(self, module_num, register_name):
         self._validate_module_num(module_num)
         base_address = self.base_addresses[module_num]
         reg_info = self.layout[register_name]
         reg_value = self.read_func(base_address + reg_info['offset'])
-        return self.read_func(reg_addr)
+        return reg_value
+
+    def read_reg_mul(self, module_num, start_reg, length):
+        self._validate_module_num(module_num)
+        base_address = self.base_addresses[module_num]
+        reg_info = self.layout[start_reg]
+        reg_value = self.read_func(base_address + reg_info['offset'])
+        return self.read_mul_func(reg_value, length)
+
 
 
     def print_configuration(self, module_num):
@@ -591,18 +612,18 @@ class Status(Module):
     BASE_ADDRESSES = {0: 0xC03C}
     LAYOUT = STATUS_LAYOUT
 
-    def __init__(self, read_func, write_func):
+    def __init__(self):
         super().__init__("Status", Status.LAYOUT,
-                         read_func, write_func, Status.BASE_ADDRESSES)
+                         Status.BASE_ADDRESSES)
 
 class PWMEncoder(Module):
     BASE_ADDRESSES = {0: 0xCB00, 1: 0xCB08, 2: 0xCB10,
                       3: 0xCB18, 4: 0xCB20, 5: 0xCB28, 6: 0xCB30, 7: 0xCB38}
     LAYOUT = PWM_ENCODER_LAYOUT
 
-    def __init__(self, read_func, write_func):
+    def __init__(self):
         super().__init__("PWM_ENCODER", PWMEncoder.LAYOUT,
-                         read_func, write_func, PWMEncoder.BASE_ADDRESSES)
+                         PWMEncoder.BASE_ADDRESSES)
 
 
 class PWMDecoder(Module):
@@ -610,44 +631,44 @@ class PWMDecoder(Module):
                       8: 0xCB88, 9: 0xCB90, 10: 0xCB98, 11: 0xCBA0, 12: 0xCBA8, 13: 0xCBB0, 14: 0xCBB8, 15: 0xCBC0}
     LAYOUT = PWM_DECODER_LAYOUT
 
-    def __init__(self, read_func, write_func):
+    def __init__(self):
         super().__init__("PWM_DECODER", PWMDecoder.LAYOUT,
-                         read_func, write_func, PWMDecoder.BASE_ADDRESSES)
+                         PWMDecoder.BASE_ADDRESSES)
 
 
 class TOD(Module):
     BASE_ADDRESSES = {0: 0xCBC8, 1: 0xCBCC, 2: 0xCBD0, 3: 0xCBD2}
     LAYOUT = TOD_LAYOUT
 
-    def __init__(self, read_func, write_func):
-        super().__init__("TOD", TOD.LAYOUT, read_func, write_func, TOD.BASE_ADDRESSES)
+    def __init__(self):
+        super().__init__("TOD", TOD.LAYOUT,TOD.BASE_ADDRESSES)
 
 
 class TODWrite(Module):
     BASE_ADDRESSES = {0: 0xCC00, 1: 0xCC10, 2: 0xCC20, 3: 0xCC30}
     LAYOUT = TOD_WRITE_LAYOUT
 
-    def __init__(self, read_func, write_func):
+    def __init__(self):
         super().__init__("TOD_WRITE", TODWrite.LAYOUT,
-                         read_func, write_func, TODWrite.BASE_ADDRESSES)
+                         TODWrite.BASE_ADDRESSES)
 
 
 class TODReadPrimary(Module):
     BASE_ADDRESSES = {0: 0xCC40, 1: 0xCC50, 2: 0xCC60, 3: 0xCC80}
     LAYOUT = TOD_READ_PRIMARY_LAYOUT
 
-    def __init__(self, read_func, write_func):
+    def __init__(self):
         super().__init__("TOD_READ_PRIMARY", TODReadPrimary.LAYOUT,
-                         read_func, write_func, TODReadPrimary.BASE_ADDRESSES)
+                         TODReadPrimary.BASE_ADDRESSES)
 
 
 class TODReadSecondary(Module):
     BASE_ADDRESSES = {0: 0xCC90, 1: 0xCCA0, 2: 0xCCB0, 3: 0xCCC0}
     LAYOUT = TOD_READ_SECONDARY_LAYOUT
 
-    def __init__(self, read_func, write_func):
+    def __init__(self):
         super().__init__("TOD_READ_SECONDARY", TODReadSecondary.LAYOUT,
-                         read_func, write_func, TODReadSecondary.BASE_ADDRESSES)
+                         TODReadSecondary.BASE_ADDRESSES)
 
 
 class Input(Module):
@@ -655,8 +676,8 @@ class Input(Module):
                       8: 0xC250, 9: 0xC260, 10: 0xC280, 11: 0xC290, 12: 0xC2A0, 13: 0xC2B0, 14: 0xC2C0, 15: 0xC2D0}
     LAYOUT = INPUT_LAYOUT
 
-    def __init__(self, read_func, write_func):
-        super().__init__("INPUT", Input.LAYOUT, read_func, write_func, Input.BASE_ADDRESSES)
+    def __init__(self):
+        super().__init__("INPUT", Input.LAYOUT, Input.BASE_ADDRESSES)
 
 
 class REFMON(Module):
@@ -664,44 +685,44 @@ class REFMON(Module):
                       8: 0xC348, 9: 0xC354, 10: 0xC360, 11: 0xC36C, 12: 0xC380, 13: 0xC38C, 14: 0xC398, 15: 0xC3A4}
     LAYOUT = REF_MON_LAYOUT
 
-    def __init__(self, read_func, write_func):
+    def __init__(self ):
         super().__init__("REF_MON", REFMON.LAYOUT,
-                         read_func, write_func, REFMON.BASE_ADDRESSES)
+                         REFMON.BASE_ADDRESSES)
 
 class PWM_USER_DATA(Module):
     BASE_ADDRESSES = {0: 0xCBC8}  # Only one base address for PWM_USER_DATA
     LAYOUT = PWM_USER_DATA_LAYOUT
 
-    def __init__(self, read_func, write_func):
+    def __init__(self):
         super().__init__("PWM_USER_DATA", PWM_USER_DATA.LAYOUT,
-                         read_func, write_func, PWM_USER_DATA.BASE_ADDRESSES)
+                         PWM_USER_DATA.BASE_ADDRESSES)
 
 
 class EEPROM(Module):
     BASE_ADDRESSES = {0: 0xCF68}  # Only one base address for PWM_USER_DATA
     LAYOUT = EEPROM_LAYOUT
 
-    def __init__(self, read_func, write_func):
+    def __init__(self):
         super().__init__("EEPROM", EEPROM.LAYOUT,
-                         read_func, write_func, EEPROM.BASE_ADDRESSES)
+                         EEPROM.BASE_ADDRESSES)
 
 
 class EEPROM_DATA(Module):
     BASE_ADDRESSES = {0: 0xCF80}  # Only one base address for PWM_USER_DATA
     LAYOUT = BYTE_BUFFER_LAYOUT
 
-    def __init__(self, read_func, write_func):
+    def __init__(self):
         super().__init__("EEPROM_DATA", EEPROM_DATA.LAYOUT,
-                         read_func, write_func, EEPROM_DATA.BASE_ADDRESSES)
+                         EEPROM_DATA.BASE_ADDRESSES)
 
 
 class OUTPUT_TDC_CFG(Module):
     BASE_ADDRESSES = {0: 0xCCD0}  # Example of multiple base addresses
     LAYOUT = OUTPUT_TDC_CFG_LAYOUT
 
-    def __init__(self, read_func, write_func):
+    def __init__(self):
         super().__init__("OUTPUT_TDC_CFG", OUTPUT_TDC_CFG.LAYOUT,
-                         read_func, write_func, OUTPUT_TDC_CFG.BASE_ADDRESSES)
+                         OUTPUT_TDC_CFG.BASE_ADDRESSES)
 
 
 class OUTPUT_TDC(Module):
@@ -709,18 +730,18 @@ class OUTPUT_TDC(Module):
                       3: 0xCD18}  # Example of multiple base addresses
     LAYOUT = OUTPUT_TDC_LAYOUT
 
-    def __init__(self, read_func, write_func):
+    def __init__(self):
         super().__init__("OUTPUT_TDC", OUTPUT_TDC.LAYOUT,
-                         read_func, write_func, OUTPUT_TDC.BASE_ADDRESSES)
+                         OUTPUT_TDC.BASE_ADDRESSES)
 
 
 class INPUT_TDC(Module):
     BASE_ADDRESSES = {0: 0xCD20}  # Only one base address for INPUT_TDC
     LAYOUT = INPUT_TDC_LAYOUT
 
-    def __init__(self, read_func, write_func):
+    def __init__(self):
         super().__init__("INPUT_TDC", INPUT_TDC.LAYOUT,
-                         read_func, write_func, INPUT_TDC.BASE_ADDRESSES)
+                         INPUT_TDC.BASE_ADDRESSES)
 
 
 class PWM_SYNC_ENCODER(Module):
@@ -728,9 +749,9 @@ class PWM_SYNC_ENCODER(Module):
                       5: 0xCD94, 6: 0xCD98, 7: 0xCD9C}  # Example of multiple base addresses
     LAYOUT = PWM_SYNC_ENCODER_LAYOUT
 
-    def __init__(self, read_func, write_func):
+    def __init__(self):
         super().__init__("PWM_SYNC_ENCODER", PWM_SYNC_ENCODER.LAYOUT,
-                         read_func, write_func, PWM_SYNC_ENCODER.BASE_ADDRESSES)
+                         PWM_SYNC_ENCODER.BASE_ADDRESSES)
 
 
 class PWM_SYNC_DECODER(Module):
@@ -742,14 +763,15 @@ class PWM_SYNC_DECODER(Module):
     }
     LAYOUT = PWM_SYNC_DECODER_LAYOUT
 
-    def __init__(self, read_func, write_func):
+    def __init__(self):
         super().__init__("PWM_SYNC_DECODER", PWM_SYNC_DECODER.LAYOUT,
-                         read_func, write_func, PWM_SYNC_DECODER.BASE_ADDRESSES)
+                         PWM_SYNC_DECODER.BASE_ADDRESSES)
 
 
 # holder of registers
 class DPLL():
-    def __init__(self, i2c_dev, read_func, write_func):
+    def __init__(self, i2c_dev, 
+            read_func, read_mul_func, write_func, write_mul_func):
         # make modules inside the dpll
         self.modules = {}
 
@@ -759,7 +781,11 @@ class DPLL():
                           PWM_SYNC_DECODER, EEPROM, EEPROM_DATA ]
 
         for mod in modules_to_use:
-            self.modules[mod.__name__] = mod(read_func, write_func)
+            self.modules[mod.__name__] = mod()
+            self.modules[mod.__name__].read_func = read_func
+            self.modules[mod.__name__].read_mul_func = read_mul_func
+            self.modules[mod.__name__].write_func = write_func
+            self.modules[mod.__name__].write_mul_func = write_mul_func
         self.gpio = cm_gpios(i2c_dev)
 
 

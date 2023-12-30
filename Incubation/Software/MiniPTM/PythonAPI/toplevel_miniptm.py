@@ -160,8 +160,8 @@ class MiniPTM:
         # doesn't quite work , since phase measurement value fluctuates
         for i in range(100):
             with concurrent.futures.ThreadPoolExecutor() as executor:
-                futures = [executor.submit(self.boards[i].read_pcie_clk_phase_measurement, False)
-                           for i in range(len(self.boards))]
+                futures = [executor.submit(self.boards[j].read_pcie_clk_phase_measurement, False)
+                           for j in range(len(self.boards))]
 
                 results = [future.result()
                            for future in futures]  # get them in order
@@ -184,27 +184,38 @@ class MiniPTM:
             time.sleep(0.5)
 
     def do_dpll_over_fiber(self):
-        for board in self.boards:
-            # print(f"\n************** Board {board.board_num} SFP Status *************\n")
-            # board.print_sfps_info()
-            print(
-                f"\n************** Board {board.board_num} PWM Status *************\n")
-            board.print_pwm_channel_status()
-            print(
-                f"\n************** Board {board.board_num} Init DPOF **************\n")
-            board.init_pwm_dplloverfiber()
-            print(
-                f"\n************** Board {board.board_num} Print PWM Config *******\n")
-            if (board.board_num == 0):
-                board.pwm_switch_listen_channel(0)
-            board.dpll.modules["PWMEncoder"].print_all_registers(0)
-            board.dpll.modules["PWMDecoder"].print_all_registers(0)
+        for i in range(100):
+            print(f"Do dpll over fiber loop {i}")
+            for j in range(len(self.boards)):
+                self.boards[j].dpll_over_fiber_loop()
 
-        # hard code just for bring-up
-        for i in range(10):
-            for j in range(1):
-                self.boards[j].read_pwm_tod_incoming()
+            # ONLY USE CONCURRENT WHEN YOU KNOW IT WORKS, it will fail silently!
+            #with concurrent.futures.ThreadPoolExecutor() as executor:
+            #    futures = [executor.submit(
+            #        self.boards[j].dpll_over_fiber_loop) for j in range(len(self.boards))]
+            #    for future in concurrent.futures.as_completed(futures):
+            #        pass
             time.sleep(0.25)
+
+    def debug_dpll_over_fiber(self):
+        pass
+        # for i in range(len(board.dpll.modules["PWMEncoder"].BASE_ADDRESSES)):
+        #    board.dpll.modules["PWMEncoder"].print_all_registers(i)
+        # for i in range(len(board.dpll.modules["PWMDecoder"].BASE_ADDRESSES)):
+        #    board.dpll.modules["PWMDecoder"].print_all_registers(i)
+        # print(f"\n************** Board {board.board_num} SFP Status *************\n")
+        # board.print_sfps_info()
+        # print(
+        #    f"\n************** Board {board.board_num} PWM Status *************\n")
+        # board.print_pwm_channel_status()
+        # print(
+        #    f"\n************** Board {board.board_num} Init DPOF **************\n")
+        # board.init_pwm_dplloverfiber()
+
+        # print(
+        #    f"\n************** Board {board.board_num} Print PWM Config *******\n")
+        # board.dpll.modules["PWMEncoder"].print_all_registers(0)
+        # board.dpll.modules["PWMDecoder"].print_all_registers(0)
 
     def close(self):
         pass
@@ -221,12 +232,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="MiniPTM top level debug")
 
     parser.add_argument('command', type=str,
-                        help='What command to run, program / debug / flash')
+                        help='What command to run, program / debug / flash / read / write')
     parser.add_argument('--config_file', type=str,
                         default="8A34002_MiniPTMV3_12-27-2023_Julian_AllPhaseMeas.tcs", help="File to program")
     parser.add_argument('--eeprom_file', type=str,
                         default="8A34002_MiniPTMV3_12-29-2023_Julian_AllPhaseMeas_EEPROM.hex", help="File to flash to EEPROM")
     parser.add_argument('--board_id', type=int, help="Board number to program")
+    parser.add_argument("--reg_addr", type=str, default="0xc024",
+                        help="Register address to read or write")
+    parser.add_argument("--reg_val", type=str, default="0x0",
+                        help="Register address to read or write")
 
     args = parser.parse_args()
     if args.command == "program":
@@ -250,8 +265,33 @@ if __name__ == "__main__":
             top.flash_eeprom_one_board(
                 top.boards[args.board_id], args.eeprom_file)
         else:
-            top.program_all_boards(args.eeprom_file)
-
+            top.flash_all_boards_eeprom(args.eeprom_file)
+    elif args.command == "read":
+        top = MiniPTM()
+        if args.board_id is not None:
+            val = top.boards[args.board_id].i2c.read_dpll_reg_direct(
+                int(args.reg_addr, 16))
+            val = int(val, 16)
+            print(
+                f"Board {args.board_id} Read Register {args.reg_addr:02x} = {val:02x}")
+        else:
+            for board in top.boards:
+                val = board.i2c.read_dpll_reg_direct(int(args.reg_addr, 16))
+                print(
+                    f"Board {board.board_num} Read Register {args.reg_addr} = 0x{val:02x}")
+    elif args.command == "write":
+        top = MiniPTM()
+        if args.board_id is not None:
+            top.boards[args.board_id].i2c.write_dpll_reg_direct(
+                int(args.reg_addr, 16), int(args.reg_val, 16))
+            print(
+                f"Board {args.board_id} Write Register {args.reg_addr} = {args.reg_val}")
+        else:
+            for board in top.boards:
+                board.i2c.write_dpll_reg_direct(
+                    int(args.reg_addr, 16), int(args.reg_val, 16))
+                print(
+                    f"Board {board.board_num} Write Register {args.reg_addr} = {args.reg_val}")
     else:
         print(f"Invalid command, must be program or debug")
 
