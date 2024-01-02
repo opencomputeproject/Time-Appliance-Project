@@ -2,40 +2,216 @@ import time
 from collections import deque
 from board_miniptm import *
 from renesas_cm_registers import *
+import random
 
 
-# Higher level board wide state machine for using DPLL over fiber
-# for time and frequency transfer
-class DPOF_State(Enum):
-    DETECT = 1  # try to figure out which channels are PWM enabled
-    ENUMERATE = 2  # of the ones that are enabled, step through and get info
-    ENUMERATE_FAST = 3  # subset of ENUMERATE, when talking over PWM
-    # found a partner and engaging them in fast PWM data transfer
-    LOCK = 4  # found a partner who is superior, follow them
-    LOCK_EXPLORE = 5  # still have a partner I'm following, but check for others
-    LOCK_EXPLORE_FAST = 6  # similar idea to enumerate, checking for others
-    # found a partner and engaging in fast PWM data transfer
+
+"""
+For DPLL over fiber, it relies on three mechanisms:
+    1. TOD transmission by the encoders
+        a. Each encoder has it's own TOD
+        b. effectively 4 TX buffers
+    2. TOD reception by the decoders
+        a. Only one RX buffer, PWM_TOD 0xce80
+        b. only seconds portion is used, but 6 bytes of second data
+    3. PWM User Data transfer
+        a. Only one buffer for TX and RX
+        b. 128 byte 
 
 
-#######################
-# CHATGPT CODE , for more or less operating DPLL as a "NIC"
+For anything more than a few bytes, PWM User Data is the only reasonable mechanism
+
+Receive path is most constrained
+    1. Only one decoder should be enabled at a time
+    2. It may take time for a new frame to come in, even if other side wants to transmit
+
+Design mainly around optimizing the receive Path
+
+Goal of communication with TOD transmission / reception is to negotiate User data transfer
+
+Define protocol using upper two bytes of TOD, TOD_SEC[5] and TOD_SEC[4]
+
+Assume these second fields are dedicated, only using 4 bytes of seconds, 132 years good enough
+
+Protocol is a handshake process
+    1. One or both sides sends an initial (0x0) state data TOD with desired action and a random byte
+
+    2. If both random numbers are the same, then both sides must change their number and wait for other side to change too
+
+    3. Whichever side has the lowest random byte wins priority for it's action to be completed
+
+    4. If the winning side wants to query something, then it readies it's PWM user data for reception, otherwise it readies it for transmission
+
+    5. LOSING SIDE
+        a. If the request is a query, the losing side readies its PWM User data for transmission, but doesnt sent it yet, it sends accept (0x1) state data TOD
+        b. If the request is a write, the losing side readies its PWM User data for reception (clearing first byte of buffer), and sends accept (0x1) state data TOD
+
+    6. The winning side, upon reception of accept, also sends accept (0x1) state data 
+        a. If the request is a query, it waits for PWM User data reception completion 
+        b. If the request is a write, it goes through process of sending user data
+
+    7. If the request is a query or a write, the losing side sends end state (0x2) TOD first, and uses random byte field to send its PWM User status
+        a. If the request is a write, losing side RX side stores this full buffer and passes to higher layer, 128 byte buffer format defined elsewhere
+        b. If the request is a query, winner side RX side stores this full buffer and passes to higher layer, 128 byte buffer format defined elsewhere
+
+    8. Two options for winner
+        a. If done with transmit , go back to normal TOD transmission without data flag set
+        b. If more data to transmit, send initial (0x0) state data TOD with desired action. Repeated start kind of behavior, go back to 4
+
+    9. For receiver
+        a. If see data flag go away, then transaction is completed, handle data buffer however that data buffer is defined
+        b. If see data flag stay and state go back to 0x0, then go back to step 4 here
+
+Defined in the layout in registers map but description is here PWM_RX_INFO_LAYOUT
+
+TOD_SEC[5][7] = Data Flag, set when the TOD field is being aliased for handshaking, 0 when normal TOD
+TOD_SEC[5][6:5] = Handshake flag
+TOD_SEC[5][0:4] = Transaction ID
+    0x0 = Read chip info
+            a. Status of all inputs, STATUS.INX_MON_STATUS bytes for 0-15 (16 bytes)
+            b. DPLL Status of DPLLs , STATUS.DPLLX_STATUS bytes for 0-3 (4 bytes)
+            c. Input frequency monitor info, STATUS.INX_MON_FREQ_STATUS for 0-15, (32 bytes)
+            d. A name string, 16 bytes including null
+            e. TOD delta seen between received TOD frame and local TOD counter, used for round trip calculations (11 bytes)
+            f. 
+
+    0x1 = Write to board
+            a. LED values bit-wise, 1 byte
+            b. Force follow this requester, 1 byte, must be 0xa5 for this function, otherwise doesn't use
+                Follow frequency and TOD and PPS
+
+TOD_SEC[4][7:0] = Random value for winner / loser determination, PWM User data state from loser upon end state
+
+"""
 
 
-# Base layer representing a single PWM TX Channel
 
-class SenderStateMachine:
-    def __init__(self, board, tod_num=0):
-        self.state = "Idle"
-        self.tod_num = 0
-        self.packet_queue = []
-        self.sequence_number = 0
-        self.MAX_PAYLOAD_SIZE = 4  # Maximum payload size in bytes
+
+"""
+RX is the most constrained , so it needs the most logic
+
+1. Need to round robin through decoders often
+2. Want to detect
+    a. is there a PWM encoder on the other side
+    b. is the PWM encoder on the other side trying to initiate a request
+"""
+class DPOF_Top():
+    def __init__(self, board):
         self.board = board
+
+        ######## RX Logic variables
+        self.decoder_active = [0,0,0,0]
+        self.decoder_wants_transaction = [0,0,0,0]
+        self.active_decoder = 0
+        self.time_on_this_decoder = time.time()
+        self.round_robin_time_seconds = 5
+        self.pwm_tod_before_switch = 0
+
+        ######## TX Logic variables
+        # keep track of which encoder I'm trying to start a transaction on
+        self.starting_transaction = [0,0,0,0] 
+
+
+        # disable all decoders
+        for i in range(len(self.board.dpll.modules["PWMDecoder"].BASE_ADDRESSES)):
+            self.board.dpll.modules["PWMDecoder"].write_field(i,
+                  "PWM_DECODER_CMD", "ENABLE", 0)
+
+        # clear the PWM TOD, basically store what it was when everything was disabled
+        self.pwm_tod_before_switch = self.read_raw_hardware_buffer()
+
+        self.board.dpll.modules["PWMDecoder"].write_field(self.active_decoder,
+                "PWM_DECODER_CMD", "ENABLE", 1)
+
+    # returns data from hardware buffer only if new data is present
+    def read_raw_hardware_buffer(self):
+        """ Read data from the hardware's global receive buffer. """
+        # just read seconds portion
+        data = self.board.i2c.read_dpll_reg_multiple(0xce80, 0x5, 6)
+        hex_val = [hex(val) for val in data]
+        print(f"Read PWM Receive Board {self.board.board_num} TOD {hex_val}")
+        return data
+
+    def go_to_next_decoder():
+        self.board.dpll.modules["PWMDecoder"].write_field(self.active_decoder,
+                "PWM_DECODER_CMD", "ENABLE", 0)
+
+        # clear the PWM TOD, basically store what it was when everything was disabled
+        self.pwm_tod_before_switch = self.read_raw_hardware_buffer()
+
+        self.active_decoder = (self.active_decoder + 1) % 4
+
+
+
+        self.board.dpll.modules["PWMDecoder"].write_field(self.active_decoder,
+                "PWM_DECODER_CMD", "ENABLE", 1)
+        self.time_on_this_decoder = time.time()
+
+        if ( self.active_decoder == 0 ):
+            # went through one round robin, maybe do something
+            pass
+
+
+
+    
+    def handshake_complete():
+        # called when I started on an encoder already
+        # and I also get a response
+
+
+ENDED AROUND HERE, 
+    # top level TX function
+    def TX_try_start_transaction(self, encoder_id=0, transaction_id=0):
+        tod_sec_upper = (1<<7) + transaction_id & 0x1f
+        tod_sec_lower = random.randint(0,255) 
+
+        tod_sec = (tod_sec_upper << (8*5)) + (tod_sec_lower << (8*4))
+
+        # do a relative TOD jump, assume upper seconds aren't rolling over
+        self.board.write_tod_relative(encoder_id, 0, 0, tod_sec, True)
+        self.starting_transaction[encoder_id] = 1
+        
+
+    # top level function
+    def tick(self): 
+        data = self.read_raw_hardware_buffer()
+        if ( data == self.pwm_tod_before_switch ):
+            # data hasn't changed
+            if ( (time.time() - self.time_on_this_decoder) >= self.round_robin_time_seconds ):
+                # given this decoder enough time, haven't received anything, go to next
+                self.go_to_next_decoder()
+            else:
+                # data hasn't changed, but still giving this receiver time
+                return []
+        else:
+            # received new data on this decoder, it's active at least
+            self.decoder_active[self.active_decoder] = 1
+            print(f"Board {self.board.board_num} found active decoder {self.active_decoder}")
+
+            # check what the data is , does it want transaction
+            if ( data[-1] & 0x80 ):
+                if ( self.starting_transaction[self.active_decoder] ):
+                    self.handshake_complete()
+                print(f"Board {self.board.board_num} found decoder request {self.active_decoder}")
+                self.decoder_wants_transaction[self.active_decoder] = 1
+
+        return [] 
+
+
+
+class PWM_TX():
+    def __init__(self, board, tod_num=0):
+        self.tod_num = tod_num
+        self.board = board
+        self.MAX_PAYLOAD_SIZE = 4
+        self.sequence_number = 0
+        self.last_tx_packet = []
+        self.state = "IDLE"
+        self.ack_num = 0
 
         # enable TOD
         self.board.dpll.modules["TOD"].write_field(self.tod_num,
                                                    "TOD_CFG", "TOD_ENABLE", 1)
-
         # enable TOD encoder
         self.board.dpll.modules["PWMEncoder"].write_field(self.tod_num,
                                                           "PWM_ENCODER_CMD", "TOD_AUTO_UPDATE", 1)
@@ -44,202 +220,120 @@ class SenderStateMachine:
         self.board.dpll.modules["PWMEncoder"].write_field(self.tod_num,
                                                           "PWM_ENCODER_CMD", "ENABLE", 1)
 
-    def handle_data(self, data):
-        """ Entry point to handle new data to send. """
-        if self.state == "Idle":
-            self._fragment_and_queue_data(data)
-            self.state = "Buffering"
 
-    def _fragment_and_queue_data(self, data):
-        """ Breaks down the data into packets and adds them to the queue. """
-        while data:
-            fragment = data[:self.MAX_PAYLOAD_SIZE]
-            data = data[self.MAX_PAYLOAD_SIZE:]
-            packet = self._create_packet(fragment, continuation=bool(data))
-            self.packet_queue.append(packet)
 
-    def _create_packet(self, data, continuation):
-        """ Create a data packet with header and payload, applying bit masks to fields. """
-        payload_size = len(data)
-        continuation_flag = 0x08 if continuation else 0x00
+    # NOT FOR SENDING ACK PACKETS
+    # payload is a list
+    def write_single_payload(self, payload, is_continuation=False):
+        if len(payload) > self.MAX_PAYLOAD_SIZE:
+            return False
+        if self.state != "IDLE":
+            return False
+       
+        header_data = 0x80 # Data flag
+        header_data += ( len(payload) & 0x7 ) << 4 # Payload size
+        header_data += int(is_continuation) << 3
+        header_data += (self.sequence_number & 0x7)
 
-        # Apply bit masks to each field
-        header_flag_masked = 0x80  # Fixed value, occupies 1 bit (bit 7)
-        # Occupies 3 bits (bits 4-6)
-        payload_size_masked = (payload_size << 4) & 0x70
-        # Occupies 3 bits (bits 0-2)
-        sequence_number_masked = self.sequence_number & 0x07
-        # Occupies 1 bit (bit 3), double for ack
-        continuation_flag_masked = (continuation_flag & 0x01) << 3
+        self.ack_num = self.sequence_number
 
-        # Combine the fields to form the header
-        header = header_flag_masked | payload_size_masked | sequence_number_masked | continuation_flag_masked
+        self.sequence_number += 1
+        self.sequence_number = self.sequence_number & 0x7
 
-        self.sequence_number = (self.sequence_number + 1) % 7
+        # ok have header, now add payload together for full packet
+        pkt_data = [header_data] + payload 
 
-        # Packet format: [Header] + [Data Payload] + [Reserved/TOD Ticks]
-        packet = [header] + data + [0] * \
-            (self.MAX_PAYLOAD_SIZE - len(data)) + [0x00]
-        # print(f" Create packet {packet}")
-        return packet
-
-    def _set_tod_counter(self, packet):
-        """ Set the TOD counter for the specified port with the packet. """
-        hex_val = [hex(val) for val in packet]
-        print(
-            f"Setting TOD counter for board {self.board.board_num} port {self.tod_num} with packet: {hex_val}, {packet}")
         tod_sec = 0
-        for i in range(len(packet)):
-            # reverse order packet, header is first
-            tod_sec += packet[i] << (8*(5-i))
+        for i in range(len(pkt_data)):
+            tod_sec += pkt_data[i] << (8*(5-i))
 
-            # set nanoseconds to a large value, let it roll over quick
-            # here basically 1usecond off from second
-            self.board.write_tod_absolute(self.tod_num, 0, 999999000, tod_sec)
+        hex_val = [hex(val) for val in pkt_data]
+        print(f"Write single payload {hex_val}")
+        # write this to TOD, give it 200ms to process
+        self.board.write_tod_absolute(self.tod_num, 0, 800000000, tod_sec)
+        self.last_tx_packet = list(pkt_data)
+        self.state = "WAIT_TX_GO_OUT_ACK"
+       
+    def write_ack_packet(self, header):
+        header_val = header[0]
+        seq_num_to_ack = header_val & 0x7
 
-            self.last_tod = tod_sec  # keep track of this
+        header_data = 0x80
+        header_data += 1 << 3 # continuation / ack flag
+        header_data += seq_num_to_ack
 
-    def tick(self):
-        """ Simulates the passing of time or external events triggering state changes. """
-        print(f"Board {self.board.board_num} sender state machine tick")
-        if self.state == "Buffering" and self.packet_queue:
-            packet = self.packet_queue.pop(0)
-            self._set_tod_counter(packet)
-            self.state = "Transmitting"
-        elif self.state == "Transmitting":
-            if self._has_tod_rolled_over():
-                self.state = "Waiting"
-        elif self.state == "Waiting":
-            if not self.packet_queue:
-                self.state = "Idle"
-            else:
-                self.state = "Buffering"
+        pkt_data = [header_data]
 
-    def _has_tod_rolled_over(self):
-        """ Check if the TOD has rolled over for the specified port. """
+        tod_sec = 0
+        for i in range(len(pkt_data)):
+            tod_sec += pkt_data[i] << (8*(5-i))
+
+        # write this to TOD, give it 200ms to process
+        self.board.write_tod_absolute(self.tod_num, 0, 800000000, tod_sec)
+        self.last_tx_packet = list(pkt_data)
+        self.state = "WAIT_TX_GO_OUT_NO_ACK"
+
+
+    def check_has_tx_gone_out(self):
+        # read current TOD seconds
         #  read TOD immediately
+
+        if ( self.is_tx_idle() ): 
+            return True
+
         self.board.dpll.modules["TODReadPrimary"].write_reg(self.tod_num,
-                                                            "TOD_READ_PRIMARY_CMD", 0x1)  # single shot, immediate
+            "TOD_READ_PRIMARY_CMD", 0x1)  # single shot, immediate
 
-        cur_tod = self.board.dpll.modules["TODReadPrimary"].read_reg_mul(self.tod_num,
-                                                                         "TOD_READ_PRIMARY_SECONDS_0_7", 6)
-        cur_tod_val = 0
-        for i in range(len(cur_tod)):
-            cur_tod_val += cur_tod[i] << (8*i)
-        hex_val = [hex(val) for val in cur_tod]
-        print(f"Board {self.board.board_num} Read cur_tod {hex_val} <-> {cur_tod} seconds {cur_tod_val} , sent tod {self.last_tod}")
-
-        if (cur_tod_val > self.last_tod):
-            print(f"TOD Rolled over!")
+        cur_tod_seconds = self.board.dpll.modules["TODReadPrimary"].read_reg(0,
+                "TOD_READ_PRIMARY_SECONDS_0_7")
+       
+        # assume you're checking this at least once every 255 seconds!
+        if cur_tod_seconds > 0:
+            print(f"Board {self.board.board_num} TX{self.tod_num} Has gone out! Seconds rolled over {cur_tod_seconds}")
+            self.last_tx_packet = []
+            if ( self.state == "WAIT_TX_GO_OUT_ACK" ): 
+                self.state = "WAIT_ACK"
+            elif ( self.state == "WAIT_TX_GO_OUT_NO_ACK" ):
+                self.state = "IDLE"
             return True
         else:
-            print(f"TOD did not rollover!")
+            print(f"Board {self.board.board_num} TX{self.tod_num} has not gone out, seconds = {cur_tod_seconds}")
             return False
 
-    def get_queue_length(self):
-        """ Returns the number of packets remaining in the queue. """
-        return len(self.packet_queue)
+    def got_incoming(self, header):
+        data_flag = (header >> 7) & 0x1 
+        ack_flag = (header >> 3 ) & 0x1
+        payload_len = (header >> 4) & 0x7
+        seq_num = (header & 0x7) 
 
-    def flush_and_reset(self):
-        """ Empties the queue and resets the state machine to its initial state. """
-        self.packet_queue.clear()
-        self.state = "Idle"
-        self.current_port = 0
-        self.sequence_number = 0
+        print(f"Board {self.board.board_num} TX{self.tod_num} got incoming header=0x{header:02x}")
+        print(f"    Seq_num = {seq_num}, ack_num = {self.ack_num}, data={data_flag}, cont/ack={ack_flag}, len={payload_len}")
+        if ( data_flag==1 and ack_flag==1 and payload_len==0 and seq_num == self.ack_num ):
+            print(f"Got ack packet, current state = {self.state}")
+            if self.state == "WAIT_ACK":
+                print(f"Got ack packet I needed, go back to idle")
+                self.state = "IDLE"
 
-    # Additional methods can be added as needed
+    def is_tx_wait_ack(self):
+        return self.state == "WAIT_ACK" 
+
+    def is_tx_idle(self):
+        if len(self.last_tx_packet) == 0 and self.state =="IDLE":
+            return True
+        return False
 
 
-# Top level manager for all PWM TX
 
-class DeviceSenderStateMachine:
+# Define some simple primitive operations, one PWM_RX per DPLL
+class PWM_RX():
     def __init__(self, board):
-        self.transmitters = [SenderStateMachine(board, i) for i in range(4)]
         self.board = board
-
-    def handle_data(self, port, data):
-        """ Handle data for a specific transmitter. """
-        if 0 <= port < len(self.transmitters):
-            self.transmitters[port].handle_data(data)
-        else:
-            raise ValueError("Invalid port number")
-
-    def tick(self):
-        """ Update the state of each transmitter. """
-        print(f"Board {self.board.board_num} DeviceSenderStateMachine tick")
-        for transmitter in self.transmitters:
-            transmitter.tick()
-
-    def get_queue_length(self, port):
-        """ Get the number of packets remaining in the queue for a specific transmitter. """
-        if 0 <= port < len(self.transmitters):
-            return self.transmitters[port].get_queue_length()
-        else:
-            raise ValueError("Invalid port number")
-
-    def flush_and_reset(self, port):
-        """ Flush and reset a specific transmitter. """
-        if 0 <= port < len(self.transmitters):
-            self.transmitters[port].flush_and_reset()
-        else:
-            raise ValueError("Invalid port number")
-
-    def flush_and_reset_all(self):
-        """ Flush and reset all transmitters. """
-        for transmitter in self.transmitters:
-            transmitter.flush_and_reset()
-
-
-# Top level transmit
-class DataExchangeProtocol:
-    # Message Type Indicators
-    QUERY_STRING = 0x01
-    QUERY_NUMERIC = 0x02
-    SET_NUMERIC = 0x03
-
-    def __init__(self, device_state_machine):
-        self.device = device_state_machine
-
-    def query_string(self, port, string_id):
-        """ Query for a specific string of data. """
-        payload = [self.QUERY_STRING, string_id]
-        self.device.handle_data(port, payload)
-
-    def query_numeric(self, port, numeric_id):
-        """ Query for numerical data of a known identifier. """
-        payload = [self.QUERY_NUMERIC, numeric_id]
-        self.device.handle_data(port, payload)
-
-    def set_numeric_value(self, port, address, value):
-        """ Set a specific numerical value at a given address. """
-        payload = [self.SET_NUMERIC, address] + self._value_to_bytes(value)
-        self.device.handle_data(port, payload)
-
-    def _value_to_bytes(self, value):
-        """ Convert a numerical value to a list of bytes. """
-        # Assuming value is an integer, adjust as needed for other types
-        # Adjust size and byte order as needed
-        return value.to_bytes(4, byteorder='big')
-
-
-# Receive stack all in one
-class ReceiverProtocol:
-    def __init__(self, board):
-        self.partial_message = b''
-        self.last_packet = None
-        self.buffer_change_count = 0
-        self.got_query = []
-        self.MAX_PAYLOAD_SIZE = 4  # Maximum payload size in bytes
-        self.board = board
+        self.MAX_PAYLOAD_SIZE = 4
+        self.last_read = []
         # disable all decoders
         for i in range(len(self.board.dpll.modules["PWMDecoder"].BASE_ADDRESSES)):
             self.board.dpll.modules["PWMDecoder"].write_field(i,
                                                               "PWM_DECODER_CMD", "ENABLE", 0)
-
-    def tick(self):
-        print(f"Board {self.board.board_num} ReceiverProtocol tick")
-        got_ack, ack_packet_to_send = self.process_incoming_data()
-        return got_ack, ack_packet_to_send
 
     def enable_port(self, port):
         """ Enable a specific port for receiving data. """
@@ -262,159 +356,18 @@ class ReceiverProtocol:
         else:
             raise ValueError("Invalid port number")
 
-    def read_hardware_buffer(self):
-        """ Read data from the hardware's global receive buffer. """
-        # just read seconds portion
-        data = self.board.i2c.read_dpll_reg_multiple(0xce80, 0x5, 6)
-        hex_val = [hex(val) for val in data]
-        print(f"Read PWM Receive Board {self.board.board_num} TOD {hex_val}")
-        return data
-
-    def _is_data_packet(self, data):
-        """ Check if the received data is a data packet. """
-        return data[5] & 0x80 == 0x80
-
-    # returns if it received it ACK packet
-    # and the ack packet to send if needed
-    def process_incoming_data(self):
-        """ Process incoming data from the hardware buffer. """
-        packet = self.read_hardware_buffer()
-        if packet and self._is_data_packet(packet) and packet != self.last_packet:
-            self.last_packet = packet
-            self.buffer_change_count += 1
-            was_ack = self.process_packet(packet)
-            return was_ack, self.get_acknowledge_packet(packet)
-        return False, []
-
-    def get_acknowledge_packet(self, in_packet):
-        """ Create a data packet with header and payload, applying bit masks to fields. """
-        seq_num = in_packet[0] & 0x7
-        payload_size = 0
-
-        # Apply bit masks to each field
-        header_flag_masked = 0x80  # Fixed value, occupies 1 bit (bit 7)
-        # Occupies 3 bits (bits 4-6)
-        payload_size_masked = (payload_size << 4) & 0x70
-        sequence_number_masked = seq_num & 0x07  # Occupies 3 bits (bits 0-2)
-        # Occupies 1 bit (bit 3), doubles for ack
-        continuation_flag_masked = 1 << 3
-
-        # Combine the fields to form the header
-        header = header_flag_masked | payload_size_masked | sequence_number_masked | continuation_flag_masked
-
-        data = []  # nothing
-        # Packet format: [Header] + [Data Payload] + [Reserved/TOD Ticks]
-        packet = [header] + data + [0] * \
-            (self.MAX_PAYLOAD_SIZE - len(data)) + [0x00]
-        return packet
-
-    def process_packet(self, packet):
-        """ Process an individual packet. """
-        if not packet:
-            return False
-        # it's in reverse order from how it's transmitted, flip it to make it more sequential
-        packet = packet.reverse()
-
-        header = packet[0]
-        payload = packet[1:]
-        if header & 0x80 == 0x80:  # Check if it's a data packet
-            payload_size = (header & 0x70) >> 4
-            continuation = header & 0x08 == 0x08
-            message_type = payload[0]
-            message_data = payload[1:1+payload_size]
-
-            if (payload_size == 0 and continuation):  # ack
-                print(f"Received ack packet")
-                self.partial_message = b''
-                return True
-
-            # Handling long messages
-            self.partial_message += bytes(message_data)
-            if not continuation:
-                self.handle_complete_message(
-                    message_type, self.partial_message)
-                self.partial_message = b''
-        return False
-
-    def handle_complete_message(self, message_type, message):
-        """ Handle a complete message based on its type. """
-        self.got_query = [message_type, message]
-        print(f"Got complete message {message_type} -> {message}")
-        return
-        if message_type == DataExchangeProtocol.QUERY_STRING:
-            # Process string query
-            string_id = message[0]
-            self.handle_string_query(string_id)
-        elif message_type == DataExchangeProtocol.QUERY_NUMERIC:
-            # Process numeric query
-            numeric_id = message[0]
-            self.handle_numeric_query(numeric_id)
-        elif message_type == DataExchangeProtocol.SET_NUMERIC:
-            # Process set numeric value
-            address, value = message[0], int.from_bytes(
-                message[1:], byteorder='big')
-            self.handle_set_numeric(address, value)
-
-    def handle_string_query(self, string_id):
-        """ Handle a string query request. """
-        # Logic to handle string query
-        pass
-
-    def handle_numeric_query(self, numeric_id):
-        """ Handle a numeric query request. """
-        # Logic to handle numeric query
-        pass
-
-    def handle_set_numeric(self, address, value):
-        """ Handle setting a numeric value. """
-        # Logic to set the numeric value
-        pass
 
 
-class DPOF_Top():
-    def __init__(self, board):
-        print(f"DPOF_Top init board {board.board_num}")
-        self.RX = ReceiverProtocol(board)
-        self.TX = DeviceSenderStateMachine(board)
-        self.TX_Protocol = DataExchangeProtocol(self.TX)
-        self.board = board
-        self.state = DPOF_State.DETECT
-        self.cur_rx_port = -1
-        self.cur_rx_port_pktcnt = 0
-        self.start_time = -1
-        print(f"DPOF_Top done init board {board.board_num}")
 
-    def run_loop(self):
-        print(f"HI FROM DPOF")
-        if ( self.state == DPOF_State.DETECT):
-            print(f" IN DETECT STATE")
-            self.detect_state()
-        print(f" Done with state processing")
-        self.TX.tick()
-        got_ack, ack_packet_to_send = self.RX.tick()
-        hex_val = [hex(val) for val in ack_packet_to_send]
-        print(f"RX Tick, got_ack={got_ack}, ack_to_send={hex_val} <-> {ack_packet_to_send}")
-        if (len(self.RX.got_query)):
-            print(f"Got full query from other side!")
+    def read_packet(self):
+        hw_data = self.read_hardware_buffer()
+        if len(hw_data):
+            hw_data.reverse()
+            header = hw_data[0]
+            if ( header & 0x80 ): # data packet flag
+                payload_len = (header >> 4) & 0x7
+                return [header], hw_data[1:payload_len+1]
+        else:
+            return [], []
+        return [], []
 
-
-    def detect_state(self):
-        print(f"DPOF Top board {self.board.board_num} detect state function")
-        if (self.cur_rx_port == -1):  # first time
-            self.RX.enable_port(0)
-            self.cur_rx_port = 0
-            self.cur_rx_port_pktcnt = 0
-            self.start_time = time.time()
-            # send out a query by default on all ports
-            for port in range(4):
-                self.TX_Protocol.query_numeric(port, 0xa)
-
-        if (time.time() - self.start_time > 5 and
-                self.cur_rx_port_pktcnt == 0):
-            # been on this port for 5 seconds
-            # haven't received any packets
-            # move to next port
-            self.RX.disable_port(self.cur_rx_port)
-            self.cur_rx_port = (self.cur_rx_port + 1) % 4
-            self.cur_rx_port_pktcnt = 0
-            self.RX.enable_port(self.cur_rx_port)

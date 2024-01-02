@@ -416,7 +416,24 @@ BYTE_BUFFER_LAYOUT = {
 }
 
 
-
+PWM_RX_INFO_LAYOUT = {
+        "PWM_TOD_SUBNS": {"offset":0x000, "fields": {"VALUE": BitField(0,8)}},
+        "PWM_TOD_NS_7_0": {"offset":0x001, "fields": {"VALUE": BitField(0,8)}},
+        "PWM_TOD_NS_15_8": {"offset":0x002, "fields": {"VALUE": BitField(0,8)}},
+        "PWM_TOD_NS_23_16": {"offset":0x003, "fields": {"VALUE": BitField(0,8)}},
+        "PWM_TOD_NS_31_24": {"offset":0x004, "fields": {"VALUE": BitField(0,8)}},
+        "PWM_TOD_SEC_7_0": {"offset":0x005, "fields": {"VALUE": BitField(0,8)}},
+        "PWM_TOD_SEC_15_8": {"offset":0x006, "fields": {"VALUE": BitField(0,8)}},
+        "PWM_TOD_SEC_23_16": {"offset":0x007, "fields": {"VALUE": BitField(0,8)}},
+        "PWM_TOD_SEC_31_24": {"offset":0x008, "fields": {"VALUE": BitField(0,8)}},
+        "PWM_TOD_SEC_39_32": {"offset":0x009, "fields": {"VALUE": BitField(0,8),
+            "PWM_RandID": BitField(0,8) } },
+        "PWM_TOD_SEC_47_40": {"offset":0x00a, "fields": {"VALUE": BitField(0,8)} 
+            "DataFlag": BitField(7,1),
+            "HandshakeData": BitField(5,2),
+            "PWM_Transaction_ID": BitField(0,5),                  
+            },
+}
 
 
 
@@ -568,7 +585,8 @@ class Module:
         self._validate_module_num(module_num)
         base_address = self.base_addresses[module_num]
         reg_info = self.layout[start_reg]
-        reg_value = self.read_func(base_address + reg_info['offset'])
+        reg_value = (base_address + reg_info['offset'])
+        #print(f"Read reg mul mod={module_num} base={base_address:02x} start={reg_value} len={length}")
         return self.read_mul_func(reg_value, length)
 
 
@@ -768,6 +786,14 @@ class PWM_SYNC_DECODER(Module):
                          PWM_SYNC_DECODER.BASE_ADDRESSES)
 
 
+
+class PWM_Rx_Info(Module):
+    BASE_ADDRESSES = {0:0xce80}
+    LAYOUT = PWM_RX_INFO_LAYOUT
+    def __init__(self):
+        super().__init__("PWM_Rx_Info", PWM_Rx_Info.LAYOUT,
+                         PWM_Rx_Info.BASE_ADDRESSES)
+
 # holder of registers
 class DPLL():
     def __init__(self, i2c_dev, 
@@ -778,7 +804,7 @@ class DPLL():
         modules_to_use = [Status, PWMEncoder, PWMDecoder, TOD, TODWrite, TODReadPrimary,
                           TODReadSecondary, Input, REFMON, PWM_USER_DATA,
                           OUTPUT_TDC_CFG, OUTPUT_TDC, INPUT_TDC, PWM_SYNC_ENCODER,
-                          PWM_SYNC_DECODER, EEPROM, EEPROM_DATA ]
+                          PWM_SYNC_DECODER, EEPROM, EEPROM_DATA, PWM_Rx_Info ]
 
         for mod in modules_to_use:
             self.modules[mod.__name__] = mod()

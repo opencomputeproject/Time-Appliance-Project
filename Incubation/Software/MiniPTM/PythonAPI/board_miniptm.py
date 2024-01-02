@@ -12,7 +12,7 @@ from renesas_cm_gpio import gpiomode
 from enum import Enum
 # a single MiniPTM board is characterized by its PCIe info and i2c adapter
 
-from dpll_over_fiber_miniptm import DPOF_Top
+#from dpll_over_fiber_miniptm import DPOF_Top
 
 
 class Single_MiniPTM:
@@ -32,7 +32,7 @@ class Single_MiniPTM:
                          self.i2c.write_dpll_reg_direct,
                          self.i2c.write_dpll_multiple)
 
-        self.dpof = DPOF_Top(self)
+        #self.dpof = DPOF_Top(self)
 
     def led_visual_test(self):
         for i in range(4):
@@ -260,13 +260,32 @@ class Single_MiniPTM:
         data += [tod_subns & 0xff]
         data += [byte for byte in tod_ns.to_bytes(4, byteorder='little')]
         data += [byte for byte in tod_sec.to_bytes(6, byteorder='little')]
-        base_addr = self.dpll.modules["TODWrite"].BASE_ADDRESSES[tod_num]
-        reg_addr = self.dpll.modules["TODWrite"].LAYOUT["TOD_WRITE_SUBNS"]["offset"]
-        addr = base_addr + reg_addr
         # print(f"Write TOD Absolute addr 0x{addr:x} -> {data}")
-        self.i2c.write_dpll_multiple(addr, data)
+        self.dpll.modules["TODWrite"].write_reg_mul(tod_num, "TOD_WRITE_SUBNS", 
+                data)
         # write the trigger for immediate absolute
+        self.dpll.modules["TODWrite"].write_reg(tod_num, "TOD_WRITE_CMD", 0x0)
         self.dpll.modules["TODWrite"].write_reg(tod_num, "TOD_WRITE_CMD", 0x1)
+
+    def write_tod_relative(self, tod_num, tod_subns=0, tod_ns=0, tod_sec=0, add=True):
+        data = []
+        data += [tod_subns & 0xff]
+        data += [byte for byte in tod_ns.to_bytes(4, byteorder='little')]
+        data += [byte for byte in tod_sec.to_bytes(6, byteorder='little')]
+        # print(f"Write TOD Absolute addr 0x{addr:x} -> {data}")
+        self.dpll.modules["TODWrite"].write_reg_mul(tod_num, "TOD_WRITE_SUBNS", 
+                data)
+        self.dpll.modules["TODWrite"].write_reg(tod_num, "TOD_WRITE_CMD", 0x0)
+        if ( add ):
+            # immediate delta TOD plus
+            self.dpll.modules["TODWrite"].write_reg(tod_num, "TOD_WRITE_CMD", 0x11)
+        else:
+            # immediate delta TOD minus
+            self.dpll.modules["TODWrite"].write_reg(tod_num, "TOD_WRITE_CMD", 0x21)
+
+
+
+
 
     def init_pwm_dplloverfiber(self):
         # disable all decoders
@@ -359,6 +378,6 @@ class Single_MiniPTM:
     # call this periodically , non blocking "super-loop" function
     def dpll_over_fiber_loop(self):
         print(f"Board {self.board_num} dpll_over_fiber_loop")
-        self.dpof.run_loop()
+        #self.dpof.run_loop()
         #self.dpof.tick()
-        print(f"Board {self.board_num} done dpll_over_fiber_loop")
+        #print(f"Board {self.board_num} done dpll_over_fiber_loop")

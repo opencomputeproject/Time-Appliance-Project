@@ -6,7 +6,7 @@ from renesas_cm_configfiles import *
 import concurrent.futures
 import time
 import argparse
-
+from dpll_over_fiber_miniptm import *
 
 class MiniPTM:
     def __init__(self):
@@ -183,22 +183,278 @@ class MiniPTM:
             print(f"Measured phase error {phase_err}")
             time.sleep(0.5)
 
-    def do_dpll_over_fiber(self):
-        for i in range(100):
-            print(f"Do dpll over fiber loop {i}")
-            for j in range(len(self.boards)):
-                self.boards[j].dpll_over_fiber_loop()
 
-            # ONLY USE CONCURRENT WHEN YOU KNOW IT WORKS, it will fail silently!
-            #with concurrent.futures.ThreadPoolExecutor() as executor:
-            #    futures = [executor.submit(
-            #        self.boards[j].dpll_over_fiber_loop) for j in range(len(self.boards))]
-            #    for future in concurrent.futures.as_completed(futures):
-            #        pass
-            time.sleep(0.25)
+
+
+    def do_dpll_over_fiber_with_ack(self):
+        tx_0 = PWM_TX(self.boards[0], 0)
+        tx_1 = PWM_TX(self.boards[1], 0)
+        rx_0 = PWM_RX(self.boards[0])
+        rx_1 = PWM_RX(self.boards[1])
+
+        value = "Hello world"
+        chunk_size = tx_0.MAX_PAYLOAD_SIZE
+        chunks = [list(value.encode()[i:i + chunk_size]) for i in range(0, len(value), chunk_size)]
+        chunk_count = 0
+
+        rx_0.enable_port(0)
+        rx_1.enable_port(0)
+
+        rx_1_packet_content = []
+        for loop_test in range(20):
+
+            value = chunks[chunk_count]
+            last_pkt = False
+            if ( chunk_count == len(chunks)-1):
+                last_pkt = True
+            chunk_count = (chunk_count + 1) % len(chunks)
+            print("\n\n")
+            hex_value = [hex(val) for val in value]
+            print(f"Value {hex_value}, Step 1, Send from TX0")
+
+            # loop to wait for TX to be ready
+            for j in range(20):
+                if ( tx_0.check_has_tx_gone_out() ):
+                    break
+                else:
+                    time.sleep(0.1)
+
+            tx_0.write_single_payload(value, not last_pkt)
+            went_out = False
+            for i in range(20):
+                if ( tx_0.check_has_tx_gone_out() ):
+                    went_out = True
+                    break
+                time.sleep(0.25)
+
+            if not went_out:
+                print(f" Step 1 TX didn't go out, end!")
+                return
+        
+            
+            print("\n\n")
+            print(f"Value {value}, Step 2, has gone from TX0, check RX1")
+            got_data = False
+            rx_1_rcvd_header = 0
+            for i in range(20):
+                header, data = rx_1.read_packet()
+                if len(header):
+                    #got a packet, give it to TX stack in case it needs it
+                    tx_1.got_incoming(header[0])
+    
+                    #got a packet, check data
+                    rx_1_rcvd_header = header
+
+                    hex_val = [hex(val) for val in data]
+                    print(f"RX1 got packet data {hex_val}")
+
+                    rx_1_packet_content += data
+                    continue_flag = (header[0] >> 3 ) & 0x1
+                    if ( continue_flag == 0 ):
+                        print(f"\n\n*************** RX1 GOT FULL PAYLOAD {rx_1_packet_content} ********\n\n")
+                    
+                    if data == value:
+                        print(f"RX1 got ping, now send ack")
+                        got_data = True
+                        break
+                time.sleep(0.25)
+
+            if not got_data:
+                print(f" Step 2 failed to get Data on RX1, end!")
+                return
+
+
+            print("\n\n")
+            print(f"Value {value}, Step 3, has gone from TX0 to RX1, send ACK to TX0")
+            # loop to wait for TX to be ready
+            for j in range(20):
+                if ( tx_1.check_has_tx_gone_out() ):
+                    break
+                else:
+                    time.sleep(0.1)
+
+            tx_1.write_ack_packet(rx_1_rcvd_header)
+            went_out = False
+            for i in range(20):
+                if ( tx_1.check_has_tx_gone_out() ):
+                    went_out = True
+                    break
+                time.sleep(0.25)
+
+            if not went_out:
+                print(f" Step 3 TX didn't go out, end!")
+                return
+
+            print("\n\n")
+            print(f"Value {value}, Step 4, has gone from TX0 to RX1, TX1 sent ack, check on RX0")
+            got_data = False
+            for i in range(20):
+                header, data = rx_0.read_packet()
+                if len(header):
+                    # got a packet, give it to TX stack in case it needs
+                    tx_0.got_incoming(header[0])
+                    if ( tx_0.is_tx_idle() ):
+                        print(f"TX0 got ack from RX1")
+                        got_data = True
+                        break
+                time.sleep(0.25)
+
+            if not got_data:
+                print(f" Step 4 failed to get ACK from RX1, end!")
+                return
+
+
+
+
+
+    # Demo simple tx / rx test here using low level DPLL over fiber classes
+    def do_dpll_over_fiber_pingpong(self):
+        tx_0 = PWM_TX(self.boards[0], 0)
+        tx_1 = PWM_TX(self.boards[1], 0)
+        rx_0 = PWM_RX(self.boards[0])
+        rx_1 = PWM_RX(self.boards[1])
+
+        values = [0xaa, 0xcc, 0xde, 0xba, 0x11]
+
+        rx_0.enable_port(0)
+        rx_1.enable_port(0)
+        
+        # simple ping pong loop forever
+        # setup TX on TX0 and wait for RX1 to get it
+        for loop_test in range(10):
+            for value in values:
+
+                print("\n\n")
+                print(f"Value {value}, Step 1, Send from TX0")
+                tx_0.write_single_payload([value], False)
+                went_out = False
+                for i in range(20):
+                    if ( tx_0.check_has_tx_gone_out() ):
+                        went_out = True
+                        break
+                    time.sleep(0.25)
+
+                if not went_out:
+                    print(f" Step 1 TX didn't go out, end!")
+                    return
+
+                print("\n\n")
+                print(f"Value {value}, Step 2, has gone from TX0, check RX1")
+                got_data = False
+                for i in range(20):
+                    header, data = rx_1.read_packet()
+                    if len(header):
+                        #got a packet, check data
+                        hex_val = [hex(val) for val in data]
+                        print(f"RX1 got packet data {hex_val}")
+                        if data[0] == value:
+                            print(f"RX1 got ping, now send pong")
+                            got_data = True
+
+                            #debug hack, continue to read RX1 for some time
+                            #for j in range(20):
+                            #    print(f"Debug RX1 read PWM incoming more {j}")
+                            #    header, data = rx_1.read_packet()
+                            #    time.sleep(0.25)
+                            break
+                    time.sleep(0.25)
+
+                if not got_data:
+                    print(f" Step 2 failed to get Data on RX1, end!")
+                    return
+
+                print("\n\n")
+                print(f"Value {value}, Step 3, has gone from TX0 to RX1, now send from TX1")
+                tx_1.write_single_payload([value], False)
+                went_out = False
+                for i in range(20):
+                    if ( tx_1.check_has_tx_gone_out() ):
+                        went_out = True
+                        break
+                    time.sleep(0.25)
+
+                if not went_out:
+                    print(f" Step 3 failed, TX1 didn't send! End")
+                    return
+
+                print("\n\n")
+                print(f"Value {value}, Step 4, has gone from TX0 to RX1 out TX1, check RX0")
+                got_data = False
+                for i in range(20):
+                    header, data = rx_0.read_packet()
+                    if len(header):
+                        #got a packet, check data
+                        hex_val = [hex(val) for val in data]
+                        print(f"RX0 got packet data {hex_val}")
+                        if data[0] == value:
+                            print(f"RX0 got pong!")
+                            got_data = True
+                            #debug hack, continue to read RX0 for some time
+                            #for j in range(20):
+                            #    print(f"Debug RX0 read PWM incoming more {j}")
+                            #    header, data = rx_0.read_packet()
+                            #    time.sleep(0.25)
+                            break
+                    time.sleep(0.25)
+
+                if not got_data:
+                    print(f" Step 4 failed! RX0 Didn't receive, end!")
+                    return
+
 
     def debug_dpll_over_fiber(self):
-        pass
+
+        # TOD debug, write it and read it back over and over
+        self.boards[0].write_tod_absolute(0, 0,0,0xffcc00000000)
+        self.boards[1].write_tod_absolute(0, 0,0,0xffaa00000000)
+
+
+
+        # disable all decoders
+        for board in self.boards:
+            for i in range(len(board.dpll.modules["PWMDecoder"].BASE_ADDRESSES)):
+                board.dpll.modules["PWMDecoder"].write_field(i,
+                        "PWM_DECODER_CMD", "ENABLE", 0)
+            # enable just decoder 0
+            board.dpll.modules["PWMDecoder"].write_field(0,
+                    "PWM_DECODER_CMD", "ENABLE", 1)
+
+        values = [0xaa, 0xcc, 0xde, 0xba, 0x11]
+        for index, value in enumerate(values):        
+            zero_val = (0xff << (5*8)) + (value << (4*8) )
+            one_val = (0xff << (5*8)) + (values[ len(values) - 1 - index] << (4*8))
+            self.boards[0].write_tod_absolute(0,0,0, zero_val)
+            self.boards[1].write_tod_absolute(0,0,0, one_val)
+
+            for i in range(10):
+                print(f"\n Debug dpll over fiber loop {i} \n")
+                for board in self.boards:
+
+                    #  read TOD immediately
+                    board.dpll.modules["TODReadPrimary"].write_reg(0,
+                            "TOD_READ_PRIMARY_CMD", 0x0)  # single shot, immediate
+                    board.dpll.modules["TODReadPrimary"].write_reg(0,
+                            "TOD_READ_PRIMARY_CMD", 0x1)  # single shot, immediate
+
+                    # this works
+                    #self.boards[0].dpll.modules["TODReadPrimary"].print_all_registers(0)
+
+
+                    # this works now as well            
+                    read_count = board.dpll.modules["TODReadPrimary"].read_reg(0,
+                            "TOD_READ_PRIMARY_COUNTER")
+                    cur_tod = board.dpll.modules["TODReadPrimary"].read_reg_mul(0,
+                            "TOD_READ_PRIMARY_SECONDS_0_7", 6)
+                    hex_val = [hex(val) for val in cur_tod]
+                    print(f"Board {board.board_num} Read read_count {read_count} cur_tod {hex_val} <-> {cur_tod}" )
+
+                    cur_pwm = board.i2c.read_dpll_reg_multiple(0xce80, 0x5, 6)
+                    cur_pwm.reverse()
+                    hex_val = [hex(val) for val in cur_pwm]
+                    print(f"Board {board.board_num} current pwm {hex_val}")
+                time.sleep(0.25)
+            
+
         # for i in range(len(board.dpll.modules["PWMEncoder"].BASE_ADDRESSES)):
         #    board.dpll.modules["PWMEncoder"].print_all_registers(i)
         # for i in range(len(board.dpll.modules["PWMDecoder"].BASE_ADDRESSES)):
@@ -255,9 +511,11 @@ if __name__ == "__main__":
         top.set_all_boards_leds_idcode()
     elif args.command == "debug":
         top = MiniPTM()
+        #top.debug_dpll_over_fiber()
         # top.print_all_full_dpll_status()
         # DPLL over fiber stuff
-        top.do_dpll_over_fiber()
+        # top.do_dpll_over_fiber_pingpong() -> basic proof of concept
+        top.do_dpll_over_fiber_with_ack()
 
     elif args.command == "flash":
         top = MiniPTM()
