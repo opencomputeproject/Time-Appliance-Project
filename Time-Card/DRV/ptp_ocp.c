@@ -24,6 +24,7 @@
 #include <linux/nvmem-consumer.h>
 #include <linux/version.h>
 #include <linux/crc16.h>
+#include <linux/timekeeping.h>
 
 /*---------------------------------------------------------------------------*/
 #ifndef MRO50_IOCTL_H
@@ -1577,7 +1578,7 @@ ptp_ocp_adjfine(struct ptp_clock_info *ptp_info, long scaled_ppm)
 	spin_lock_irqsave(&bp->lock, flags);
 	__ptp_ocp_adjfine_locked(bp, scaled_ppm);
 	spin_unlock_irqrestore(&bp->lock, flags);
-	
+
 	return 0;
 }
 
@@ -1608,7 +1609,7 @@ ptp_ocp_syncdevicetime(ktime_t *device_time,
 
 	/* request */
 	iowrite32(PTM_CONTROL_ENABLE | PTM_CONTROL_TRIGGER, &reg->ctrl);
-	
+
 	/* wait until valid */
 	count = 100;
 	do {
@@ -1641,13 +1642,13 @@ ptp_ocp_syncdevicetime(ktime_t *device_time,
 #if IS_ENABLED(CONFIG_X86_TSC) && !defined(CONFIG_UML)
 	*system_counterval = convert_art_ns_to_tsc(ptm_master_time);
 #else
-    *system_counterval (struct system_counterval_t) { };
+	*system_counterval = (struct system_counterval_t) { };
 #endif
 
 	/* store T4 & T1 for next request */
 	bp->ptm_t4_prev = (((u64) ioread32(&reg->t4_time[0]) << 32) |
 		(ioread32(&reg->t4_time[1]) & 0xffffffff));
-	
+
 	bp->ptm_t1_prev = t1_curr;
 
 	return 0;
@@ -3050,7 +3051,7 @@ ptp_ocp_get_resources(struct ptp_ocp *bp, kernel_ulong_t driver_data, struct ocp
     pci_read_config_byte(bp->pdev, PCI_REVISION_ID, &rev_id);
 
 	ocp_driver_data = (struct ocp_driver_data *)driver_data;
-	
+
 	for(d = ocp_driver_data; d->ocp_resource; d++) {
 		if (d->min_revision <= rev_id && d->max_revision >= rev_id) {
 			*table = d->ocp_resource;
@@ -3062,7 +3063,7 @@ ptp_ocp_get_resources(struct ptp_ocp *bp, kernel_ulong_t driver_data, struct ocp
 
 	if (err < 0)
 		dev_err(&bp->dev, "Unsupported device version %d\n", rev_id);
-	
+
 	return err;
 }
 
@@ -5232,7 +5233,7 @@ ptp_ocp_serial_info(struct device *dev, const char *name, int port, int baud)
 
 static void
 ptp_ocp_disable_ptm(struct ptp_ocp *bp)
-{	
+{
 	struct ptp_ocp_ext_src *ptm = bp->ptm;
 	struct ptm_reg __iomem *reg = ptm->mem;
 	int count;
@@ -5253,7 +5254,7 @@ ptp_ocp_disable_ptm(struct ptp_ocp *bp)
 
 static void
 ptp_ocp_enable_ptm(struct ptp_ocp *bp)
-{	
+{
 	struct ptp_ocp_ext_src *ptm = bp->ptm;
 	struct ptm_reg __iomem *reg = ptm->mem;
 	int count;
@@ -5268,7 +5269,7 @@ ptp_ocp_enable_ptm(struct ptp_ocp *bp)
 		if ((ioread32(&reg->status) & PTM_STATUS_BUSY) == 0)
 			break;
 	} while (count > 0);
-	
+
 	if (count <= 0) {
 		printk("Enable and trigger 1st PTM failed: Status = 0x%X \n", reg->status);
 	}
@@ -5280,7 +5281,7 @@ ptp_ocp_enable_ptm(struct ptp_ocp *bp)
 		if ((ioread32(&reg->status) & PTM_STATUS_BUSY) == 0)
 			break;
 	} while (count > 0);
-	
+
 	if (count <= 0) {
 		printk("Enable and trigger 2nd PTM failed: Status = 0x%X \n", reg->status);
 	}
@@ -5452,7 +5453,7 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	} else {
 		dev_info(&pdev->dev, "MSI/MSI-X info: %d\n", err);
 	}
-	
+
 	bp->n_irqs = err;
 	pci_set_master(pdev);
 
@@ -5480,13 +5481,13 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	}
 	ptp_ocp_info(bp);
 	ptp_ocp_devlink_register(devlink, &pdev->dev);
-	
+
 	if(bp->has_msix_support) {
 		/* Enable MSI-X Irq in LitePCIe*/
 		iowrite32(0xFF, &bp->msi->enable);
 		dev_info(&pdev->dev, "Enabled MSI-X 0xFF\n");
 	}
-	
+
 	return 0;
 
 out:
