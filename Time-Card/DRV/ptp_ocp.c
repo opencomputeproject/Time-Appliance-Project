@@ -461,12 +461,10 @@ static int ptp_ocp_register_i2c(struct ptp_ocp *bp, struct ocp_resource *r);
 static int ptp_ocp_register_spi(struct ptp_ocp *bp, struct ocp_resource *r);
 static int ptp_ocp_register_serial(struct ptp_ocp *bp, struct ocp_resource *r);
 static int ptp_ocp_register_ext(struct ptp_ocp *bp, struct ocp_resource *r);
+static int ptp_ocp_register_ext_no_irq(struct ptp_ocp *bp, struct ocp_resource *r);
 static int ptp_ocp_fb_board_init(struct ptp_ocp *bp, struct ocp_resource *r);
 static irqreturn_t ptp_ocp_ts_irq(int irq, void *priv);
-static irqreturn_t ptp_ocp_ptm_irq(int irq, void *priv);
 static irqreturn_t ptp_ocp_signal_irq(int irq, void *priv);
-static int ptp_ocp_ptm_enable(void *priv, struct ptp_clock_request *rq,
-			     u32 req, bool enable);
 static int ptp_ocp_ts_enable(void *priv, struct ptp_clock_request *rq,
 			     u32 req, bool enable);
 static int ptp_ocp_signal_from_perout(struct ptp_ocp *bp, int gen,
@@ -535,6 +533,9 @@ static struct ptp_ocp_eeprom_map art_eeprom_map[] = {
 
 #define OCP_EXT_RESOURCE(member) \
 	OCP_RES_LOCATION(member), .setup = ptp_ocp_register_ext
+
+#define OCP_EXT_NO_IRQ_RESOURCE(member) \
+	OCP_RES_LOCATION(member), .setup = ptp_ocp_register_ext_no_irq
 
 /* This is the MSI vector mapping used.
  * 0: PPS (TS5)
@@ -797,12 +798,10 @@ static struct ocp_resource ocp_fb_resource_rev2[] = {
 		.offset = CSR_PCIE_MSI_BASE, .size = 0x4,
 	},
 	{
-		OCP_EXT_RESOURCE(ptm),
-		.offset = CSR_PTM_REQUESTER_BASE, .size = 0x800, .irq_vec = 0,
+		OCP_EXT_NO_IRQ_RESOURCE(ptm),
+		.offset = CSR_PTM_REQUESTER_BASE, .size = 0x800,
 		.extra = &(struct ptp_ocp_ext_info) {
 			.index = 0,
-			.irq_fcn = ptp_ocp_ptm_irq,
-			.enable = ptp_ocp_ptm_enable,
 		},
 	},
 	{
@@ -2473,20 +2472,6 @@ ptp_ocp_signal_enable(void *priv, struct ptp_clock_request *rq,
 	return 0;
 }
 
-static int
-ptp_ocp_ptm_enable(void *priv, struct ptp_clock_request *rq,
-		  u32 req, bool enable)
-{
-	return 0;
-}
-
-static irqreturn_t
-ptp_ocp_ptm_irq(int irq, void *priv)
-{
-	// TODO
-	return IRQ_HANDLED;
-}
-
 static irqreturn_t
 ptp_ocp_ts_irq(int irq, void *priv)
 {
@@ -2592,6 +2577,34 @@ ptp_ocp_register_ext(struct ptp_ocp *bp, struct ocp_resource *r)
 		dev_err(&pdev->dev, "Could not get irq %d\n", r->irq_vec);
 		goto out;
 	}
+
+	bp_assign_entry(bp, r, ext);
+
+	return 0;
+
+out:
+	kfree(ext);
+	return err;
+}
+
+static int
+ptp_ocp_register_ext_no_irq(struct ptp_ocp *bp, struct ocp_resource *r)
+{
+	struct ptp_ocp_ext_src *ext;
+	int err;
+
+	ext = kzalloc(sizeof(*ext), GFP_KERNEL);
+	if (!ext)
+		return -ENOMEM;
+
+	ext->mem = ptp_ocp_get_mem(bp, r);
+	if (IS_ERR(ext->mem)) {
+		err = PTR_ERR(ext->mem);
+		goto out;
+	}
+
+	ext->bp = bp;
+	ext->info = r->extra;
 
 	bp_assign_entry(bp, r, ext);
 
@@ -5370,6 +5383,8 @@ ptp_ocp_detach(struct ptp_ocp *bp)
 		pci_free_irq_vectors(bp->pdev);
 	if (bp->ptp)
 		ptp_clock_unregister(bp->ptp);
+	if (bp->ptm)
+		kfree(bp->ptm);
 	kfree(bp->ptp_info.pin_config);
 	device_unregister(&bp->dev);
 }
