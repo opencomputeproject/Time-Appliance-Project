@@ -428,7 +428,7 @@ PWM_RX_INFO_LAYOUT = {
         "PWM_TOD_SEC_31_24": {"offset":0x008, "fields": {"VALUE": BitField(0,8)}},
         "PWM_TOD_SEC_39_32": {"offset":0x009, "fields": {"VALUE": BitField(0,8),
             "PWM_RandID": BitField(0,8) } },
-        "PWM_TOD_SEC_47_40": {"offset":0x00a, "fields": {"VALUE": BitField(0,8)} 
+        "PWM_TOD_SEC_47_40": {"offset":0x00a, "fields": {"VALUE": BitField(0,8)} ,
             "DataFlag": BitField(7,1),
             "HandshakeData": BitField(5,2),
             "PWM_Transaction_ID": BitField(0,5),                  

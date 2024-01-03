@@ -12,7 +12,7 @@ from renesas_cm_gpio import gpiomode
 from enum import Enum
 # a single MiniPTM board is characterized by its PCIe info and i2c adapter
 
-#from dpll_over_fiber_miniptm import DPOF_Top
+from dpll_over_fiber_miniptm import DPOF_Top
 
 
 class Single_MiniPTM:
@@ -32,7 +32,7 @@ class Single_MiniPTM:
                          self.i2c.write_dpll_reg_direct,
                          self.i2c.write_dpll_multiple)
 
-        #self.dpof = DPOF_Top(self)
+        self.dpof = DPOF_Top(self)
 
     def led_visual_test(self):
         for i in range(4):
@@ -290,15 +290,13 @@ class Single_MiniPTM:
     def init_pwm_dplloverfiber(self):
         # disable all decoders
         for i in range(len(self.dpll.modules["PWMDecoder"].BASE_ADDRESSES)):
-            print(f"Debug PWM Decoder {i}")
+            #print(f"Debug PWM Decoder {i}")
             self.dpll.modules["PWMDecoder"].write_field(
                 i, "PWM_DECODER_CMD", "ENABLE", 0)
 
-        # initialize all TODs to PWM negotiation flag mode
+        # initialize all TODs 
         for i in range(len(self.dpll.modules["TODWrite"].BASE_ADDRESSES)):
-            # using highest part of TOD seconds as PWM flag
-            # highest
-            self.write_tod_absolute(i, 0, 0, 0x80 << (8*5))
+            self.write_tod_absolute(i, 0, 0, 0)
 
         # enable all encoders to transmit
         for i in range(len(self.dpll.modules["PWMEncoder"].BASE_ADDRESSES)):
@@ -379,5 +377,5 @@ class Single_MiniPTM:
     def dpll_over_fiber_loop(self):
         print(f"Board {self.board_num} dpll_over_fiber_loop")
         #self.dpof.run_loop()
-        #self.dpof.tick()
-        #print(f"Board {self.board_num} done dpll_over_fiber_loop")
+        self.dpof.tick()
+        print(f"Board {self.board_num} done dpll_over_fiber_loop")

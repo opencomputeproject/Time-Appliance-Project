@@ -473,6 +473,24 @@ class MiniPTM:
         # board.dpll.modules["PWMEncoder"].print_all_registers(0)
         # board.dpll.modules["PWMDecoder"].print_all_registers(0)
 
+
+
+    def dpll_over_fiber_test(self):
+        for board in self.boards:
+            board.init_pwm_dplloverfiber()
+
+
+        for i in range(100):
+            # constant stimulus as possible, query on channel 0 query ID 0
+            self.boards[0].dpof.dpof_query(0, 0)
+
+            for board in self.boards:
+                print(f"\n DPLL Over fiber loop board {board.board_num} \n")
+                board.dpll_over_fiber_loop()
+
+            time.sleep(0.25)
+            print(f"\n\n****** DPLL over fiber Top level loop number {i} *******\n\n")
+
     def close(self):
         pass
 
@@ -511,11 +529,14 @@ if __name__ == "__main__":
         top.set_all_boards_leds_idcode()
     elif args.command == "debug":
         top = MiniPTM()
+        top.dpll_over_fiber_test()
+
         #top.debug_dpll_over_fiber()
         # top.print_all_full_dpll_status()
         # DPLL over fiber stuff
         # top.do_dpll_over_fiber_pingpong() -> basic proof of concept
-        top.do_dpll_over_fiber_with_ack()
+        # top.do_dpll_over_fiber_with_ack() -> Another proof of concept
+
 
     elif args.command == "flash":
         top = MiniPTM()
