@@ -98,6 +98,8 @@ RX is the most constrained , so it needs the most logic
 
 
 # basically control TOD , a single PWM Encoder, and a single decoder
+# Secondary feature of this,
+# Record TOD at reception of PPS from this decoder on each TOD using SecondaryTODRead
 class dpof_single_channel():
     IDLE = 0
     RX_SLAVE = 1
@@ -112,7 +114,8 @@ class dpof_single_channel():
     RX_SLAVE_WAIT_WRITE = 10
     RX_SLAVE_DONE_WAIT = 11
 
-    def __init__(self, board, tod_num = 0, encoder_num=0, decoder_num=0, decoder_time_slice_sec=5):
+    def __init__(self, board, tod_num = 0, encoder_num=0, decoder_num=0, decoder_time_slice_sec=5, DEBUG_PRINT=False):
+        self.DEBUG_PRINT = DEBUG_PRINT
         self.board = board
 
         # tx variables
@@ -136,6 +139,20 @@ class dpof_single_channel():
 
         self.fifo_grant = False
         self.state = dpof_single_channel.IDLE 
+
+
+
+        # store what got written to me
+        self.pwm_write_data = []
+
+        # store what I read back 
+        self.pwm_query_data = []
+
+        # store latest TOD frame data (not including handshake bytes)
+        # first entry is what was received over PWM, other 4 entries are each local TOD
+        # counter value at time of PWM reception
+        self.tod_compare_data = []
+
 
 
     def grant_fifo_control(self):
@@ -167,7 +184,8 @@ class dpof_single_channel():
             else:
                 self.state = dpof_single_channel.RX_SLAVE
                 self.master_request = transaction_id_rx
-                print(f"Going to rx slave state from idle, master request = 0x{self.master_request:02x}")
+                if ( self.DEBUG_PRINT ):
+                    print(f"Going to rx slave state from idle, master request = 0x{self.master_request:02x}")
                 return self.disable_decoder_if_time_over(), True
 
        
@@ -176,7 +194,8 @@ class dpof_single_channel():
         #only transition out of this state is if fifo grant is granted by higher level
         # or TX API called
         if ( self.fifo_grant ):
-            print(f"RX slave state got fifo grant")
+            if ( self.DEBUG_PRINT ):
+                print(f"RX slave state got fifo grant")
             # got the grant, now I can use PWM FIFO for dpll over fiber as slave
             if ( self.is_transaction_id_query(self.master_request) ):
                 # write 0x1 to master
@@ -185,19 +204,26 @@ class dpof_single_channel():
                 # master request is a query, don't need fifo or decoder locked yet
                 self.state = dpof_single_channel.RX_SLAVE_RESPOND_QUERY
 
-                print(f"RX slave state go to respond query")
+                if ( self.DEBUG_PRINT ):
+                    print(f"RX slave state go to respond query")
                 return self.disable_decoder_if_time_over(), True
             else:
-                # master request is a write
-                # NEED TO HOLD FIFO AND DECODER 
-                self.state = dpof_single_channel.RX_SLAVE_WAIT_WRITE
 
                 # set fifo to receive, 0x0 for idle
                 self.board.dpll.modules["PWM_USER_DATA"].write_reg(0,
                         "PWM_USER_DATA_PWM_USER_DATA_CMD_STS", 0x0)
-                print(f"RX slave state go to wait write")
+
+                # write 0x1 to master
+                self.start_tx(0x1, self.master_request, [])
+
+                # master request is a write
+                # NEED TO HOLD FIFO AND DECODER 
+                self.state = dpof_single_channel.RX_SLAVE_WAIT_WRITE
+
+                if ( self.DEBUG_PRINT ):
+                    print(f"RX slave state go to wait write")
                 return True, True
-        return self.disable_decoder_if_time_over(), False
+        return self.disable_decoder_if_time_over(), True
 
 
     def run_rx_slave_respond_query(self):
@@ -214,12 +240,15 @@ class dpof_single_channel():
             data_flag = (top_byte >> 7) & 0x1
             handshake_state_rx = (top_byte >> 5) & 0x3
             transaction_id_rx = top_byte & 0x1f
-            print(f"Run rx slave respond query handshake_state_rx id={handshake_state_rx}")
+            if ( self.DEBUG_PRINT ):
+                print(f"Run rx slave respond query handshake_state_rx id={handshake_state_rx}")
 
             if ( handshake_state_rx == 0x1 ):
                 # Got 0x1, write to PWM FIFO and send it, wait for TX Completion on FIFO
                 self.fifo_to_send = self.get_fifo_respond_to_query(transaction_id_rx)
-                print(f"Will send {len(self.fifo_to_send)} bytes of PWM")
+                if ( self.DEBUG_PRINT ):
+                    print(f"Will send {len(self.fifo_to_send)} bytes of PWM")
+
                 self.board.dpll.modules["PWM_USER_DATA"].write_reg(0,
                         "PWM_USER_DATA_PWM_USER_DATA_SIZE", len(self.fifo_to_send))
 
@@ -229,7 +258,8 @@ class dpof_single_channel():
                 # wait for TX completion on FIFO
                 self.state = dpof_single_channel.RX_SLAVE_RESPOND_QUERY_WAIT_FIFO_TX 
 
-                print(f"Go to rx slave respond query wait fifo tx")
+                if ( self.DEBUG_PRINT ):
+                    print(f"Go to rx slave respond query wait fifo tx")
 
                 return self.disable_decoder_if_time_over(), True
         return self.disable_decoder_if_time_over(), True
@@ -240,8 +270,10 @@ class dpof_single_channel():
         fifo_status = self.board.dpll.modules["PWM_USER_DATA"].read_reg(0,
                 "PWM_USER_DATA_PWM_USER_DATA_CMD_STS")
         if (fifo_status == 0x3): # got tx ack , can send data now
-            print(f"RX slave respond query wait fifo tx, got tx ack")
-            print(f" Sending fifo {self.fifo_to_send}")
+
+            if ( self.DEBUG_PRINT ):
+                print(f"RX slave respond query wait fifo tx, got tx ack")
+                print(f" Sending fifo {self.fifo_to_send}")
             for i in range(len(self.fifo_to_send)):
                 reg_name = f"BYTE_OTP_EEPROM_PWM_BUFF_{i}"
                 self.board.dpll.modules["EEPROM_DATA"].write_reg(0,
@@ -253,7 +285,8 @@ class dpof_single_channel():
 
             self.state = dpof_single_channel.RX_SLAVE_RESPOND_QUERY_WAIT_FIFO_TX_DONE
         elif ( fifo_status > 0x3 ):
-            print(f"GOT FIFO STATUS BAD, {fifo_status}")
+            if ( self.DEBUG_PRINT ):
+                print(f"GOT FIFO STATUS BAD, {fifo_status}")
 
         # don't need decoder, but need PWM fifo
         return self.disable_decoder_if_time_over(), True
@@ -267,14 +300,16 @@ class dpof_single_channel():
 
         if ( fifo_status == 0x5 ):
             # once complete, send 0x2 and go to done wait
-            print(f"Fifo status good, PWM transmission successful!")
+            if ( self.DEBUG_PRINT ):
+                print(f"Fifo status good, PWM transmission successful!")
             self.start_tx(0x2, self.master_request, [])
             self.state = dpof_single_channel.RX_SLAVE_DONE_WAIT
 
             # done with FIFO
             return self.disable_decoder_if_time_over(), False
         else:
-            print(f"Fifo status not done yet, respond query wait fifo tx done")
+            if ( self.DEBUG_PRINT ):
+                print(f"Fifo status not done yet, respond query wait fifo tx done")
         return self.disable_decoder_if_time_over(), True
 
 
@@ -296,9 +331,15 @@ class dpof_single_channel():
             transaction_id_rx = top_byte & 0x1f
             if( not data_flag ):
                 self.state = dpof_single_channel.IDLE
+                if ( self.DEBUG_PRINT ):
+                    print(f"RX slave done wait state, going to idle")
             else:
                 if ( handshake_state_rx == 0x0 ):
                     self.state = dpof_single_channel.RX_SLAVE
+                    self.master_request = transaction_id_rx
+                    if ( self.DEBUG_PRINT ):
+                        print(f"RX slave done wait state, going to rx slave")
+                    return self.disable_decoder_if_time_over(), True
         return self.disable_decoder_if_time_over(), False
 
     def run_rx_slave_wait_write(self):
@@ -306,12 +347,35 @@ class dpof_single_channel():
         fifo_status = self.board.dpll.modules["PWM_USER_DATA"].read_reg(0,
                 "PWM_USER_DATA_PWM_USER_DATA_CMD_STS")
         if ( fifo_status == 0xb ):
-            print(f"PWM User data reception successful!")
+            if ( self.DEBUG_PRINT ):
+                print(f"PWM User data reception successful!")
+
+
+            fifo_byte_count = self.board.dpll.modules["PWM_USER_DATA"].read_reg(0,
+                    "PWM_USER_DATA_PWM_USER_DATA_SIZE")
+            if ( self.DEBUG_PRINT ):
+                print(f"Slave wait write Received {fifo_byte_count} through FIFO")
+
+            fifo_data = []
+
+            for i in range(fifo_byte_count):
+                reg_name = f"BYTE_OTP_EEPROM_PWM_BUFF_{i}"
+                fifo_data.append( self.board.dpll.modules["EEPROM_DATA"].read_reg(0,
+                        reg_name ) )
+
+            if ( self.DEBUG_PRINT ):
+                print(f"Slave wait write Received fifo data: {fifo_data}") 
+
+            self.pwm_write_data.append( [self.decoder, self.master_request, fifo_data] ) 
+
             # send 0x2 and wait
             self.start_tx(0x2, self.master_request, [])
             self.state = dpof_single_channel.RX_SLAVE_DONE_WAIT
+            if ( self.DEBUG_PRINT ):
+                print(f"Going to RX slave done wait")
         else:
-            print(f"PWM User data reception not done yet! {fifo_status:02x}")
+            if ( self.DEBUG_PRINT ):
+                print(f"PWM User data reception not done yet! {fifo_status:02x}")
 
         # need to hold decoder and fifo
         return True, True
@@ -363,7 +427,8 @@ class dpof_single_channel():
         if ( not self.fifo_grant ):
             return self.disable_decoder_if_time_over(), True
 
-        print(f"Transmit won state got fifo grant")
+        if ( self.DEBUG_PRINT ):
+            print(f"Transmit won state got fifo grant")
         if ( self.is_tx_query ): #I'm trying to query and have FIFO lock
             # enable PWM FIFO for reception
             # set fifo to receive, 0x0 for idle
@@ -374,7 +439,8 @@ class dpof_single_channel():
             self.start_tx(0x1, self.current_transaction_id_tx, [])
             self.state = dpof_single_channel.TRANSMIT_QUERY
             # need to hold both decoder and FIFO
-            print(f"Transmit won state, going to transmit query")
+            if ( self.DEBUG_PRINT ):
+                print(f"Transmit won state, going to transmit query")
             return True, True
         else:
             # I'm trying to write to other end
@@ -382,10 +448,15 @@ class dpof_single_channel():
             self.board.dpll.modules["PWM_USER_DATA"].write_reg(0,
                     "PWM_USER_DATA_PWM_USER_DATA_SIZE", len(self.fifo_to_send))
 
+            if ( self.DEBUG_PRINT ):
+                print(f"Going to transmit {len(self.fifo_to_send)} bytes")
+
             self.board.dpll.modules["PWM_USER_DATA"].write_reg(0,
                     "PWM_USER_DATA_PWM_USER_DATA_CMD_STS", 0x1) #send transmission request
             self.state = dpof_single_channel.TRANSMIT_WRITE
-            print(f"Transmit won state, going to transmit write")
+
+            if ( self.DEBUG_PRINT ):
+                print(f"Transmit won state, going to transmit write")
 
         
         # need FIFO 
@@ -396,6 +467,9 @@ class dpof_single_channel():
         # pseudo wait state, waiting for CMD_STS to 
         pwm_status = self.board.dpll.modules["PWM_USER_DATA"].read_reg(0,
                 "PWM_USER_DATA_PWM_USER_DATA_CMD_STS")
+
+        if ( self.DEBUG_PRINT ):
+            print(f"Transmit write state, check PWM user status, {pwm_status}")
         if ( pwm_status == 0x3 ): #got tx ack, can send data now
             for i in range(len(self.fifo_to_send)):
                 reg_name = f"BYTE_OTP_EEPROM_PWM_BUFF_{i}"
@@ -405,7 +479,10 @@ class dpof_single_channel():
             # start transmission
             self.board.dpll.modules["PWM_USER_DATA"].write_reg(0,
                     "PWM_USER_DATA_PWM_USER_DATA_CMD_STS", 0x2) #sent transmission request
-    
+   
+            if ( self.DEBUG_PRINT ):
+                print(f"Got tx ack, sending data now! Going to transmit done wait state")
+
             # don't necessarily need to wait for TX FIFO to say it's done, just wait for other side
             self.state = dpof_single_channel.TRANSMIT_DONE_WAIT
 
@@ -417,16 +494,21 @@ class dpof_single_channel():
         # wait for PWM FIFO to fill up 
         fifo_status = self.board.dpll.modules["PWM_USER_DATA"].read_reg(0,
                 "PWM_USER_DATA_PWM_USER_DATA_CMD_STS")
-        print(f"Run transmit query state, fifo status {fifo_status:02x}")
+
+        if ( self.DEBUG_PRINT ):
+            print(f"Run transmit query state, fifo status {fifo_status:02x}")
 
         if ( fifo_status == 0xb ):
 
-            print(f"PWM User data reception successful!")
+            if ( self.DEBUG_PRINT ):
+                print(f"PWM User data reception successful!")
 
 
             fifo_byte_count = self.board.dpll.modules["PWM_USER_DATA"].read_reg(0,
                     "PWM_USER_DATA_PWM_USER_DATA_SIZE")
-            print(f"Received {fifo_byte_count} through FIFO")
+
+            if ( self.DEBUG_PRINT ):
+                print(f"Received {fifo_byte_count} through FIFO")
 
             fifo_data = []
 
@@ -435,12 +517,17 @@ class dpof_single_channel():
                 fifo_data.append( self.board.dpll.modules["EEPROM_DATA"].read_reg(0,
                         reg_name ) )
 
-            print(f"Received fifo data: {fifo_data}") 
+            if ( self.DEBUG_PRINT ):
+                print(f"Received fifo data: {fifo_data}") 
+
+            self.pwm_query_data.append( [self.decoder, self.current_transaction_id_tx,
+                fifo_data] )
 
             # check if RX already sent 0x2, if not go to wait state
             data = self.check_decoder_new_data() 
             if ( len(data) == 0 ):
                 # Case 1: Decoder inactive
+                self.state = dpof_single_channel.TRANSMIT_DONE_WAIT
                 return self.disable_decoder_if_time_over(), False
             else:
                 # Case 2: Decoder active
@@ -451,17 +538,19 @@ class dpof_single_channel():
                 handshake_state_rx = (top_byte >> 5) & 0x3
                 transaction_id_rx = top_byte & 0x1f
                 if ( handshake_state_rx == 0x2 ): # got ack from other side
-                    print(f"Transmit query state got 0x2, done")
+                    if ( self.DEBUG_PRINT ):
+                        print(f"Transmit query state got 0x2, done")
                     self.stop_tx()
                     self.state = dpof_single_channel.IDLE
                     return self.disable_decoder_if_time_over(), False
                 
 
             # go to this state to wait for 0x2
-            self.state = dpof_single_channel.TRANSMIT_DONE_WAIT_STATE
+            self.state = dpof_single_channel.TRANSMIT_DONE_WAIT
             return self.disable_decoder_if_time_over(), False
         else:
-            print(f"PWM User data reception not done yet! {fifo_status:02x}")
+            if ( self.DEBUG_PRINT ):
+                print(f"PWM User data reception not done yet! {fifo_status:02x}")
 
         # need to hold decoder and fifo
         return True, True
@@ -470,7 +559,9 @@ class dpof_single_channel():
         # debug, read cmd status
         fifo_status = self.board.dpll.modules["PWM_USER_DATA"].read_reg(0,
                 "PWM_USER_DATA_PWM_USER_DATA_CMD_STS")
-        print(f"Run transmit done wait state debug fifo-status {fifo_status:02x}")
+
+        if ( self.DEBUG_PRINT ):
+            print(f"Run transmit done wait state debug fifo-status {fifo_status:02x}")
 
         # need to wait for rx data
         data = self.check_decoder_new_data() 
@@ -486,7 +577,8 @@ class dpof_single_channel():
             handshake_state_rx = (top_byte >> 5) & 0x3
             transaction_id_rx = top_byte & 0x1f
             if ( handshake_state_rx == 0x2 ): # got ack from other side
-                print(f"Transmit done wait state got 0x2, done")
+                if ( self.DEBUG_PRINT ):
+                    print(f"Transmit done wait state got 0x2, done")
                 self.stop_tx()
                 self.state = dpof_single_channel.IDLE
 
@@ -496,42 +588,43 @@ class dpof_single_channel():
     # First bool, whether decoder is now disabled or enabled, True for enabled
     # Second bool, if PWM FIFO is needed
     def top_state_machine(self):
-        print(f"Board {self.board.board_num} top state machine channel {self.tod_num}")
+        if ( self.DEBUG_PRINT ):
+            print(f"Board {self.board.board_num} top state machine channel {self.tod_num}")
         if ( self.state == dpof_single_channel.IDLE ):
-            print(f"Running idle state")
+            if ( self.DEBUG_PRINT ): print(f"Running idle state")
             return self.run_idle_state()
         elif ( self.state == dpof_single_channel.RX_SLAVE ):
-            print(f"Running rx slave state")
+            if ( self.DEBUG_PRINT ): print(f"Running rx slave state")
             return self.run_rx_slave_state()
         elif ( self.state == dpof_single_channel.RX_SLAVE_RESPOND_QUERY ):
-            print(f"Running run_rx_slave_respond_query")
+            if ( self.DEBUG_PRINT ): print(f"Running run_rx_slave_respond_query")
             return self.run_rx_slave_respond_query()
         elif ( self.state == dpof_single_channel.RX_SLAVE_RESPOND_QUERY_WAIT_FIFO_TX ):
-            print(f"Running run_rx_slave_respond_query_wait_fifo_tx")
+            if ( self.DEBUG_PRINT ): print(f"Running run_rx_slave_respond_query_wait_fifo_tx")
             return self.run_rx_slave_respond_query_wait_fifo_tx()
         elif ( self.state == dpof_single_channel.RX_SLAVE_RESPOND_QUERY_WAIT_FIFO_TX_DONE ):
-            print(f"Running run_rx_slave_respond_query_wait_fifo_tx_done")
+            if ( self.DEBUG_PRINT ): print(f"Running run_rx_slave_respond_query_wait_fifo_tx_done")
             return self.run_rx_slave_respond_query_wait_fifo_tx_done()
         elif ( self.state == dpof_single_channel.RX_SLAVE_WAIT_WRITE ):
-            print(f"Running run_rx_slave_wait_write")
+            if ( self.DEBUG_PRINT ): print(f"Running run_rx_slave_wait_write")
             return self.run_rx_slave_wait_write()
         elif ( self.state == dpof_single_channel.RX_SLAVE_DONE_WAIT ):
-            print(f"Running run_rx_slave_done_wait")
+            if ( self.DEBUG_PRINT ): print(f"Running run_rx_slave_done_wait")
             return self.run_rx_slave_done_wait()
         elif ( self.state == dpof_single_channel.TRANSMIT_START ):
-            print(f"Running transmit start state")
+            if ( self.DEBUG_PRINT ): print(f"Running transmit start state")
             return self.run_transmit_start_state()
         elif ( self.state == dpof_single_channel.TRANSMIT_WON ):
-            print(f"Running transmit won state")
+            if ( self.DEBUG_PRINT ): print(f"Running transmit won state")
             return self.run_transmit_won_state()
         elif ( self.state == dpof_single_channel.TRANSMIT_WRITE ):
-            print(f"Running transmit write state")
+            if ( self.DEBUG_PRINT ): print(f"Running transmit write state")
             return self.run_transmit_write_state()
         elif ( self.state == dpof_single_channel.TRANSMIT_QUERY ):
-            print(f"Running transmit query state")
+            if ( self.DEBUG_PRINT ): print(f"Running transmit query state")
             return self.run_transmit_query_state()
         elif ( self.state == dpof_single_channel.TRANSMIT_DONE_WAIT ):
-            print(f"Running transmit done wait state")
+            if ( self.DEBUG_PRINT ): print(f"Running transmit done wait state")
             return self.run_transmit_done_wait_state()
         return self.disable_decoder_if_time_over(), False
 
@@ -564,7 +657,8 @@ class dpof_single_channel():
         self.is_tx_query = self.is_transaction_id_query(transaction_id)
         self.state = dpof_single_channel.TRANSMIT_START
 
-        print(f"Board {self.board.board_num} transmit start id={handshake_id} trans_id={transaction_id} data {fifo_data}")
+        if ( self.DEBUG_PRINT ):
+            print(f"Board {self.board.board_num} transmit start id={handshake_id} trans_id={transaction_id} rand={self.tx_rand_num} data {fifo_data}")
         return True
 
     def stop_tx(self):
@@ -594,9 +688,13 @@ class dpof_single_channel():
 
     # when I lose handshake, and far side is querying me
     def get_fifo_respond_to_query(self, query_id):
-        print(f"RX Fill fifo respond to query {query_id}")
+        if ( self.DEBUG_PRINT ):
+            print(f"RX Fill fifo respond to query {query_id}")
         if ( query_id == 0 ):
-            return [0x1, 0x2, 0x3, 0x4]
+            return [0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa,
+                    0xb, 0xc, 0xd, 0xe, 0xf, 0x10, 0x11, 0x12, 0x13,
+                    0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b,
+                    0x1c, 0x1d, 0x1e, 0x1f]
             # big query
         else:
             pass
@@ -606,7 +704,8 @@ class dpof_single_channel():
     # returns False if decoder disabled, true if still enabled 
     def disable_decoder_if_time_over(self):
         if ( self.get_how_long_decoder_on() >= self.decoder_time_slice_sec ):
-            print(f"Stopping RX, {self.get_how_long_decoder_on()}, {self.decoder_time_slice_sec}")
+            if ( self.DEBUG_PRINT ):
+                print(f"Stopping RX, {self.get_how_long_decoder_on()}, {self.decoder_time_slice_sec}")
             # time slice elapsed
             self.stop_rx()
             return False
@@ -616,17 +715,39 @@ class dpof_single_channel():
 
 
     def stop_rx(self):
-        print(f"Board {self.board.board_num} stop rx {self.decoder}")
+        if ( self.DEBUG_PRINT ):
+            print(f"Board {self.board.board_num} stop rx {self.decoder}")
         # simple, turn off decoder
         self.board.dpll.modules["PWMDecoder"].write_field(self.decoder,
               "PWM_DECODER_CMD", "ENABLE", 0)
         self.rx_enable = False
 
     def start_rx(self):
-        print(f"Board {self.board.board_num} start rx {self.decoder}")
+        if ( self.DEBUG_PRINT ):
+            print(f"Board {self.board.board_num} start rx {self.decoder}")
         # record what PWM TOD is to detect change after enabling decoder
         self.pwm_tod_before_start_rx = self.read_raw_hardware_buffer()
-        
+       
+        # Secondary feature, record TOD at reception of PPS from this decoder
+        # on each TOD using SecondaryTODRead
+
+        # clear any previous triggers
+        for i in range(4): # 4 TODs
+
+            if ( self.DEBUG_PRINT ):
+                print(f"Enable TOD Secondary {i} read using decoder {self.decoder}")
+
+            self.board.dpll.modules["TODReadSecondary"].write_field(i,
+                    "TOD_READ_SECONDARY_CMD", "TOD_READ_TRIGGER", 0x0)
+
+            #configure this decoder as trigger source
+            self.board.dpll.modules["TODReadSecondary"].write_field(i,
+                    "TOD_READ_SECONDARY_SEL_CFG_0", "PWM_DECODER_INDEX", self.decoder)
+
+            #configure continous TOD read on PWM Decoder 1PPS output
+            self.board.dpll.modules["TODReadSecondary"].write_reg(i,
+                    "TOD_READ_SECONDARY_CMD", 0x14)
+
         #enable decoder with frame access
         self.board.dpll.modules["PWMDecoder"].write_field(self.decoder,
               "PWM_DECODER_CMD", "ENABLE", 0x5)
@@ -643,19 +764,36 @@ class dpof_single_channel():
 
     def check_decoder_new_data(self):
         if ( self.rx_enabled ):
-            data = self.read_raw_hardware_buffer() 
+            data = self.read_raw_hardware_buffer(True) 
+            data_hs = data[-2:]
             # only keep handshake bytes, top two bytes
-            if ( (data == self.pwm_tod_before_start_rx) or
-                    (data == self.last_data_this_decoder) ):
+            if ( (data_hs == self.pwm_tod_before_start_rx) or
+                    (data_hs == self.last_data_this_decoder) ):
                 # nothing new
                 return []
             else:
-                hex_val = [hex(val) for val in data]
-                print(f" Debug check decoder new data {data} {self.last_data_this_decoder}")
-                print(f"Board {self.board.board_num} decoder {self.decoder} new data {hex_val}")
-                self.last_data_this_decoder = list(data)
-                print(f" Debug {self.last_data_this_decoder}")
-                return data
+                hex_val = [hex(val) for val in data_hs]
+                if ( self.DEBUG_PRINT ):
+                    print(f" Debug check decoder new data {data_hs} {self.last_data_this_decoder}")
+                    print(f"Board {self.board.board_num} decoder {self.decoder} new data {hex_val}")
+                self.last_data_this_decoder = list(data_hs)
+                if ( self.DEBUG_PRINT ):
+                    print(f" Debug {self.last_data_this_decoder}")
+
+                ####### Secondary feature, record TODs from TODReadSecondary and this PWM frame
+                self.tod_compare_data = []
+                self.tod_compare_data.append( data[:-2] ) #ignore top two bytes, handshake bytes
+
+                for i in range(4): # read back TODs as well
+                    local_tod = self.board.dpll.modules["TODReadSecondary"].read_reg_mul(i,
+                            "TOD_READ_SECONDARY_SUBNS", 11)
+                    local_tod = local_tod[:-2]
+                    self.tod_compare_data.append(local_tod)
+
+                if ( self.DEBUG_PRINT ):
+                    print(f"Debug tod compare data {self.tod_compare_data}")
+
+                return data_hs
         return []
 
 
@@ -673,14 +811,25 @@ class dpof_single_channel():
         return cur_tod 
 
     # returns data from hardware buffer, only two handshake bytes 
-    def read_raw_hardware_buffer(self):
+    def read_raw_hardware_buffer(self, full_data=False):
         """ Read data from the hardware's global receive buffer. """
         # just read seconds portion
         data = self.board.i2c.read_dpll_reg_multiple(0xce80, 0x0, 11)
         hex_val = [hex(val) for val in data]
-        print(f"Read PWM Raw Receive Board {self.board.board_num} TOD {hex_val}")
+
+        if ( self.DEBUG_PRINT ):
+            print(f"Read PWM Raw Receive Board {self.board.board_num} TOD {hex_val}")
+
+        if ( full_data ):
+            return data
         return data[-2:]
 
+
+
+
+
+#####################################################################
+# Top level dpll over fiber class for one MiniPTM / DPLL over fiber DPLL instnace
 
 class DPOF_Top():
     def __init__(self, board):
@@ -731,8 +880,32 @@ class DPOF_Top():
                     # release fifo lock
                     chan.release_fifo_control()
                     self.fifo_lock_chan = -1
-                    
+                   
+            # check if any results
+            if ( len(chan.pwm_write_data) > 0 ):
+                print(f"DPOF Top tick, got written to! {chan.pwm_write_data}")
+            elif ( len(chan.pwm_query_data) > 0):
+                print(f"DPOF Top Tick, got query data back! {chan.pwm_query_data}")
 
+
+    # returns a single query data entry, [channel, query_id, [query data]]
+    # or returns empty list
+    def pop_query_data(self):
+        for index, chan in enumerate(self.channels):
+            if ( len(chan.pwm_query_data) > 0 ):
+                data = chan.pwm_query_data.pop(0)
+                return data
+        return []
+
+    def pop_write_data(self):
+        for index, chan in enumerate(self.channels):
+            if ( len(chan.pwm_write_data) > 0 ):
+                data = chan.pwm_write_data.pop(0)
+                return data
+        return []
+
+    def get_chan_tx_ready(self, channel_num=0):
+        return self.channels[channel_num].can_tx()
 
     def dpof_query(self, channel_num=0, query_id=0):
         if ( self.channels[channel_num].can_tx() ):
@@ -749,4 +922,12 @@ class DPOF_Top():
         return False
 
 
+    def get_tod_compare(self):
+        data = []
+        for chan in self.channels:
+            if ( len(chan.tod_compare_data) > 0 ):
+                data.append( chan.tod_compare_data )
+        return data
+
+    
     

@@ -475,18 +475,43 @@ class MiniPTM:
 
 
 
+
+    # THIS CODE WORKS! 
+    # The read and write are kinda messy, conflict resolution is not great
+    
     def dpll_over_fiber_test(self):
+        alternate_query_write_flag = 0
         for board in self.boards:
             board.init_pwm_dplloverfiber()
 
 
         for i in range(100):
-            # constant stimulus as possible, query on channel 0 query ID 0
-            self.boards[0].dpof.dpof_query(0, 0)
+            # constant stimulus as possible, 
+            # alternate between query on channel 0 query ID 0 and write
+            
+            if ( self.boards[0].dpof.get_chan_tx_ready(0) ):
+                if ( alternate_query_write_flag == 0 ):
+                    print(f"Starting send query!")
+                    self.boards[0].dpof.dpof_query(0, 0)
+                    alternate_query_write_flag = 1
+                else:
+                    print(f"Starting write data!")
+                    # 0x1 is write
+                    self.boards[0].dpof.dpof_write(0,1,[0xde,0xad,0xbe,0xef])
+                    alternate_query_write_flag = 0
 
             for board in self.boards:
                 print(f"\n DPLL Over fiber loop board {board.board_num} \n")
                 board.dpll_over_fiber_loop()
+                query_data = board.dpof.pop_query_data()
+                if ( len(query_data) ):
+                    print(f"Board {board.board_num} at top level, got query data {query_data}")
+                write_data = board.dpof.pop_write_data()
+                if ( len(write_data) ):
+                    print(f"Board {board.board_num} at top level, got write data {write_data}")
+                tod_compare_data = board.dpof.get_tod_compare()
+                if ( len(tod_compare_data) > 0 ):
+                    print(f"Board {board.board_num} at top level, got TOD comparison {tod_compare_data}")
 
             time.sleep(0.25)
             print(f"\n\n****** DPLL over fiber Top level loop number {i} *******\n\n")
