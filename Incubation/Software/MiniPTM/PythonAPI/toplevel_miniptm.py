@@ -7,6 +7,9 @@ import concurrent.futures
 import time
 import argparse
 from dpll_over_fiber_miniptm import *
+from scipy import stats
+
+
 
 class MiniPTM:
     def __init__(self):
@@ -157,31 +160,110 @@ class MiniPTM:
 
         # hack , use first board as "reference"
 
+        num_per_slope = 20
         # doesn't quite work , since phase measurement value fluctuates
-        for i in range(100):
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                futures = [executor.submit(self.boards[j].read_pcie_clk_phase_measurement, False)
-                           for j in range(len(self.boards))]
+        results_board_0 = []
 
-                results = [future.result()
-                           for future in futures]  # get them in order
-                for result in results:
-                    print(result)
-                print(results[0] - results[1])
+        results_board_1 = []
+        cur_ppm_adjust = 0
 
-            time.sleep(0.5)
-            continue
+        slope_differences = []
 
-            phase_ref = self.boards[0].read_pcie_clk_phase_measurement(False)
-            print(f"Phase_ref = {phase_ref}")
-            phase_meas = []
-            for board in self.boards[1:]:
-                phase_meas.append(board.read_pcie_clk_phase_measurement(False))
+        # start of it , make sure frequency adjust word is zero
+        self.boards[1].dpll.modules["DPLL_Freq_Write"].write_reg_mul(0,
+            "DPLL_WR_FREQ_7_0", [0,0,0,0,0,0]) 
+        
+        # reset it wth synth
+        for board in self.boards:
+            board.read_pcie_clk_phase_measurement(True, 1)
 
-            print(f"Phase measurements = {phase_meas}")
-            phase_err = [x - phase_ref for x in phase_meas]
-            print(f"Measured phase error {phase_err}")
-            time.sleep(0.5)
+        for j in range(1000):
+            for i in range(num_per_slope):
+                difference_board_0 = []
+                difference_board_1 = []
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    results = []
+                    if ( i == 0 ):
+                        #futures = [executor.submit(self.boards[j].read_pcie_clk_phase_measurement, True,1)
+                        #           for j in range(len(self.boards))]
+                        #results = [future.result()
+                        #           for future in futures]  # get them in order
+                        #ignore those
+                        #results = []
+                        futures = [executor.submit(self.boards[j].read_pcie_clk_phase_measurement, False,1)
+                                   for j in range(len(self.boards))]
+                        results = [future.result()
+                                   for future in futures]  # get them in order
+                    else:
+                        futures = [executor.submit(self.boards[j].read_pcie_clk_phase_measurement, False,1)
+                                   for j in range(len(self.boards))]
+                        results = [future.result()
+                                   for future in futures]  # get them in order
+
+
+                    results_board_0.append(results[0] * 50e-12) #in units of 50ps
+                    if ( len(results_board_0) >= 2 ):
+                        #calculate difference as well
+                        difference_board_0.append(results_board_0[-1] - results_board_0[-2])
+                        has_positive = any(x > 0 for x in difference_board_0)
+                        has_negative = any(x < 0 for x in difference_board_0)
+                        if has_positive and has_negative:
+                            print(f"BAD VALUE, HAS POSITIVE AND NEGATIVE DIFFERENCES BOARD 0")
+
+                    results_board_1.append(results[1] * 50e-12) # in units of 50ps
+                    if ( len(results_board_1) >= 2 ):
+                        #calculate difference as well
+                        difference_board_1.append(results_board_1[-1] - results_board_1[-2])
+                        has_positive = any(x > 0 for x in difference_board_1)
+                        has_negative = any(x < 0 for x in difference_board_1)
+                        if has_positive and has_negative:
+                            print(f"BAD VALUE, HAS POSITIVE AND NEGATIVE DIFFERENCES BOARD 1")
+
+            #compute slope
+            x = list(range(num_per_slope))
+            slope_0, _, _, _, _ = stats.linregress(x, results_board_0[-1*num_per_slope:])
+            #slopes_board_0.append(slope_0)
+            slope_1, _, _, _, _ = stats.linregress(x, results_board_1[-1*num_per_slope:])
+            #slopes_board_1.append(slope_1)
+
+            slope_difference = slope_0 - slope_1
+            slope_differences.append(slope_difference)
+            # slope is the rate of change of phase on both boards
+            #print(f"Slope difference: {slope_difference}")
+            # use this as error signal, simple frequency adjustment to follower board, here board 1
+            # In config file, DPLL0 is master DPLL, but in Frequency Write mode
+
+            ##### Use DPLL_FREQ_0.DPLL_WR_FREQ register set , write-frequency mode
+            # slope_difference is in 
+
+            # simple proportional 
+            # board 0 is accumulating phase faster than board 1
+            # board 0 is faster with respect to 100MHz than board 1
+            # speed up board 1
+            cur_ppm_adjust += slope_difference * 10
+                
+            fcw = calculate_fcw(cur_ppm_adjust)
+            fcw = to_twos_complement_bytes(fcw, 42)
+            print(f"{j} -> Slope_diff = {slope_difference} , Cur_ppm_adjust = {cur_ppm_adjust} , FCW change to {fcw}\n")
+            # it's in the right order, just write it
+            #self.boards[1].dpll.modules["DPLL_Freq_Write"].write_reg_mul(0,
+            #    "DPLL_WR_FREQ_7_0", fcw) 
+           
+                
+        print(f"Slope differences: {slope_differences}")
+        print(f"Board 0 phase: {results_board_0}")
+        print(f"Board 1 phase: {results_board_1}")
+
+
+
+
+        #print(f"Results board 0: {results_board_0}")
+        #print(f"Results board 1: {results_board_1}")
+
+        #print(f"Slopes 0: {slopes_board_0}")
+        #print(f"Slopes 1: {slopes_board_1}")
+
+
 
 
 
@@ -531,7 +613,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="MiniPTM top level debug")
 
     parser.add_argument('command', type=str,
-                        help='What command to run, program / debug / flash / read / write')
+                        help='What command to run, program / debug_dpof / debug_pfm / flash / read / write')
     parser.add_argument('--config_file', type=str,
                         default="8A34002_MiniPTMV3_12-27-2023_Julian_AllPhaseMeas.tcs", help="File to program")
     parser.add_argument('--eeprom_file', type=str,
@@ -552,7 +634,7 @@ if __name__ == "__main__":
             top.program_all_boards(config_file=args.config_file)
 
         top.set_all_boards_leds_idcode()
-    elif args.command == "debug":
+    elif args.command == "debug_dpof":
         top = MiniPTM()
         top.dpll_over_fiber_test()
 
@@ -562,6 +644,10 @@ if __name__ == "__main__":
         # top.do_dpll_over_fiber_pingpong() -> basic proof of concept
         # top.do_dpll_over_fiber_with_ack() -> Another proof of concept
 
+
+    elif args.command == "debug_pfm":
+        top = MiniPTM()
+        top.do_pfm_use_input_tdc()
 
     elif args.command == "flash":
         top = MiniPTM()

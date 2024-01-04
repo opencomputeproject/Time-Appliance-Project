@@ -436,10 +436,29 @@ PWM_RX_INFO_LAYOUT = {
 }
 
 
+DPLL_CTRL_LAYOUT = {
+        "FOD_FREQ_M_7_0": {"offset": 0x1c, "fields": {"VALUE": BitField(0,8)}},
+        "FOD_FREQ_M_15_8": {"offset": 0x1d, "fields": {"VALUE": BitField(0,8)}},
+        "FOD_FREQ_M_23_16": {"offset": 0x1e, "fields": {"VALUE": BitField(0,8)}},
+        "FOD_FREQ_M_31_24": {"offset": 0x1f, "fields": {"VALUE": BitField(0,8)}},
+        "FOD_FREQ_M_39_32": {"offset": 0x20, "fields": {"VALUE": BitField(0,8)}},
+        "FOD_FREQ_M_47_40": {"offset": 0x21, "fields": {"VALUE": BitField(0,8)}},
+        "FOD_FREQ_N_7_0": {"offset": 0x22, "fields": {"VALUE": BitField(0,8)}},
+        "FOD_FREQ_N_15_8": {"offset": 0x23, "fields": {"VALUE": BitField(0,8)}},
+}
 
 
-
-
+DPLL_FREQ_WRITE_LAYOUT = {
+        "DPLL_WR_FREQ_7_0": {"offset": 0x0, "fields": {"VALUE": BitField(0,8)}},
+        "DPLL_WR_FREQ_15_8": {"offset": 0x1, "fields": {"VALUE": BitField(0,8)}},
+        "DPLL_WR_FREQ_23_16": {"offset": 0x2, "fields": {"VALUE": BitField(0,8)}},
+        "DPLL_WR_FREQ_31_24": {"offset": 0x3, "fields": {"VALUE": BitField(0,8)}},
+        "DPLL_WR_FREQ_39_32": {"offset": 0x4, "fields": {"VALUE": BitField(0,8)}},
+        "DPLL_WR_FREQ_41_40": {"offset": 0x5, "fields": {"VALUE": BitField(0,2), 
+            "Reserved": BitField(2,6)
+            }
+            },
+}
 
 
 
@@ -477,7 +496,7 @@ def int_to_signed_nbit(number, n_bits):
         inverted = ''.join('1' if b == '0' else '0' for b in binary_str)
         # Add 1
         decimal = int(inverted, 2) + 1
-        return -decimal
+        return -1 * decimal
 
     binary_n_bit = format(number, f'0{n_bits}b')
 
@@ -520,8 +539,28 @@ def hex_to_signed_nbit(hex_value, n_bits):
     else:
         return int(binary_n_bit, 2)
 
+def to_twos_complement_bytes(value, n_bits):
+    # Adjust value for n-bit representation
+    if value < 0:
+        value = (1 << n_bits) + value
+    else:
+        value = value % (1 << n_bits)
+
+    # Calculate the number of bytes needed for n bits
+    n_bytes = (n_bits + 7) // 8
+
+    # Convert to bytes
+    value_in_bytes = value.to_bytes(n_bytes, byteorder='little', signed=False)
+
+    # Convert each byte to an integer and return the list
+    return [byte for byte in value_in_bytes]
 
 
+def calculate_fcw(ffo_ppm=0):
+	ffo_fraction = ffo_ppm / 10**6
+	fcw = (1 - (1 / (1+ ffo_fraction))) * 2**53
+	fcw = int(fcw)
+	return fcw
 
 
 class Module:
@@ -794,6 +833,23 @@ class PWM_Rx_Info(Module):
         super().__init__("PWM_Rx_Info", PWM_Rx_Info.LAYOUT,
                          PWM_Rx_Info.BASE_ADDRESSES)
 
+
+class DPLL_Ctrl(Module):
+    BASE_ADDRESSES = {0:0xc600, 1:0xc63c, 2:0xc680, 3:0xc6bc}
+    LAYOUT = DPLL_CTRL_LAYOUT
+    def __init__(self):
+        super().__init__("DPLL_Ctrl", DPLL_Ctrl.LAYOUT,
+                         DPLL_Ctrl.BASE_ADDRESSES)
+
+class DPLL_Freq_Write(Module):
+    BASE_ADDRESSES = {0:0xc838, 1:0xc840, 2:0xc848, 3:0xc850}
+    LAYOUT = DPLL_FREQ_WRITE_LAYOUT
+    def __init__(self):
+        super().__init__("DPLL_Freq_Write", DPLL_Freq_Write.LAYOUT,
+                         DPLL_Freq_Write.BASE_ADDRESSES)
+
+
+
 # holder of registers
 class DPLL():
     def __init__(self, i2c_dev, 
@@ -804,7 +860,8 @@ class DPLL():
         modules_to_use = [Status, PWMEncoder, PWMDecoder, TOD, TODWrite, TODReadPrimary,
                           TODReadSecondary, Input, REFMON, PWM_USER_DATA,
                           OUTPUT_TDC_CFG, OUTPUT_TDC, INPUT_TDC, PWM_SYNC_ENCODER,
-                          PWM_SYNC_DECODER, EEPROM, EEPROM_DATA, PWM_Rx_Info ]
+                          PWM_SYNC_DECODER, EEPROM, EEPROM_DATA, PWM_Rx_Info, DPLL_Ctrl,
+                          DPLL_Freq_Write ]
 
         for mod in modules_to_use:
             self.modules[mod.__name__] = mod()
