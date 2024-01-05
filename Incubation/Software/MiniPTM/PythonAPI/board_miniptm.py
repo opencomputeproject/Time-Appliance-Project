@@ -230,6 +230,7 @@ class Single_MiniPTM:
             average += phase_val
 
         average = average / avg_count
+        #print(f"Read pcie clk phase board {self.board_num} val = {average}")
         return average
 
     def clear_all_dpll_sticky_status(self):
