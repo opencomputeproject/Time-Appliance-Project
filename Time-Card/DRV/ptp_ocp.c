@@ -992,6 +992,9 @@ static struct ocp_resource ocp_fb_resource_rev2[] = {
 				.num_chipselect = 1,
 				.bits_per_word = 8,
 				.num_devices = 1,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
+				.force_irq = true,
+#endif
 				.devices = &(struct spi_board_info) {
 					.modalias = "spi-nor",
 				},
