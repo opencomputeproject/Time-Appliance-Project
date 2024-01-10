@@ -384,7 +384,7 @@ struct ptp_ocp {
 	struct tod_reg		__iomem *nmea_out;
 	struct frequency_reg	__iomem *freq_in[4];
 	struct msi_reg __iomem	*msi;
-	struct ptp_ocp_ext_src	*ptm;
+	struct ptm_reg __iomem	*ptm;
 	struct ptp_ocp_ext_src	*signal_out[4];
 	struct ptp_ocp_ext_src	*pps;
 	struct ptp_ocp_ext_src	*ts0;
@@ -432,8 +432,6 @@ struct ptp_ocp {
 	struct system_time_snapshot snapshot;
 	u64			ptm_t1_prev;
 	u64			ptm_t4_prev;
-	bool		has_ptm_support;
-	bool		has_msix_support;
 };
 
 #define OCP_REQ_TIMESTAMP	BIT(0)
@@ -450,11 +448,8 @@ struct ocp_resource {
 };
 
 struct ocp_driver_data {
-	u8 min_revision;
-	u8 max_revision;
-	struct ocp_resource *ocp_resource;
-	bool ptm_support;
-	bool msix_support;
+	struct ocp_resource *ocp_resource_msi;
+	struct ocp_resource *ocp_resource_msix;
 };
 
 static int ptp_ocp_register_mem(struct ptp_ocp *bp, struct ocp_resource *r);
@@ -462,7 +457,6 @@ static int ptp_ocp_register_i2c(struct ptp_ocp *bp, struct ocp_resource *r);
 static int ptp_ocp_register_spi(struct ptp_ocp *bp, struct ocp_resource *r);
 static int ptp_ocp_register_serial(struct ptp_ocp *bp, struct ocp_resource *r);
 static int ptp_ocp_register_ext(struct ptp_ocp *bp, struct ocp_resource *r);
-static int ptp_ocp_register_ext_no_irq(struct ptp_ocp *bp, struct ocp_resource *r);
 static int ptp_ocp_fb_board_init(struct ptp_ocp *bp, struct ocp_resource *r);
 static irqreturn_t ptp_ocp_ts_irq(int irq, void *priv);
 static irqreturn_t ptp_ocp_signal_irq(int irq, void *priv);
@@ -534,9 +528,6 @@ static struct ptp_ocp_eeprom_map art_eeprom_map[] = {
 
 #define OCP_EXT_RESOURCE(member) \
 	OCP_RES_LOCATION(member), .setup = ptp_ocp_register_ext
-
-#define OCP_EXT_NO_IRQ_RESOURCE(member) \
-	OCP_RES_LOCATION(member), .setup = ptp_ocp_register_ext_no_irq
 
 /* This is the MSI vector mapping used.
  * 0: PPS (TS5)
@@ -799,11 +790,8 @@ static struct ocp_resource ocp_fb_resource_rev2[] = {
 		.offset = CSR_PCIE_MSI_BASE, .size = 0x4,
 	},
 	{
-		OCP_EXT_NO_IRQ_RESOURCE(ptm),
+		OCP_MEM_RESOURCE(ptm),
 		.offset = CSR_PTM_REQUESTER_BASE, .size = 0x800,
-		.extra = &(struct ptp_ocp_ext_info) {
-			.index = 0,
-		},
 	},
 	{
 		OCP_MEM_RESOURCE(reg),
@@ -1034,18 +1022,8 @@ static struct ocp_resource ocp_fb_resource_rev2[] = {
 
 static struct ocp_driver_data ocp_fb_driver_data[] = {
 	{
-		.min_revision = 0,
-		.max_revision = 1,
-		.ocp_resource = (struct ocp_resource *) (&ocp_fb_resource_rev1),
-		.ptm_support = false,
-		.msix_support = false,
-	},
-	{
-		.min_revision = 2,
-		.max_revision = 2,
-		.ocp_resource = (struct ocp_resource *) (&ocp_fb_resource_rev2),
-		.ptm_support = true,
-		.msix_support = true,
+		.ocp_resource_msi = (struct ocp_resource *) (&ocp_fb_resource_rev1),
+		.ocp_resource_msix = (struct ocp_resource *) (&ocp_fb_resource_rev2),
 	},
 	{ }
 };
@@ -1224,11 +1202,8 @@ static struct ocp_resource ocp_art_resource[] = {
 
 static struct ocp_driver_data ocp_art_driver_data[] = {
 	{
-		.min_revision = 0,
-		.max_revision = 255,
-		.ocp_resource = (struct ocp_resource *) (&ocp_art_resource),
-		.ptm_support = false,
-		.msix_support = false,
+		.ocp_resource_msi = (struct ocp_resource *) (&ocp_art_resource),
+		.ocp_resource_msix = (struct ocp_resource *) (&ocp_art_resource),
 	},
 	{ }
 };
@@ -1588,6 +1563,7 @@ ptp_ocp_null_adjphase(struct ptp_clock_info *ptp_info, s32 phase_ns)
 	return -EOPNOTSUPP;
 }
 
+#ifdef CONFIG_PCIE_PTM
 static int
 ptp_ocp_syncdevicetime(ktime_t *device_time,
             struct system_counterval_t *system_counterval,
@@ -1598,8 +1574,7 @@ ptp_ocp_syncdevicetime(ktime_t *device_time,
 	u32 prop_delay;
 	u64 ptm_master_time;
 	struct ptp_ocp *bp = ctx;
-	struct ptp_ocp_ext_src *ptm = bp->ptm;
-	struct ptm_reg __iomem *reg = ptm->mem;
+	struct ptm_reg __iomem *reg = bp->ptm;
 	u64 t1_curr;
 	ktime_t t1, t2_curr;
 	int count;
@@ -1659,13 +1634,20 @@ ptp_ocp_getcrosststamp(struct ptp_clock_info *ptp_info,
         	struct system_device_crosststamp *cts)
 {
 	struct ptp_ocp *bp = container_of(ptp_info, struct ptp_ocp, ptp_info);
-
-	if (!bp->has_ptm_support)
+	if (!bp->pdev->ptm_enabled)
 		return 0;
 
 	return get_device_system_crosststamp(ptp_ocp_syncdevicetime,
                          bp, &bp->snapshot, cts);
 }
+#else
+static int
+ptp_ocp_getcrosststamp(struct ptp_clock_info *ptp_info,
+        	struct system_device_crosststamp *cts)
+{
+	return 0;
+}
+#endif
 
 static int
 ptp_ocp_enable(struct ptp_clock_info *ptp_info, struct ptp_clock_request *rq,
@@ -2589,34 +2571,6 @@ out:
 }
 
 static int
-ptp_ocp_register_ext_no_irq(struct ptp_ocp *bp, struct ocp_resource *r)
-{
-	struct ptp_ocp_ext_src *ext;
-	int err;
-
-	ext = kzalloc(sizeof(*ext), GFP_KERNEL);
-	if (!ext)
-		return -ENOMEM;
-
-	ext->mem = ptp_ocp_get_mem(bp, r);
-	if (IS_ERR(ext->mem)) {
-		err = PTR_ERR(ext->mem);
-		goto out;
-	}
-
-	ext->bp = bp;
-	ext->info = r->extra;
-
-	bp_assign_entry(bp, r, ext);
-
-	return 0;
-
-out:
-	kfree(ext);
-	return err;
-}
-
-static int
 ptp_ocp_serial_line(struct ptp_ocp *bp, struct ocp_resource *r)
 {
 	struct pci_dev *pdev = bp->pdev;
@@ -3040,41 +2994,27 @@ ptp_ocp_allow_irq(struct ptp_ocp *bp, struct ocp_resource *r)
 	return allow;
 }
 
-static int
-ptp_ocp_get_resources(struct ptp_ocp *bp, kernel_ulong_t driver_data, struct ocp_resource **table)
+static struct ocp_resource *
+ptp_ocp_get_resources(struct ptp_ocp *bp, kernel_ulong_t driver_data)
 {
-	struct ocp_driver_data *d, *ocp_driver_data;
-	u8 rev_id;
-	int err = -EOPNOTSUPP;
-
-	/* Get device revision */
-    pci_read_config_byte(bp->pdev, PCI_REVISION_ID, &rev_id);
+	struct ocp_driver_data *ocp_driver_data;
 
 	ocp_driver_data = (struct ocp_driver_data *)driver_data;
 
-	for(d = ocp_driver_data; d->ocp_resource; d++) {
-		if (d->min_revision <= rev_id && d->max_revision >= rev_id) {
-			*table = d->ocp_resource;
-			bp->has_ptm_support = d->ptm_support;
-			bp->has_msix_support = d->msix_support;
-			err = 0;
-		}
-	}
+	if (bp->pdev->msix_enabled && ocp_driver_data->ocp_resource_msix)
+		return ocp_driver_data->ocp_resource_msix;
 
-	if (err < 0)
-		dev_err(&bp->dev, "Unsupported device version %d\n", rev_id);
-
-	return err;
+	return ocp_driver_data->ocp_resource_msi;
 }
 
 static int
 ptp_ocp_register_resources(struct ptp_ocp *bp, kernel_ulong_t driver_data)
 {
 	struct ocp_resource *r, *table;
-	int err = 0;
+	int err;
 
 	/* Get driver resources matching device revision */
-	ptp_ocp_get_resources(bp, driver_data, &table);
+	table = ptp_ocp_get_resources(bp, driver_data);
 
 	for (r = table; r->setup; r++) {
 		if (!ptp_ocp_allow_irq(bp, r))
@@ -5234,58 +5174,50 @@ ptp_ocp_serial_info(struct device *dev, const char *name, int port, int baud)
 static void
 ptp_ocp_disable_ptm(struct ptp_ocp *bp)
 {
-	struct ptp_ocp_ext_src *ptm = bp->ptm;
-	struct ptm_reg __iomem *reg = ptm->mem;
+	struct ptm_reg __iomem *reg = bp->ptm;
+	u32 status;
 	int count;
 
 	/* disable PTM control*/
 	iowrite32(0, &reg->ctrl);
 	count = 100;
 	do {
-		count--;
-		if ((ioread32(&reg->status)) == 0)
+		status = ioread32(&reg->status);
+		if (!status)
 			break;
+		count--;
 	} while (count > 0);
 
-	if (count <= 0) {
-		printk("PTM not disabled: Status = 0x%X \n", reg->status);
+	if (!count) {
+		dev_err(&bp->pdev->dev, "PTM not disabled: Status = 0x%X \n", status);
 	}
 }
 
 static void
 ptp_ocp_enable_ptm(struct ptp_ocp *bp)
 {
-	struct ptp_ocp_ext_src *ptm = bp->ptm;
-	struct ptm_reg __iomem *reg = ptm->mem;
-	int count;
+	struct ptm_reg __iomem *reg = bp->ptm;
+	u32 status;
+	int count, try = 2;
 
 	/* enable PTM control and start first request */
 	/* prepare T1 & T4 for next request */
 
-	iowrite32(PTM_CONTROL_ENABLE | PTM_CONTROL_TRIGGER, &reg->ctrl);
-	count = 100;
-	do {
-		count--;
-		if ((ioread32(&reg->status) & PTM_STATUS_BUSY) == 0)
-			break;
-	} while (count > 0);
+	while (try--) {
+		iowrite32(PTM_CONTROL_ENABLE | PTM_CONTROL_TRIGGER, &reg->ctrl);
+		count = 100;
+		do {
+			status = ioread32(&reg->status);
+			if ((status & PTM_STATUS_BUSY) == 0)
+				break;
+			count--;
+		} while (count > 0);
 
-	if (count <= 0) {
-		printk("Enable and trigger 1st PTM failed: Status = 0x%X \n", reg->status);
-	}
+		if (count)
+			continue;
 
-	iowrite32(PTM_CONTROL_ENABLE | PTM_CONTROL_TRIGGER, &reg->ctrl);
-	count = 100;
-	do {
-		count--;
-		if ((ioread32(&reg->status) & PTM_STATUS_BUSY) == 0)
-			break;
-	} while (count > 0);
-
-	if (count <= 0) {
-		printk("Enable and trigger 2nd PTM failed: Status = 0x%X \n", reg->status);
-	}
-
+		dev_err(&bp->pdev->dev, "Enable and trigger PTM failed: Status = 0x%X, try: %d\n", status, 2 - try);
+  }
 	bp->ptm_t4_prev = (((u64) ioread32(&reg->t4_time[0]) << 32) |
 		(ioread32(&reg->t4_time[1]) & 0xffffffff));
 
@@ -5473,7 +5405,7 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	if (err)
 		goto out;
 
-	if (bp->has_ptm_support) {
+	if (bp->ptm) {
 		ptp_ocp_disable_ptm(bp);
 		ptp_ocp_enable_ptm(bp);
 	} else {
@@ -5482,7 +5414,7 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	ptp_ocp_info(bp);
 	ptp_ocp_devlink_register(devlink, &pdev->dev);
 
-	if(bp->has_msix_support) {
+	if(bp->pdev->msix_enabled) {
 		/* Enable MSI-X Irq in LitePCIe*/
 		iowrite32(0xFF, &bp->msi->enable);
 		dev_info(&pdev->dev, "Enabled MSI-X 0xFF\n");
