@@ -11,6 +11,8 @@ from scipy import stats
 import sys
 import threading
 import select
+from scipy.signal import medfilt
+import numpy as np
 
 
 def input_with_timeout(timeout):
@@ -31,11 +33,47 @@ def input_thread_func(stop_event):
                 MiniPTM.user_input_str.append(result.lower())
 
 
+class PIController:
+    def __init__(self, kp, ki):
+        self.kp = kp
+        self.ki = ki
+        self.integral = 0
+
+    def update(self, error):
+        self.integral += error
+        return self.kp * error + self.ki * self.integral
+
+
+class MovingAverageFilter:
+    def __init__(self, window_size=5, outlier_percentage=50):
+        self.window_size = window_size
+        self.outlier_percentage = outlier_percentage / 100.0
+        self.rolling_window = []
+        self.previous_average = None
+
+    def update(self, new_sample):
+        if self.previous_average is not None and self.previous_average != 0:
+            percentage_change = abs(new_sample - self.previous_average) / abs(self.previous_average)
+            
+            if percentage_change > self.outlier_percentage:
+                return self.previous_average  # Ignore outlier and return previous average
+
+        self.rolling_window.append(new_sample)
+        if len(self.rolling_window) > self.window_size:
+            self.rolling_window.pop(0)
+
+        if len(self.rolling_window) > 0:
+            self.previous_average = np.mean(self.rolling_window)
+        
+        return self.previous_average
+
 class MiniPTM:
     user_input_str = []
     user_input_lock = threading.Lock()
-    PFM_KP = 10
-    PFM_KI = 0.2
+    # PFM_KP = 10
+    # PFM_KI = 0.2 for input TDC mode
+    PFM_KP = 0.7
+    PFM_KI = 0.3
 
     def __init__(self):
         miniptm_devs = get_miniptm_devices()
@@ -61,7 +99,7 @@ class MiniPTM:
         with MiniPTM.user_input_lock:
             while len(MiniPTM.user_input_str):
                 val = MiniPTM.user_input_str.pop(0)
-                if ( len(val) == 0 ):
+                if (len(val) == 0):
                     continue
                 print(f"User entered {val}")
                 if val == "quit":
@@ -69,12 +107,11 @@ class MiniPTM:
                 else:
                     parts = val.split()
                     print(f"User input in parts, {parts}")
-                    if ( parts[0] == 'set' ):
-                        if (parts[1] == "kp" ):
+                    if (parts[0] == 'set'):
+                        if (parts[1] == "kp"):
                             MiniPTM.PFM_KP = float(parts[2])
-                        elif (parts[1] == "ki" ):
+                        elif (parts[1] == "ki"):
                             MiniPTM.PFM_KI = float(parts[2])
-
 
     def set_all_boards_leds_idcode(self):
         # leave LEDs to show what board number it is
@@ -194,6 +231,204 @@ class MiniPTM:
         # DOES NOT WORK, Can't configure Output TDC to measure GPIO0
         pass
 
+    def do_pfm_output_tdc_one_measurement(self):
+        results_first = []
+        results_first_int = []
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            # Output TDC trigger time should be concurrent, reading it back doesn't matter
+            # 0x89 = filter disabled, clear accumulated , single shot, measurement, GO
+            futures = [executor.submit(self.boards[j].dpll.modules["OUTPUT_TDC"].write_reg, 2,
+                                       "OUTPUT_TDC_CTRL_4", 0x89) for j in range(len(self.boards))]
+            results_first = [future.result()
+                             for future in futures]  # get them in order
+
+            results_first = []
+
+            for board in self.boards:
+                for i in range(100):
+                    status = board.dpll.modules["Status"].read_reg(
+                        0, "OUTPUT_TDC2_STATUS")
+                    print(
+                        f"Board {board.board_num} output tdc2 status = 0x{status:02x}")
+                    if (not (status & 0x2)):  # not in progress
+                        results_first.append(board.dpll.modules["Status"].read_reg_mul(0,
+                                                                                       "OUTPUT_TDC2_MEASUREMENT_7_0", 6))
+                        break
+                    else:
+                        time.sleep(0.1)
+
+            results_first_int = []
+            for val in results_first:
+                phase_val = 0
+                for i, byte in enumerate(val):
+                    phase_val += byte << (8*i)
+                phase_val = int_to_signed_nbit(phase_val, 36)
+                # already in picoseconds apparently
+                results_first_int.append(phase_val)
+
+            print(
+                f" Got first results, {results_first}, int {results_first_int}")
+            return results_first_int
+
+    def old_do_pfm_sacrifice_dpll3_use_output_tdc(self):
+        # DPLL 0 / DPLL 1 are combo slaves of DPLL 2
+        # DPLL 2 is DCO Operation with write frequency mode, combo slave to system DPLL
+        # DPLL 3 is sacrificed, tracking 100MHz input divided down to 16KHz
+        # Use output TDC 2, source = DPLL2 target = DPLL3 in single shot mode to measure phase
+        if (len(self.boards) <= 1):
+            print("PFM only works with two+ boards, ending")
+            return
+
+        results_board_0 = []
+        results_board_1 = []
+        cur_ppm_adjust = 0
+
+        slope_differences = []
+        for board in self.boards:
+            # start of it , make sure frequency adjust word is zero
+            board.dpll.modules["DPLL_Freq_Write"].write_reg_mul(2,
+                                                                "DPLL_WR_FREQ_7_0", [0, 0, 0, 0, 0, 0])
+            # assume output TDC2 is setup from config file
+            print(f"\n********* Board {board.board_num} config ************\n")
+            board.dpll.modules["OUTPUT_TDC_CFG"].print_all_registers(0)
+            board.dpll.modules["OUTPUT_TDC"].print_all_registers(2)
+            reg = board.dpll.modules["Status"].read_reg(
+                0, "OUTPUT_TDC_CFG_STATUS")
+            print(f"OUTPUT_TDC_CFG_STATUS = 0x{reg:02x}")
+            reg = board.dpll.modules["Status"].read_reg(
+                0, "OUTPUT_TDC2_STATUS")
+            print(f"OUTPUT_TDC2_STATUS = 0x{reg:02x}")
+
+        print(f"Start pfm use sacrificial DPLL3 and output tdc")
+        for j in range(1000):
+            print(f"\nLoop{j}")
+            results_first = []
+            results_second = []
+            results_first = self.do_pfm_output_tdc_one_measurement()
+            time.sleep(0.25)  # some time to accumulate phase offset
+            results_second = self.do_pfm_output_tdc_one_measurement()
+
+            print(
+                f"Board 0 measurements {results_first[0]},{results_second[0]}")
+            print(
+                f"Board 1 measurements {results_first[1]},{results_second[1]}")
+            board0_change = results_second[0] - results_first[0]
+            board1_change = results_second[1] - results_first[1]
+            change_diff = board0_change - board1_change
+
+            print(
+                f"Loop {j} board0_change={board0_change} , board1_change={board1_change}, diff = {change_diff}")
+            print(
+                f"{j} -> Slope_diff = {change_diff} , Cur_ppm_adjust = 0, FCW change to [0,0,0,0,0,0]")
+
+    # Median filter function
+
+    def moving_average_with_outlier_removal(data, window_size=5, outlier_threshold=1.5):
+        q25, q75 = np.percentile(data, [25, 75])
+        iqr = q75 - q25
+        lower_bound = q25 - (iqr * outlier_threshold)
+        upper_bound = q75 + (iqr * outlier_threshold)
+
+        filtered_data = [x for x in data if lower_bound <= x <= upper_bound]
+        if not filtered_data:  # If all data are outliers, return an empty array
+            return np.array([])
+
+        ma_filtered = np.convolve(filtered_data, np.ones(
+            window_size), 'valid') / window_size
+        return ma_filtered
+
+    def handle_all_outliers(previous_valid_value):
+        return previous_valid_value
+
+    def do_pfm_sacrifice_dpll3(self):
+        # Use DPLL3 in DPLL mode locked to 100MHz
+        # read back loop filter status values from DPLL3 and compare between boards
+        # Feed into DPLL2 as FCW
+        if (len(self.boards) <= 1):
+            print("PFM only works with two+ boards, ending")
+            return
+
+        ffo_diff_history = []
+        cur_ppm_adjust = 0
+
+        integral = 0
+
+        for board in self.boards:
+            # start of it , make sure frequency adjust word is zero
+            board.dpll.modules["DPLL_Freq_Write"].write_reg_mul(2,
+                                                                "DPLL_WR_FREQ_7_0", [0, 0, 0, 0, 0, 0])
+
+        time.sleep(2)
+        print(f"Start pfm use sacrifical DPLL3")
+        time_diff = 0
+        last_ffo_write = 0
+        alpha = 0.1
+        filter0 = MovingAverageFilter(window_size=5, outlier_percentage=50)
+        filter1 = MovingAverageFilter(window_size=5, outlier_percentage=50)
+
+        for j in range(10000):
+            results_first_int = []
+            print(f"\nLoop{j}")
+
+            time_start = time.time()
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                results = []
+                futures = [executor.submit(self.boards[j].dpll.modules["Status"].read_reg_mul, 0,
+                                           "DPLL3_FILTER_STATUS_7_0", 6) for j in range(len(self.boards))]
+                results_first = [future.result()
+                                 for future in futures]  # get them in order
+
+                print(f" Got first results, {results_first}")
+            for val in results_first:
+                phase_val = 0
+                for i, byte in enumerate(val):
+                    phase_val += byte << (8*i)
+                phase_val = int_to_signed_nbit(phase_val, 48)
+                # 48-bit FFO value in units of 2^-53
+                results_first_int.append(phase_val)  # units of 50ps
+
+            print(
+                f"Loop {j} board0 = {results_first_int[0]} , board1 = {results_first_int[1]}")
+
+            # need to filter these inputs actually, the noise here causes problems
+            filtered_value0 = filter0.update(results_first_int[0])
+            filtered_value1 = filter1.update(results_first_int[1])
+        
+            filtered_value0 = results_first_int[0]
+            filtered_value1 = results_first_int[1]
+
+            if (filtered_value0 is None or filtered_value1 is None):
+                print(
+                    f"Filtered value is none, pass, {filtered_value0} {filtered_value1}")
+                continue
+
+            print(f"Filtered values {filtered_value0} , {filtered_value1}")
+
+            ffo_diff = filtered_value1 - filtered_value0
+            ffo_ratio = filtered_value1 / filtered_value0
+            print(f"FFO difference={ffo_diff}, ratio = {ffo_ratio}")
+
+            # simple low pass filter
+            #if (last_ffo_write == 0):
+            #    last_ffo_write = ffo_diff
+            #ffo_to_write = alpha * ffo_diff + (1 - alpha) * last_ffo_write
+            #last_ffo_write = ffo_to_write
+
+            # just use value directly
+            ffo_to_write = ffo_diff
+
+            print(f"FFO to write after filter:  {ffo_to_write}")
+            # apparently write frequency is already in the same scale, just convert it
+            ffo_to_write_bytes = to_twos_complement_bytes(
+                int(ffo_to_write), 42)
+            hex_val = [hex(val) for val in ffo_to_write_bytes]
+            print(f"Write frequency bytes {hex_val}")
+            self.boards[1].dpll.modules["DPLL_Freq_Write"].write_reg_mul(2,
+                    "DPLL_WR_FREQ_7_0", ffo_to_write_bytes)
+
+            time.sleep(0.1)
+            time_diff += time.time() - time_start
+
     def do_pfm_use_input_tdc(self):
         # Use Input TDC from DPLL1 , measure CLK8 (10MHz from PCIe 100MHz divided down)
         #   versus CLK5 (10MHz loopback from Q7 for zero delay)
@@ -202,13 +437,7 @@ class MiniPTM:
             print("PFM only works with two+ boards, ending")
             return
 
-        # simple algorithm, measure both phase values, and
-
-        # hack , use first board as "reference"
-
-        # doesn't quite work , since phase measurement value fluctuates
         results_board_0 = []
-
         results_board_1 = []
         cur_ppm_adjust = 0
 
@@ -217,12 +446,19 @@ class MiniPTM:
 
         integral = 0
 
-        # start of it , make sure frequency adjust word is zero
-        self.boards[1].dpll.modules["DPLL_Freq_Write"].write_reg_mul(3,
-                 "DPLL_WR_FREQ_7_0", [0, 0, 0, 0, 0, 0])
+        for board in self.boards:
+            # start of it , make sure frequency adjust word is zero
+            board.dpll.modules["DPLL_Freq_Write"].write_reg_mul(3,
+                                                                "DPLL_WR_FREQ_7_0", [0, 0, 0, 0, 0, 0])
+
+            # HACK FROM RENESAS, DISABLE DECIMATOR OF PFD
+            board.i2c.write_dpll_reg_direct(0x8a2d, 0x0)  # channel 0
+            board.i2c.write_dpll_reg_direct(0x8b2d, 0x0)  # channel 1
+            board.i2c.write_dpll_reg_direct(0x8c2d, 0x0)  # channel 2
+            board.i2c.write_dpll_reg_direct(0x8d2d, 0x0)  # channel 3
 
         print(f"Start pfm use input tdc")
-        # reset it wth synth
+        # reset it
         for board in self.boards:
             board.read_pcie_clk_phase_measurement(True, 1)
 
@@ -239,15 +475,15 @@ class MiniPTM:
                            for j in range(len(self.boards))]
                 results_first = [future.result()
                                  for future in futures]  # get them in order
-                #print(f" Got first results, {results_first}")
+                # print(f" Got first results, {results_first}")
                 start_time = time.time()
-                time.sleep(1)  # give it time to accumulate phase
+                time.sleep(2)  # give it time to accumulate phase
 
                 futures = [executor.submit(self.boards[j].read_pcie_clk_phase_measurement, False, 1)
                            for j in range(len(self.boards))]
                 results_second = [future.result()
                                   for future in futures]  # get them in order
-                #print(f" Got second results, {results_second}")
+                # print(f" Got second results, {results_second}")
 
                 end_time = time.time()
                 time_diff = end_time - start_time
@@ -258,32 +494,52 @@ class MiniPTM:
                 results_board_0.append(
                     results_second[0] * 50e-12)  # in units of 50ps
 
-                print(f"Board 0 measurements {results_board_0[-2]},{results_board_0[-1]}")
+                print(
+                    f"Board 0 measurements {results_board_0[-2]},{results_board_0[-1]}")
 
                 results_board_1.append(
                     results_first[1] * 50e-12)  # in units of 50ps
                 results_board_1.append(
                     results_second[1] * 50e-12)  # in units of 50ps
 
-                print(f"Board 1 measurements {results_board_1[-2]},{results_board_1[-1]}")
+                print(
+                    f"Board 1 measurements {results_board_1[-2]},{results_board_1[-1]}")
 
                 board0_change = (
                     results_second[0] * 50e-12) - (results_first[0] * 50e-12)
                 board1_change = (
                     results_second[1] * 50e-12) - (results_first[1] * 50e-12)
 
-                # TDC can saturate, do a clear if either board is above a threshold, I'm using 0.5, half a second
-                if ( results_board_0[-1] > 0.15 or results_board_1[-1] > 0.15):
-                    futures = [executor.submit(self.boards[j].read_pcie_clk_phase_measurement, True, 1)
-                               for j in range(len(self.boards))]
-                    results_first = [future.result()
-                                     for future in futures]  # get them in order
+                # if saturates, change is zero, use that as threshold
+                if (abs(results_second[0]) > 0.0004094 or abs(results_second[1]) > 0.0004094):
+                    for index, board in enumerate(self.boards):
+                        print(
+                            f"Board {index} trying to reset phase measurement")
+                        # flip the clocks being measured
+                        cfg = self.boards[index].dpll.modules["DPLL_Config"].read_reg(1,
+                                                                                      "DPLL_PHASE_MEASUREMENT_CFG")
+                        fb_clk = (cfg >> 4) & 0xf
+                        ref_clk = cfg & 0xf
 
-                
+                        new_cfg = (fb_clk) + (ref_clk << 4)
+                        self.boards[index].dpll.modules["DPLL_Config"].write_reg(1,
+                                                                                 "DPLL_PHASE_MEASUREMENT_CFG", new_cfg)
+
+                        # just write DPLL mode to phase measurement again, trigger register
+                        self.boards[index].dpll.modules["DPLL_Config"].write_field(1,
+                                                                                   "DPLL_MODE", "PLL_MODE", 0x2)
+                        self.boards[index].i2c.write_dpll_reg_direct(
+                            0x8a2d, 0x0)  # channel 0
+                        self.boards[index].i2c.write_dpll_reg_direct(
+                            0x8b2d, 0x0)  # channel 1
+                        self.boards[index].i2c.write_dpll_reg_direct(
+                            0x8c2d, 0x0)  # channel 2
+                        self.boards[index].i2c.write_dpll_reg_direct(
+                            0x8d2d, 0x0)  # channel 3
+
                 print(
                     f"Loop {j} board0_change={board0_change} , board1_change={board1_change}, diff={board0_change - board1_change}", flush=True)
 
-            
             # compute slope
             x = list(range(num_per_slope))
             slope_0, _, _, _, _ = stats.linregress(
@@ -298,8 +554,6 @@ class MiniPTM:
 
             proportional = slope_difference * MiniPTM.PFM_KP
             integral += slope_difference * time_diff * MiniPTM.PFM_KI
-            
-            
 
             cur_ppm_adjust += proportional + integral
 
@@ -308,8 +562,14 @@ class MiniPTM:
             print(
                 f"{j} -> Slope_diff = {slope_difference} , Cur_ppm_adjust = {cur_ppm_adjust} , FCW change to {fcw}\n")
             # it's in the right order, just write it
-            self.boards[1].dpll.modules["DPLL_Freq_Write"].write_reg_mul(3,
-                                                                         "DPLL_WR_FREQ_7_0", fcw)
+            if (False):
+                self.boards[1].dpll.modules["DPLL_Freq_Write"].write_reg_mul(3,
+                                                                             "DPLL_WR_FREQ_7_0", fcw)
+            # HACK FROM RENESAS, DISABLE DECIMATOR OF PFD
+            self.boards[1].i2c.write_dpll_reg_direct(0x8a2d, 0x0)  # channel 0
+            self.boards[1].i2c.write_dpll_reg_direct(0x8b2d, 0x0)  # channel 1
+            self.boards[1].i2c.write_dpll_reg_direct(0x8c2d, 0x0)  # channel 2
+            self.boards[1].i2c.write_dpll_reg_direct(0x8d2d, 0x0)  # channel 3
 
             self.check_user_input()
             time.sleep(2)
@@ -329,290 +589,100 @@ class MiniPTM:
 ######################################################################################################
 # DPLL over fiber
 
-    def do_dpll_over_fiber_with_ack(self):
-        tx_0 = PWM_TX(self.boards[0], 0)
-        tx_1 = PWM_TX(self.boards[1], 0)
-        rx_0 = PWM_RX(self.boards[0])
-        rx_1 = PWM_RX(self.boards[1])
+    # used as part of dpll over fiber
 
-        value = "Hello world"
-        chunk_size = tx_0.MAX_PAYLOAD_SIZE
-        chunks = [list(value.encode()[i:i + chunk_size])
-                  for i in range(0, len(value), chunk_size)]
-        chunk_count = 0
+    def handle_query_response(self, board, query_response):
+        print(f"Top board {board.board_num} query response {query_response}")
+        decoder_num = query_response[0]
+        query_id = query_response[1]
+        query_data = query_response[2]
+        print(f"Got query data {len(query_data)}")
 
-        rx_0.enable_port(0)
-        rx_1.enable_port(0)
+        status_bytes = query_data[:16]
+        dpll_statuses = query_data[16:20]
+        input_freq_monitor_info = query_data[20:52]
+        name_string = query_data[52:68]
+        TOD_delta = query_data[68:79]  # TOD delta seen at far side
+        # what remote side saw, 1 for local tod > incoming tod, 0 for local < incoming WRT remote side
+        tod_flag = query_data[79]
+        clock_quality = query_data[80]
 
-        rx_1_packet_content = []
-        for loop_test in range(20):
+        print(f"Board {board.board_num} handle query response {query_data}")
+        # switch to it if not already
+        cur_dpllmode = board.dpll.modules["DPLL_Config"].read_reg(3,
+                                                                  "DPLL_MODE")
+        cur_reference = board.dpll.modules["Status"].read_reg(0,
+                                                              "DPLL3_REF_STATUS")
 
-            value = chunks[chunk_count]
-            last_pkt = False
-            if (chunk_count == len(chunks)-1):
-                last_pkt = True
-            chunk_count = (chunk_count + 1) % len(chunks)
-            print("\n\n")
-            hex_value = [hex(val) for val in value]
-            print(f"Value {hex_value}, Step 1, Send from TX0")
-
-            # loop to wait for TX to be ready
-            for j in range(20):
-                if (tx_0.check_has_tx_gone_out()):
-                    break
-                else:
-                    time.sleep(0.1)
-
-            tx_0.write_single_payload(value, not last_pkt)
-            went_out = False
-            for i in range(20):
-                if (tx_0.check_has_tx_gone_out()):
-                    went_out = True
-                    break
-                time.sleep(0.25)
-
-            if not went_out:
-                print(f" Step 1 TX didn't go out, end!")
-                return
-
-            print("\n\n")
-            print(f"Value {value}, Step 2, has gone from TX0, check RX1")
-            got_data = False
-            rx_1_rcvd_header = 0
-            for i in range(20):
-                header, data = rx_1.read_packet()
-                if len(header):
-                    # got a packet, give it to TX stack in case it needs it
-                    tx_1.got_incoming(header[0])
-
-                    # got a packet, check data
-                    rx_1_rcvd_header = header
-
-                    hex_val = [hex(val) for val in data]
-                    print(f"RX1 got packet data {hex_val}")
-
-                    rx_1_packet_content += data
-                    continue_flag = (header[0] >> 3) & 0x1
-                    if (continue_flag == 0):
-                        print(
-                            f"\n\n*************** RX1 GOT FULL PAYLOAD {rx_1_packet_content} ********\n\n")
-
-                    if data == value:
-                        print(f"RX1 got ping, now send ack")
-                        got_data = True
-                        break
-                time.sleep(0.25)
-
-            if not got_data:
-                print(f" Step 2 failed to get Data on RX1, end!")
-                return
-
-            print("\n\n")
-            print(
-                f"Value {value}, Step 3, has gone from TX0 to RX1, send ACK to TX0")
-            # loop to wait for TX to be ready
-            for j in range(20):
-                if (tx_1.check_has_tx_gone_out()):
-                    break
-                else:
-                    time.sleep(0.1)
-
-            tx_1.write_ack_packet(rx_1_rcvd_header)
-            went_out = False
-            for i in range(20):
-                if (tx_1.check_has_tx_gone_out()):
-                    went_out = True
-                    break
-                time.sleep(0.25)
-
-            if not went_out:
-                print(f" Step 3 TX didn't go out, end!")
-                return
-
-            print("\n\n")
-            print(
-                f"Value {value}, Step 4, has gone from TX0 to RX1, TX1 sent ack, check on RX0")
-            got_data = False
-            for i in range(20):
-                header, data = rx_0.read_packet()
-                if len(header):
-                    # got a packet, give it to TX stack in case it needs
-                    tx_0.got_incoming(header[0])
-                    if (tx_0.is_tx_idle()):
-                        print(f"TX0 got ack from RX1")
-                        got_data = True
-                        break
-                time.sleep(0.25)
-
-            if not got_data:
-                print(f" Step 4 failed to get ACK from RX1, end!")
-                return
-
-    # Demo simple tx / rx test here using low level DPLL over fiber classes
-
-    def do_dpll_over_fiber_pingpong(self):
-        tx_0 = PWM_TX(self.boards[0], 0)
-        tx_1 = PWM_TX(self.boards[1], 0)
-        rx_0 = PWM_RX(self.boards[0])
-        rx_1 = PWM_RX(self.boards[1])
-
-        values = [0xaa, 0xcc, 0xde, 0xba, 0x11]
-
-        rx_0.enable_port(0)
-        rx_1.enable_port(0)
-
-        # simple ping pong loop forever
-        # setup TX on TX0 and wait for RX1 to get it
-        for loop_test in range(10):
-            for value in values:
-
-                print("\n\n")
-                print(f"Value {value}, Step 1, Send from TX0")
-                tx_0.write_single_payload([value], False)
-                went_out = False
-                for i in range(20):
-                    if (tx_0.check_has_tx_gone_out()):
-                        went_out = True
-                        break
-                    time.sleep(0.25)
-
-                if not went_out:
-                    print(f" Step 1 TX didn't go out, end!")
-                    return
-
-                print("\n\n")
-                print(f"Value {value}, Step 2, has gone from TX0, check RX1")
-                got_data = False
-                for i in range(20):
-                    header, data = rx_1.read_packet()
-                    if len(header):
-                        # got a packet, check data
-                        hex_val = [hex(val) for val in data]
-                        print(f"RX1 got packet data {hex_val}")
-                        if data[0] == value:
-                            print(f"RX1 got ping, now send pong")
-                            got_data = True
-
-                            # debug hack, continue to read RX1 for some time
-                            # for j in range(20):
-                            #    print(f"Debug RX1 read PWM incoming more {j}")
-                            #    header, data = rx_1.read_packet()
-                            #    time.sleep(0.25)
-                            break
-                    time.sleep(0.25)
-
-                if not got_data:
-                    print(f" Step 2 failed to get Data on RX1, end!")
-                    return
-
-                print("\n\n")
+        if (clock_quality < board.best_clock_quality_seen):  # found a better clock
+            if (cur_dpllmode != 0 or cur_reference != decoder_num):
                 print(
-                    f"Value {value}, Step 3, has gone from TX0 to RX1, now send from TX1")
-                tx_1.write_single_payload([value], False)
-                went_out = False
-                for i in range(20):
-                    if (tx_1.check_has_tx_gone_out()):
-                        went_out = True
-                        break
-                    time.sleep(0.25)
+                    f"Board {board.board_num} changing to track input {decoder_num} clock quality {clock_quality}!")
+                # 0x11 is write frequency input, keep it in the list, that's the default software control
+                board.setup_dpll_track_and_priority_list([decoder_num, 0x11])
+                board.best_clock_quality_seen = clock_quality
 
-                if not went_out:
-                    print(f" Step 3 failed, TX1 didn't send! End")
-                    return
+                # reset this variable upon starting to track a clock
+                board.tod_compare_count = 0
 
-                print("\n\n")
-                print(
-                    f"Value {value}, Step 4, has gone from TX0 to RX1 out TX1, check RX0")
-                got_data = False
-                for i in range(20):
-                    header, data = rx_0.read_packet()
-                    if len(header):
-                        # got a packet, check data
-                        hex_val = [hex(val) for val in data]
-                        print(f"RX0 got packet data {hex_val}")
-                        if data[0] == value:
-                            print(f"RX0 got pong!")
-                            got_data = True
-                            # debug hack, continue to read RX0 for some time
-                            # for j in range(20):
-                            #    print(f"Debug RX0 read PWM incoming more {j}")
-                            #    header, data = rx_0.read_packet()
-                            #    time.sleep(0.25)
-                            break
-                    time.sleep(0.25)
+        if (clock_quality == board.best_clock_quality_seen):
+            if (cur_dpllmode == 0 and cur_reference == decoder_num):
+                # this query is for the decoder I'm tracking
+                print(f"Board {board.board_num} got query for board tracking")
 
-                if not got_data:
-                    print(f" Step 4 failed! RX0 Didn't receive, end!")
-                    return
+                if (board.tod_compare_count >= 10):
+                    # give it 10 tods to align and do jumps, should be pretty stable after that
+                    # compare what the far side sees and estimate round trip
 
-    def debug_dpll_over_fiber(self):
+                    print(f"Got 10 TODs, do round trip calculation")
+                    half_round_trip = time_divide_by_value(TOD_delta, 2)
 
-        # TOD debug, write it and read it back over and over
-        self.boards[0].write_tod_absolute(0, 0, 0, 0xffcc00000000)
-        self.boards[1].write_tod_absolute(0, 0, 0, 0xffaa00000000)
-
-        # disable all decoders
-        for board in self.boards:
-            for i in range(len(board.dpll.modules["PWMDecoder"].BASE_ADDRESSES)):
-                board.dpll.modules["PWMDecoder"].write_field(i,
-                                                             "PWM_DECODER_CMD", "ENABLE", 0)
-            # enable just decoder 0
-            board.dpll.modules["PWMDecoder"].write_field(0,
-                                                         "PWM_DECODER_CMD", "ENABLE", 1)
-
-        values = [0xaa, 0xcc, 0xde, 0xba, 0x11]
-        for index, value in enumerate(values):
-            zero_val = (0xff << (5*8)) + (value << (4*8))
-            one_val = (0xff << (5*8)) + \
-                (values[len(values) - 1 - index] << (4*8))
-            self.boards[0].write_tod_absolute(0, 0, 0, zero_val)
-            self.boards[1].write_tod_absolute(0, 0, 0, one_val)
-
-            for i in range(10):
-                print(f"\n Debug dpll over fiber loop {i} \n")
-                for board in self.boards:
-
-                    #  read TOD immediately
-                    board.dpll.modules["TODReadPrimary"].write_reg(0,
-                                                                   "TOD_READ_PRIMARY_CMD", 0x0)  # single shot, immediate
-                    board.dpll.modules["TODReadPrimary"].write_reg(0,
-                                                                   "TOD_READ_PRIMARY_CMD", 0x1)  # single shot, immediate
-
-                    # this works
-                    # self.boards[0].dpll.modules["TODReadPrimary"].print_all_registers(0)
-
-                    # this works now as well
-                    read_count = board.dpll.modules["TODReadPrimary"].read_reg(0,
-                                                                               "TOD_READ_PRIMARY_COUNTER")
-                    cur_tod = board.dpll.modules["TODReadPrimary"].read_reg_mul(0,
-                                                                                "TOD_READ_PRIMARY_SECONDS_0_7", 6)
-                    hex_val = [hex(val) for val in cur_tod]
                     print(
-                        f"Board {board.board_num} Read read_count {read_count} cur_tod {hex_val} <-> {cur_tod}")
+                        f"TOD delta from query {TOD_delta} , half = {half_round_trip}")
+                    board.round_trip_time = half_round_trip
 
-                    cur_pwm = board.i2c.read_dpll_reg_multiple(0xce80, 0x5, 6)
-                    cur_pwm.reverse()
-                    hex_val = [hex(val) for val in cur_pwm]
-                    print(f"Board {board.board_num} current pwm {hex_val}")
-                time.sleep(0.25)
+                    if (tod_flag == 1):
+                        # remote side saw it's TOD larger than mine
+                        print(f"handle query response round trip far side larger")
+                        board.round_trip_time = half_round_trip
 
-        # for i in range(len(board.dpll.modules["PWMEncoder"].BASE_ADDRESSES)):
-        #    board.dpll.modules["PWMEncoder"].print_all_registers(i)
-        # for i in range(len(board.dpll.modules["PWMDecoder"].BASE_ADDRESSES)):
-        #    board.dpll.modules["PWMDecoder"].print_all_registers(i)
-        # print(f"\n************** Board {board.board_num} SFP Status *************\n")
-        # board.print_sfps_info()
-        # print(
-        #    f"\n************** Board {board.board_num} PWM Status *************\n")
-        # board.print_pwm_channel_status()
-        # print(
-        #    f"\n************** Board {board.board_num} Init DPOF **************\n")
-        # board.init_pwm_dplloverfiber()
+                    elif (tod_flag == 0):
+                        # remote side saw it's TOD smaller than mine somehow
+                        print(
+                            f"Handle query respond round trip far side smaller?????")
 
-        # print(
-        #    f"\n************** Board {board.board_num} Print PWM Config *******\n")
-        # board.dpll.modules["PWMEncoder"].print_all_registers(0)
-        # board.dpll.modules["PWMDecoder"].print_all_registers(0)
+    def handle_tod_compare(self, board, tod_compare):
+        # tod compare has a bunch of data
+        decoder_num = tod_compare[0][0]
+        remote_tod = tod_compare[0][1]
+        local_tods = tod_compare[0][2:]
+
+        # check if this board is in dpll mode tracking this decoder
+        cur_dpllmode = board.dpll.modules["DPLL_Config"].read_reg(3,
+                                                                  "DPLL_MODE")
+        # assume DPLL3 is master, a bit hacky
+        cur_reference = board.dpll.modules["Status"].read_reg(0,
+                                                              "DPLL3_REF_STATUS")
+
+        if (cur_dpllmode == 0x0 and cur_reference == decoder_num):
+
+            if (hasattr(board, tod_compare_count)):
+                if (board.tod_compare_count < 10):
+                    return
+
+            print(
+                f"Handle tod compare board {board.board_num}, remote={remote_tod} , local={local_tods}")
+            for tod in range(4):
+                # do a TOD adjustment as well to try to align with this
+                # 9 bytes, not upper two handshake bytes
+                local_tod_received = local_tods[tod]
+                board.adjust_tod(tod, local_tod_received, remote_tod_received)
+
+            # store a variable in the board for my own purpose at higher level
+            if hasattr(board, tod_compare_count):
+                board.tod_compare_count += 1
+            else:
+                board.tod_compare_count = 1
 
     # THIS CODE WORKS!
     # The read and write are kinda messy, conflict resolution is not great
@@ -622,41 +692,113 @@ class MiniPTM:
         for board in self.boards:
             board.init_pwm_dplloverfiber()
 
-        for i in range(100):
-            # constant stimulus as possible,
-            # alternate between query on channel 0 query ID 0 and write
+        time_between_queries = 15
 
-            if (self.boards[0].dpof.get_chan_tx_ready(0)):
-                if (alternate_query_write_flag == 0):
-                    print(f"Starting send query!")
-                    self.boards[0].dpof.dpof_query(0, 0)
-                    alternate_query_write_flag = 1
-                else:
-                    print(f"Starting write data!")
-                    # 0x1 is write
-                    self.boards[0].dpof.dpof_write(
-                        0, 1, [0xde, 0xad, 0xbe, 0xef])
-                    alternate_query_write_flag = 0
+        board_query_response = [[], []]
+        board_tod_comparison = [[], []]
+        time_board_query_response = [0, 0]
+        loop_count = 0
 
+        while (True):
+            print(
+                f"\n\n****** DPLL over fiber Top level loop number {loop_count} *******\n\n")
+            for index, board in enumerate(self.boards):
+                # Do periodic queries as necessary and possible
+                time_debug = time.time() - time_board_query_response[index]
+                tx_ready = self.boards[index].dpof.get_chan_tx_ready(0)
+                print(f"Board{index} time {time_debug} , tx_ready={tx_ready}")
+                if (((time.time() - time_board_query_response[index]) > time_between_queries) and
+                        self.boards[index].dpof.get_chan_tx_ready(0)):
+
+                    print(f"Board {board.board_num} start query chan 0")
+                    self.boards[index].dpof.dpof_query(0, 0)
+                    break
+
+            # run all the dpll loops
             for board in self.boards:
                 print(f"\n DPLL Over fiber loop board {board.board_num} \n")
                 board.dpll_over_fiber_loop()
+
+            # check the results from all the dpll over fiber loops
+            for index, board in enumerate(self.boards):
                 query_data = board.dpof.pop_query_data()
                 if (len(query_data)):
-                    print(
-                        f"Board {board.board_num} at top level, got query data {query_data}")
-                write_data = board.dpof.pop_write_data()
-                if (len(write_data)):
-                    print(
-                        f"Board {board.board_num} at top level, got write data {write_data}")
+                    # print(
+                    #    f"Board {board.board_num} at top level, got query data {query_data}")
+                    board_query_response[index].append(query_data)
+                    time_board_query_response[index] = time.time()
+
                 tod_compare_data = board.dpof.get_tod_compare()
                 if (len(tod_compare_data) > 0):
                     print(
                         f"Board {board.board_num} at top level, got TOD comparison {tod_compare_data}")
+                    board_tod_comparison[index].append(tod_compare_data)
+
+                write_data = board.dpof.pop_write_data()
+                if (len(write_data)):
+                    print(
+                        f"Board {board.board_num} at top level, got write data {write_data}")
+
+            # now do something with the DPLL data
+            for index, board in enumerate(self.boards):
+                while len(board_tod_comparison[index]) > 0:
+                    tod_compare = board_tod_comparison[index].pop(0)
+                    self.handle_tod_compare(board, tod_compare)
+
+                while len(board_query_response[index]) > 0:
+                    response = board_query_response[index].pop(0)
+                    self.handle_query_response(board, response)
 
             time.sleep(0.25)
-            print(
-                f"\n\n****** DPLL over fiber Top level loop number {i} *******\n\n")
+            loop_count += 1
+
+
+#############
+# Simple proof of concept debug
+
+    def debug_me(self):
+        # Debug SFP connection, make sure I can swap between Phase measurement + DCO mode to DPLL tracking mode
+        # assume SFP0 connected between board 0 and board 1
+        self.boards[1].setup_dpll_track_and_priority_list([0])  # clk0
+
+        print(f"Debug me, board 1 set clk0 as dpll track and priority")
+
+    def debug_print(self):
+        # debugging locking stuff
+        # self.boards[1].dpll.modules["DPLL_Config"].print_all_registers(0)
+        # self.boards[1].dpll.modules["DPLL_Config"].print_all_registers(1)
+        # self.boards[1].dpll.modules["DPLL_Config"].print_all_registers(2)
+        # self.boards[1].dpll.modules["DPLL_Config"].print_all_registers(3)
+        print(f"\n\n************** BOARD 0 ***********************\n\n")
+        self.boards[0].dpll.modules["Status"].print_all_registers(0)
+        self.boards[0].dpll.modules["DPLL_Config"].print_all_registers(3)
+
+        print(f"\n\n************** BOARD 1 ***********************\n\n")
+        self.boards[1].dpll.modules["Status"].print_all_registers(0)
+        self.boards[1].dpll.modules["DPLL_Config"].print_all_registers(3)
+
+        # clear all stickies
+        for board in self.boards:
+            board.i2c.write_dpll_reg_direct(0xc169, 0x1)
+
+
+
+        # for board in self.boards:
+        #    print(f"Board {board.board_num}")
+        #    board.dpll.modules["Status"].print_register(0,
+        #                                                "IN8_MON_FREQ_STATUS_0", True)
+        #    board.dpll.modules["Status"].print_register(0,
+        #                                                "IN8_MON_FREQ_STATUS_1", True)
+
+        # for i in range(50):
+        #    phase = self.boards[1].dpll.modules["Status"].read_reg_mul(0,
+        #            "DPLL1_PHASE_STATUS_7_0", 5)
+        #    print(f"Board 1 loop {i} phase status {phase}")
+
+        #for board in self.boards:
+        #    value = board.dpll.modules["Status"].read_reg_mul(0,
+        #                                                      "DPLL3_FILTER_STATUS_7_0", 6)
+        #    print(f"Board {board.board_num} FILTER STATUS = {value}")
 
     def close(self):
         pass
@@ -690,10 +832,10 @@ if __name__ == "__main__":
     # input_thread = threading.Thread(target=wait_for_input, args=(MiniPTM.user_input_str,MiniPTM.user_input_lock))
     # input_thread.start()
 
-    stop_event = threading.Event()
-    input_thread = threading.Thread(
-        target=input_thread_func, args=(stop_event,))
-    input_thread.start()
+    # stop_event = threading.Event()
+    # input_thread = threading.Thread(
+    #    target=input_thread_func, args=(stop_event,))
+    # input_thread.start()
 
     if args.command == "program":
         top = MiniPTM()
@@ -704,19 +846,26 @@ if __name__ == "__main__":
             top.program_all_boards(config_file=args.config_file)
 
         top.set_all_boards_leds_idcode()
+    elif args.command == "debug":
+        top = MiniPTM()
+        top.debug_me()
+    elif args.command == "debug_sfp":
+        top = MiniPTM()
+        for board in top.boards:
+            print(
+                f"\n *********** SFP Debug Board {board.board_num} ***********\n")
+            board.print_sfps_info()
+    elif args.command == "debug_print":
+        top = MiniPTM()
+        top.debug_print()
     elif args.command == "debug_dpof":
         top = MiniPTM()
         top.dpll_over_fiber_test()
 
-        # top.debug_dpll_over_fiber()
-        # top.print_all_full_dpll_status()
-        # DPLL over fiber stuff
-        # top.do_dpll_over_fiber_pingpong() -> basic proof of concept
-        # top.do_dpll_over_fiber_with_ack() -> Another proof of concept
-
     elif args.command == "debug_pfm":
         top = MiniPTM()
-        top.do_pfm_use_input_tdc()
+        top.do_pfm_sacrifice_dpll3()
+        # top.do_pfm_sacrifice_dpll3_use_output_tdc()
 
     elif args.command == "flash":
         top = MiniPTM()
@@ -727,12 +876,12 @@ if __name__ == "__main__":
             top.flash_all_boards_eeprom(args.eeprom_file)
     elif args.command == "read":
         top = MiniPTM()
+        print(f"Starting read register")
         if args.board_id is not None:
             val = top.boards[args.board_id].i2c.read_dpll_reg_direct(
                 int(args.reg_addr, 16))
-            val = int(val, 16)
             print(
-                f"Board {args.board_id} Read Register {args.reg_addr:02x} = {val:02x}")
+                f"Board {args.board_id} Read Register {args.reg_addr} = 0x{val:02x}")
         else:
             for board in top.boards:
                 val = board.i2c.read_dpll_reg_direct(int(args.reg_addr, 16))
@@ -754,8 +903,8 @@ if __name__ == "__main__":
     else:
         print(f"Invalid command, must be program or debug")
 
-    stop_event.set()
-    input_thread.join()
+    # stop_event.set()
+    # input_thread.join()
 
     # PFM STUFF
     # top.print_all_pcie_clock_info()

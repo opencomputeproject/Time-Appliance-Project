@@ -195,6 +195,7 @@ class miniptm_i2c:
             data_a0 += self.read_i2c_data(SFP_ADDRESS_A0, 64, 32)
             vendor_name, serial_number, vendor_part_number, module_type = self.interpret_data(
                 data_a0)
+            print(f"Full A0 data: {data_a0}")
             print(
                 f"Vendor Name: {vendor_name}, Serial Number: {serial_number}")
             print(
@@ -209,6 +210,13 @@ class miniptm_i2c:
         # Read temperature, Tx and Rx power from address A2
         try:  # this might fail, copper cables for instance don't even implement A2 sometimes
             # Assuming temperature is at register 96
+            data_a2 = []
+            data_a2 += self.read_i2c_data(SFP_ADDRESS_A2, 0, 32)
+            data_a2 += self.read_i2c_data(SFP_ADDRESS_A2, 32, 32)
+            data_a2 += self.read_i2c_data(SFP_ADDRESS_A2, 64, 32)
+            data_a2 += self.read_i2c_data(SFP_ADDRESS_A2, 96, 32)
+            print(f"Full A2 data: {data_a2}")
+
             temp_data = self.read_i2c_data(SFP_ADDRESS_A2, 96, 2)
             tx_power_data = self.read_i2c_data(
                 SFP_ADDRESS_A2, 102, 2)  # Tx power at register 102
@@ -242,7 +250,7 @@ class miniptm_i2c:
 
             # read control / status register
             data = self.bus.read_byte_data(SFP_ADDRESS_A2, 110)
-            print(f"Control register 110 = 0x{data:x}")
+            print(f"Control register 110 = 0x{data:02x}")
         except:
             pass
 

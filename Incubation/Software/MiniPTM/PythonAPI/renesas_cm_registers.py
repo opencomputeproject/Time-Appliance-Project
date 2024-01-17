@@ -1,6 +1,7 @@
 import re
 from renesas_cm_gpio import cm_gpios
 
+
 class BitField:
     def __init__(self, start_bit, length):
         self.start_bit = start_bit
@@ -270,14 +271,6 @@ PWM_SYNC_DECODER_LAYOUT = {
 }
 
 
-
-
-
-
-
-
-
-
 # Common field structures
 MON_STATUS_FIELDS = {
     "TRANS_DETECT_STICKY": BitField(7, 1),
@@ -308,8 +301,6 @@ DPLL_REF_STATUS_FIELDS = {
     "RESERVED": BitField(5, 3),
     "DPLL_INPUT": BitField(0, 5)
 }
-
-
 
 
 # STATUS module layout structure
@@ -346,7 +337,7 @@ STATUS_LAYOUT = {
     "USER_GPIO8_TO_15_STATUS": {"offset": 0x08B, "fields": {f"GPIO{i + 8}_LEVEL": BitField(i, 1) for i in range(8)}},
 
     # IN_MON_FREQ_STATUS registers
-    **{f"IN{num}_MON_FREQ_STATUS_0": {"offset": 0x08C + num * 2, "fields": {"FFO_7_0": BitField(0, 8)} }
+    **{f"IN{num}_MON_FREQ_STATUS_0": {"offset": 0x08C + num * 2, "fields": {"FFO_7_0": BitField(0, 8)}}
        for num in range(16)},
     **{f"IN{num}_MON_FREQ_STATUS_1": {"offset": 0x08D + num * 2, "fields": {"FFO_UNIT": BitField(6, 2), f"FFO_13:8": BitField(0, 6)}}
        for num in range(16)},
@@ -355,9 +346,6 @@ STATUS_LAYOUT = {
 }
 # Continuing STATUS module layout structure
 STATUS_LAYOUT.update({
-    # DPLL_PHASE_STATUS registers
-    **{f"DPLL{num}_PHASE_STATUS_{35 + i*8}_{i*8}": {"offset": 0x0DC + num * 8 + i, "fields": {f"DPLL{num}_PHASE_STATUS_{35 + i*8}_{i*8}": BitField(0, 8)}}
-       for num in range(8) for i in range(5)},
 
     # DPLL_PHASE_PULL_IN_STATUS registers
     **{f"DPLL{num}_PHASE_PULL_IN_STATUS": {"offset": 0x11C + num, "fields": {"REMAINING_TIME": BitField(0, 8)}}
@@ -379,7 +367,6 @@ STATUS_LAYOUT.update({
        for num in range(4) for i in range(6)},
 
 })
-
 
 
 # Additional registers and fields can be added as needed
@@ -417,62 +404,175 @@ BYTE_BUFFER_LAYOUT = {
 
 
 PWM_RX_INFO_LAYOUT = {
-        "PWM_TOD_SUBNS": {"offset":0x000, "fields": {"VALUE": BitField(0,8)}},
-        "PWM_TOD_NS_7_0": {"offset":0x001, "fields": {"VALUE": BitField(0,8)}},
-        "PWM_TOD_NS_15_8": {"offset":0x002, "fields": {"VALUE": BitField(0,8)}},
-        "PWM_TOD_NS_23_16": {"offset":0x003, "fields": {"VALUE": BitField(0,8)}},
-        "PWM_TOD_NS_31_24": {"offset":0x004, "fields": {"VALUE": BitField(0,8)}},
-        "PWM_TOD_SEC_7_0": {"offset":0x005, "fields": {"VALUE": BitField(0,8)}},
-        "PWM_TOD_SEC_15_8": {"offset":0x006, "fields": {"VALUE": BitField(0,8)}},
-        "PWM_TOD_SEC_23_16": {"offset":0x007, "fields": {"VALUE": BitField(0,8)}},
-        "PWM_TOD_SEC_31_24": {"offset":0x008, "fields": {"VALUE": BitField(0,8)}},
-        "PWM_TOD_SEC_39_32": {"offset":0x009, "fields": {"VALUE": BitField(0,8),
-            "PWM_RandID": BitField(0,8) } },
-        "PWM_TOD_SEC_47_40": {"offset":0x00a, "fields": {"VALUE": BitField(0,8)} ,
-            "DataFlag": BitField(7,1),
-            "HandshakeData": BitField(5,2),
-            "PWM_Transaction_ID": BitField(0,5),                  
-            },
+    "PWM_TOD_SUBNS": {"offset": 0x000, "fields": {"VALUE": BitField(0, 8)}},
+    "PWM_TOD_NS_7_0": {"offset": 0x001, "fields": {"VALUE": BitField(0, 8)}},
+    "PWM_TOD_NS_15_8": {"offset": 0x002, "fields": {"VALUE": BitField(0, 8)}},
+    "PWM_TOD_NS_23_16": {"offset": 0x003, "fields": {"VALUE": BitField(0, 8)}},
+    "PWM_TOD_NS_31_24": {"offset": 0x004, "fields": {"VALUE": BitField(0, 8)}},
+    "PWM_TOD_SEC_7_0": {"offset": 0x005, "fields": {"VALUE": BitField(0, 8)}},
+    "PWM_TOD_SEC_15_8": {"offset": 0x006, "fields": {"VALUE": BitField(0, 8)}},
+    "PWM_TOD_SEC_23_16": {"offset": 0x007, "fields": {"VALUE": BitField(0, 8)}},
+    "PWM_TOD_SEC_31_24": {"offset": 0x008, "fields": {"VALUE": BitField(0, 8)}},
+    "PWM_TOD_SEC_39_32": {"offset": 0x009, "fields": {"VALUE": BitField(0, 8),
+                                                      "PWM_RandID": BitField(0, 8)}},
+    "PWM_TOD_SEC_47_40": {"offset": 0x00a, "fields": {"VALUE": BitField(0, 8)},
+                          "DataFlag": BitField(7, 1),
+                          "HandshakeData": BitField(5, 2),
+                          "PWM_Transaction_ID": BitField(0, 5),
+                          },
 }
 
 
 DPLL_CTRL_LAYOUT = {
-        "FOD_FREQ_M_7_0": {"offset": 0x1c, "fields": {"VALUE": BitField(0,8)}},
-        "FOD_FREQ_M_15_8": {"offset": 0x1d, "fields": {"VALUE": BitField(0,8)}},
-        "FOD_FREQ_M_23_16": {"offset": 0x1e, "fields": {"VALUE": BitField(0,8)}},
-        "FOD_FREQ_M_31_24": {"offset": 0x1f, "fields": {"VALUE": BitField(0,8)}},
-        "FOD_FREQ_M_39_32": {"offset": 0x20, "fields": {"VALUE": BitField(0,8)}},
-        "FOD_FREQ_M_47_40": {"offset": 0x21, "fields": {"VALUE": BitField(0,8)}},
-        "FOD_FREQ_N_7_0": {"offset": 0x22, "fields": {"VALUE": BitField(0,8)}},
-        "FOD_FREQ_N_15_8": {"offset": 0x23, "fields": {"VALUE": BitField(0,8)}},
+    "FOD_FREQ_M_7_0": {"offset": 0x1c, "fields": {"VALUE": BitField(0, 8)}},
+    "FOD_FREQ_M_15_8": {"offset": 0x1d, "fields": {"VALUE": BitField(0, 8)}},
+    "FOD_FREQ_M_23_16": {"offset": 0x1e, "fields": {"VALUE": BitField(0, 8)}},
+    "FOD_FREQ_M_31_24": {"offset": 0x1f, "fields": {"VALUE": BitField(0, 8)}},
+    "FOD_FREQ_M_39_32": {"offset": 0x20, "fields": {"VALUE": BitField(0, 8)}},
+    "FOD_FREQ_M_47_40": {"offset": 0x21, "fields": {"VALUE": BitField(0, 8)}},
+    "FOD_FREQ_N_7_0": {"offset": 0x22, "fields": {"VALUE": BitField(0, 8)}},
+    "FOD_FREQ_N_15_8": {"offset": 0x23, "fields": {"VALUE": BitField(0, 8)}},
 }
 
 
 DPLL_FREQ_WRITE_LAYOUT = {
-        "DPLL_WR_FREQ_7_0": {"offset": 0x0, "fields": {"VALUE": BitField(0,8)}},
-        "DPLL_WR_FREQ_15_8": {"offset": 0x1, "fields": {"VALUE": BitField(0,8)}},
-        "DPLL_WR_FREQ_23_16": {"offset": 0x2, "fields": {"VALUE": BitField(0,8)}},
-        "DPLL_WR_FREQ_31_24": {"offset": 0x3, "fields": {"VALUE": BitField(0,8)}},
-        "DPLL_WR_FREQ_39_32": {"offset": 0x4, "fields": {"VALUE": BitField(0,8)}},
-        "DPLL_WR_FREQ_41_40": {"offset": 0x5, "fields": {"VALUE": BitField(0,2), 
-            "Reserved": BitField(2,6)
-            }
-            },
+    "DPLL_WR_FREQ_7_0": {"offset": 0x0, "fields": {"VALUE": BitField(0, 8)}},
+    "DPLL_WR_FREQ_15_8": {"offset": 0x1, "fields": {"VALUE": BitField(0, 8)}},
+    "DPLL_WR_FREQ_23_16": {"offset": 0x2, "fields": {"VALUE": BitField(0, 8)}},
+    "DPLL_WR_FREQ_31_24": {"offset": 0x3, "fields": {"VALUE": BitField(0, 8)}},
+    "DPLL_WR_FREQ_39_32": {"offset": 0x4, "fields": {"VALUE": BitField(0, 8)}},
+    "DPLL_WR_FREQ_41_40": {"offset": 0x5, "fields": {"VALUE": BitField(0, 2),
+                                                     "Reserved": BitField(2, 6)
+                                                     }
+                           },
 }
 
 
+# Common bitfield structure for DPLL_REF_PRIORITY registers
+DPLL_REF_PRIORITY_FIELDS = {
+    "PRIORITY_GROUP_NUMBER": BitField(6, 2),
+    "PRIORITY_REF": BitField(1, 5),
+    "PRIORITY_EN": BitField(0, 1)
+}
 
+DPLL_LAYOUT = {
+    "DPLL_DCO_INC_DEC_SIZE_7_0": {"offset": 0x000, "fields": {"DCO_INC_DEC_SIZE_7_0": BitField(0, 8)}},
+    "DPLL_DCO_INC_DEC_SIZE_15_8": {"offset": 0x001, "fields": {"DCO_INC_DEC_SIZE_15_8": BitField(0, 8)}},
+    "DPLL_CTRL_0": {"offset": 0x002, "fields": {"FORCE_LOCK_INPUT": BitField(3, 5), "GLOBAL_SYNC_EN": BitField(2, 1), "REVERTIVE_EN": BitField(1, 1), "HITLESS_EN": BitField(0, 1)}},
+    "DPLL_CTRL_1": {"offset": 0x003, "fields": {"HITLESS_TYPE": BitField(5, 1), "FB_SELECT_REF": BitField(1, 4), "FB_SELECT_REF_EN": BitField(0, 1)}},
+    "DPLL_CTRL_2": {"offset": 0x004, "fields": {"FRAME_SYNC_PULSE_RESYNC_EN": BitField(7, 1), "FRAME_SYNC_MODE": BitField(5, 2), "EXT_FB_REF_SELECT": BitField(1, 4), "EXT_FB_EN": BitField(0, 1)}},
+    "DPLL_UPDATE_RATE_CFG": {"offset": 0x005, "fields": {"UPDATE_RATE_CFG": BitField(0, 2)}},
+    "DPLL_FILTER_STATUS_UPDATE_CFG": {"offset": 0x006, "fields": {"FILTER_STATUS_UPDATE_EN": BitField(2, 1), "FILTER_STATUS_SELECT_CNFG": BitField(0, 2)}},
+    "DPLL_HO_ADVCD_HISTORY": {"offset": 0x007, "fields": {"HISTORY": BitField(0, 6)}},
+    "DPLL_HO_ADVCD_BW_7_0": {"offset": 0x008, "fields": {"DPLL_HO_ADVCD_BW_7_0": BitField(0, 8)}},
+    "DPLL_HO_ADVCD_BW_15_8": {"offset": 0x009, "fields": {"BW_UNIT": BitField(6, 2), "DPLL_HO_ADVCD_BW_15_8": BitField(0, 6)}},
+    "DPLL_HO_CFG": {"offset": 0x00A, "fields": {"HOLDOVER_MODE": BitField(0, 3)}},
+    "DPLL_LOCK_0": {"offset": 0x00B, "fields": {"PHASE_UNIT": BitField(6, 2), "PHASE_LOCK_MAX_ERROR": BitField(0, 6)}},
+    "DPLL_LOCK_1": {"offset": 0x00C, "fields": {"PHASE_MON_DUR": BitField(0, 8)}},
+    "DPLL_LOCK_2": {"offset": 0x00D, "fields": {"FFO_UNIT": BitField(6, 2), "FFO_LOCK_MAX_ERROR": BitField(0, 6)}},
+    "DPLL_LOCK_3": {"offset": 0x00E, "fields": {"FFO_MON_DUR": BitField(0, 8)}},
 
+    # Generating DPLL_REF_PRIORITY registers
+    **{f"DPLL_REF_PRIORITY_{i}": {"offset": 0x00F + i, "fields": {
+        "PRIORITY_GROUP_NUMBER": BitField(6, 2),
+        "PRIORITY_REF": BitField(1, 5),
+        "PRIORITY_EN": BitField(0, 1)
+    }} for i in range(19)},
 
-
-
-
-
-
-
-
-
-
+    # Next five registers
+    "DPLL_TRANS_CTRL": {"offset": 0x022, "fields": {
+        "RESERVED": BitField(2, 6),
+        "TRANS_SUPPRESS_EN": BitField(1, 1),
+        "TRANS_DETECT_EN": BitField(0, 1)
+    }},
+    "DPLL_FASTLOCK_CFG_0": {"offset": 0x023, "fields": {
+        "LOCK_REC_PULL_IN_EN": BitField(7, 1),
+        "LOCK_REC_FAST_ACQ_EN": BitField(6, 1),
+        "LOCK_REC_PHASE_SNAP_EN": BitField(5, 1),
+        "LOCK_REC_FREQ_SNAP_EN": BitField(4, 1),
+        "LOCK_ACQ_PULL_IN_EN": BitField(3, 1),
+        "LOCK_ACQ_FAST_ACQ_EN": BitField(2, 1),
+        "LOCK_ACQ_PHASE_SNAP_EN": BitField(1, 1),
+        "LOCK_ACQ_FREQ_SNAP_EN": BitField(0, 1)
+    }},
+    "DPLL_FASTLOCK_CFG_1": {"offset": 0x024, "fields": {
+        "PRE_FAST_ACQ_TIMER": BitField(4, 4),
+        "DAMP_FTR": BitField(0, 4)
+    }},
+    "DPLL_MAX_FREQ_OFFSET": {"offset": 0x025, "fields": {
+        "MAX_FFO": BitField(0, 8)
+    }},
+    "DPLL_FASTLOCK_PSL": {"offset": 0x026, "fields": {
+        "DPLL_FASTLOCK_PSL_7_0": BitField(0, 8)
+    }},
+    "DPLL_FASTLOCK_PSL_15_8": {"offset": 0x027, "fields": {
+        "DPLL_FASTLOCK_PSL_15_8": BitField(0, 8)
+    }},
+    "DPLL_FASTLOCK_FSL": {"offset": 0x028, "fields": {
+        "DPLL_FASTLOCK_FSL_7_0": BitField(0, 8)
+    }},
+    "DPLL_FASTLOCK_FSL_15_8": {"offset": 0x029, "fields": {
+        "DPLL_FASTLOCK_FSL_15_8": BitField(0, 8)
+    }},
+    "DPLL_FASTLOCK_BW": {"offset": 0x02A, "fields": {
+        "DPLL_FASTLOCK_BW_7_0": BitField(0, 8)
+    }},
+    "DPLL_FASTLOCK_BW_15_8": {"offset": 0x02B, "fields": {
+        "BW_UNIT": BitField(6, 2),
+        "DPLL_FASTLOCK_BW_15_8": BitField(0, 6)
+    }},
+    "DPLL_WRITE_FREQ_TIMER": {"offset": 0x02C, "fields": {
+        "WRITE_FREQ_TIMEOUT_CNFG_7_0": BitField(0, 8)
+    }},
+    "DPLL_WRITE_FREQ_TIMER_15_8": {"offset": 0x02D, "fields": {
+        "WRITE_FREQ_TIMEOUT_CNFG_15_8": BitField(0, 8)
+    }},
+    "DPLL_WRITE_PHASE_TIMER": {"offset": 0x02E, "fields": {
+        "WRITE_PHASE_TIMEOUT_CNFG_7_0": BitField(0, 8)
+    }},
+    "DPLL_WRITE_PHASE_TIMER_15_8": {"offset": 0x02F, "fields": {
+        "WRITE_PHASE_TIMEOUT_CNFG_15_8": BitField(0, 8)
+    }},
+    "DPLL_PRED_CFG": {"offset": 0x030, "fields": {
+        "RESERVED": BitField(2, 6),
+        "WP_PRED": BitField(1, 1),
+        "PRED_EN": BitField(0, 1)
+    }},
+    "DPLL_TOD_SYNC_CFG": {"offset": 0x031, "fields": {
+        "RESERVED": BitField(3, 5),
+        "TOD_SYNC_SOURCE": BitField(1, 2),
+        "TOD_SYNC_EN": BitField(0, 1)
+    }},
+    "DPLL_COMBO_SLAVE_CFG_0": {"offset": 0x032, "fields": {
+        "RESERVED": BitField(5, 3),
+        "PRI_COMBO_SRC_EN": BitField(5, 1),
+        "PRI_COMBO_SRC_FILTERED_CNFG": BitField(4, 1),
+        "PRI_COMBO_SRC_ID": BitField(0, 4)
+    }},
+    "DPLL_COMBO_SLAVE_CFG_1": {"offset": 0x033, "fields": {
+        "RESERVED": BitField(5, 3),
+        "SEC_COMBO_SRC_EN": BitField(5, 1),
+        "SEC_COMBO_SRC_FILTERED_CNFG": BitField(4, 1),
+        "SEC_COMBO_SRC_ID": BitField(0, 4)
+    }},
+    "DPLL_SLAVE_REF_CFG": {"offset": 0x034, "fields": {
+        "RESERVED": BitField(4, 4),
+        "SLAVE_REFERENCE": BitField(0, 4)
+    }},
+    "DPLL_REF_MODE": {"offset": 0x035, "fields": {
+        "RESERVED": BitField(3, 5),
+        "MODE": BitField(0, 3)
+    }},
+    "DPLL_PHASE_MEASUREMENT_CFG": {"offset": 0x036, "fields": {
+        "PFD_FB_CLK_SEL": BitField(4, 4),
+        "PFD_REF_CLK_SEL": BitField(0, 4)
+    }},
+    "DPLL_MODE": {"offset": 0x037, "fields": {
+        "WRITE_TIMER_MODE": BitField(6, 1),
+        "PLL_MODE": BitField(3, 3),
+        "STATE_MODE": BitField(0, 3)
+    }}
+}
 
 
 def int_to_signed_nbit(number, n_bits):
@@ -539,6 +639,7 @@ def hex_to_signed_nbit(hex_value, n_bits):
     else:
         return int(binary_n_bit, 2)
 
+
 def to_twos_complement_bytes(value, n_bits):
     # Adjust value for n-bit representation
     if value < 0:
@@ -557,20 +658,74 @@ def to_twos_complement_bytes(value, n_bits):
 
 
 def calculate_fcw(ffo_ppm=0):
-	ffo_fraction = ffo_ppm / 10**6
-	fcw = (1 - (1 / (1+ ffo_fraction))) * 2**53
-	fcw = int(fcw)
-	return fcw
+    ffo_fraction = ffo_ppm / 10**6
+    fcw = (1 - (1 / (1 + ffo_fraction))) * 2**53
+    fcw = int(fcw)
+    return fcw
+
+
+def time_to_nanoseconds(time):
+    sub_nanoseconds = time[0] / 256  # Convert sub-nanoseconds to nanoseconds
+    nanoseconds = int.from_bytes(time[1:5], byteorder='little', signed=False)
+    # Convert seconds to nanoseconds
+    seconds = int.from_bytes(time[5:], byteorder='little', signed=False) * 1e9
+    return sub_nanoseconds + nanoseconds + seconds
+
+
+def nanoseconds_to_time(nanoseconds):
+    seconds = int(nanoseconds // 1e9)
+    nanoseconds_remainder = int(nanoseconds % 1e9)
+    sub_nanoseconds = int((nanoseconds_remainder % 1) * 256)
+
+    seconds_bytes = seconds.to_bytes(4, byteorder='little', signed=False)
+    nanoseconds_bytes = nanoseconds_remainder.to_bytes(
+        4, byteorder='little', signed=False)
+    return [sub_nanoseconds] + list(nanoseconds_bytes) + list(seconds_bytes)
+
+
+def time_divide_by_value(time1, value):
+    nano_time = time_to_nanoseconds(time1)
+    nano_time = nano_time / value
+    return nanoseconds_to_time(nanoseconds)
+
+# takes two TOD lists
+
+
+def time_difference_with_flag(time1, time2):
+    """
+    Compute the absolute difference between two time values in the specified 11-byte format.
+    Also, return a flag indicating which time value was larger.
+    Each time value is a list of 11 integers.
+    """
+
+    # Compute the difference
+    diff_nanoseconds = time_to_nanoseconds(time1) - time_to_nanoseconds(time2)
+
+    # Determine the flag
+    if diff_nanoseconds > 0:
+        flag = "time1 is larger"
+        flag = 1
+    elif diff_nanoseconds < 0:
+        flag = "time2 is larger"
+        flag = -1
+    else:
+        flag = "times are equal"
+        flag = 0
+
+    # Convert the absolute difference back to the 11-byte format
+    abs_diff = nanoseconds_to_time(abs(diff_nanoseconds))
+
+    return abs_diff, flag
 
 
 class Module:
     def __init__(self, name, layout, base_addresses):
         self.name = name
         self.layout = layout
-        #self.read_func = read_func
-        #self.read_mul_func = read_mul_func
-        #self.write_func = write_func
-        #self.write_mul_func = write_mul_func
+        # self.read_func = read_func
+        # self.read_mul_func = read_mul_func
+        # self.write_func = write_func
+        # self.write_mul_func = write_mul_func
         self.base_addresses = base_addresses
 
     def _validate_module_num(self, module_num):
@@ -586,14 +741,14 @@ class Module:
 
     def write_field(self, module_num, register_name, field_name, field_value):
         self._validate_module_num(module_num)
-        #print(f"Write field {module_num} reg {register_name} {field_name} {field_value}")
+        # print(f"Write field {module_num} reg {register_name} {field_name} {field_value}")
         base_address = self.base_addresses[module_num]
         reg_info = self.layout[register_name]
         reg_addr = base_address + reg_info['offset']
 
-        #print(f"Read reg_addr {reg_addr:02x}")
+        # print(f"Read reg_addr {reg_addr:02x}")
         reg_value = self.read_func(reg_addr)
-        #print(f"Read reg_addr {reg_addr:02x} = {reg_value:02x}")
+        # print(f"Read reg_addr {reg_addr:02x} = {reg_value:02x}")
         new_reg_value = reg_info['fields'][field_name].set_value(
             reg_value, field_value)
         self.write_func(reg_addr, new_reg_value)
@@ -612,7 +767,6 @@ class Module:
         reg_addr = base_address + reg_info['offset']
         self.write_mul_func(reg_addr, data)
 
-
     def read_reg(self, module_num, register_name):
         self._validate_module_num(module_num)
         base_address = self.base_addresses[module_num]
@@ -625,10 +779,8 @@ class Module:
         base_address = self.base_addresses[module_num]
         reg_info = self.layout[start_reg]
         reg_value = (base_address + reg_info['offset'])
-        #print(f"Read reg mul mod={module_num} base={base_address:02x} start={reg_value} len={length}")
+        # print(f"Read reg mul mod={module_num} base={base_address:02x} start={reg_value} len={length}")
         return self.read_mul_func(reg_value, length)
-
-
 
     def print_configuration(self, module_num):
         self._validate_module_num(module_num)
@@ -664,7 +816,6 @@ class Module:
                 self.print_register(i, register, True)
 
 
-
 class Status(Module):
     BASE_ADDRESSES = {0: 0xC03C}
     LAYOUT = STATUS_LAYOUT
@@ -672,6 +823,7 @@ class Status(Module):
     def __init__(self):
         super().__init__("Status", Status.LAYOUT,
                          Status.BASE_ADDRESSES)
+
 
 class PWMEncoder(Module):
     BASE_ADDRESSES = {0: 0xCB00, 1: 0xCB08, 2: 0xCB10,
@@ -698,7 +850,7 @@ class TOD(Module):
     LAYOUT = TOD_LAYOUT
 
     def __init__(self):
-        super().__init__("TOD", TOD.LAYOUT,TOD.BASE_ADDRESSES)
+        super().__init__("TOD", TOD.LAYOUT, TOD.BASE_ADDRESSES)
 
 
 class TODWrite(Module):
@@ -742,9 +894,10 @@ class REFMON(Module):
                       8: 0xC348, 9: 0xC354, 10: 0xC360, 11: 0xC36C, 12: 0xC380, 13: 0xC38C, 14: 0xC398, 15: 0xC3A4}
     LAYOUT = REF_MON_LAYOUT
 
-    def __init__(self ):
+    def __init__(self):
         super().__init__("REF_MON", REFMON.LAYOUT,
                          REFMON.BASE_ADDRESSES)
+
 
 class PWM_USER_DATA(Module):
     BASE_ADDRESSES = {0: 0xCBC8}  # Only one base address for PWM_USER_DATA
@@ -825,35 +978,46 @@ class PWM_SYNC_DECODER(Module):
                          PWM_SYNC_DECODER.BASE_ADDRESSES)
 
 
-
 class PWM_Rx_Info(Module):
-    BASE_ADDRESSES = {0:0xce80}
+    BASE_ADDRESSES = {0: 0xce80}
     LAYOUT = PWM_RX_INFO_LAYOUT
+
     def __init__(self):
         super().__init__("PWM_Rx_Info", PWM_Rx_Info.LAYOUT,
                          PWM_Rx_Info.BASE_ADDRESSES)
 
 
 class DPLL_Ctrl(Module):
-    BASE_ADDRESSES = {0:0xc600, 1:0xc63c, 2:0xc680, 3:0xc6bc}
+    BASE_ADDRESSES = {0: 0xc600, 1: 0xc63c, 2: 0xc680, 3: 0xc6bc}
     LAYOUT = DPLL_CTRL_LAYOUT
+
     def __init__(self):
         super().__init__("DPLL_Ctrl", DPLL_Ctrl.LAYOUT,
                          DPLL_Ctrl.BASE_ADDRESSES)
 
+
 class DPLL_Freq_Write(Module):
-    BASE_ADDRESSES = {0:0xc838, 1:0xc840, 2:0xc848, 3:0xc850}
+    BASE_ADDRESSES = {0: 0xc838, 1: 0xc840, 2: 0xc848, 3: 0xc850}
     LAYOUT = DPLL_FREQ_WRITE_LAYOUT
+
     def __init__(self):
         super().__init__("DPLL_Freq_Write", DPLL_Freq_Write.LAYOUT,
                          DPLL_Freq_Write.BASE_ADDRESSES)
 
 
+class DPLL_Config(Module):
+    BASE_ADDRESSES = {0: 0xc3b0, 1: 0xc400, 2: 0xc438, 3: 0xc480}
+    LAYOUT = DPLL_LAYOUT
+
+    def __init__(self):
+        super().__init__("DPLL_Config", DPLL_Config.LAYOUT,
+                         DPLL_Config.BASE_ADDRESSES)
+
 
 # holder of registers
 class DPLL():
-    def __init__(self, i2c_dev, 
-            read_func, read_mul_func, write_func, write_mul_func):
+    def __init__(self, i2c_dev,
+                 read_func, read_mul_func, write_func, write_mul_func):
         # make modules inside the dpll
         self.modules = {}
 
@@ -861,7 +1025,7 @@ class DPLL():
                           TODReadSecondary, Input, REFMON, PWM_USER_DATA,
                           OUTPUT_TDC_CFG, OUTPUT_TDC, INPUT_TDC, PWM_SYNC_ENCODER,
                           PWM_SYNC_DECODER, EEPROM, EEPROM_DATA, PWM_Rx_Info, DPLL_Ctrl,
-                          DPLL_Freq_Write ]
+                          DPLL_Freq_Write, DPLL_Config]
 
         for mod in modules_to_use:
             self.modules[mod.__name__] = mod()
@@ -894,8 +1058,7 @@ def parse_dpll_config_file(file_path):
     return config_data
 
 
-
-if __name__ == "__main__": 
+if __name__ == "__main__":
     # Define the file path
     file_path = '/mnt/data/8A34012_20230901_123654_CLK3_PWMpos_v8d.tcs'
 

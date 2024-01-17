@@ -25,6 +25,7 @@ class Single_MiniPTM:
 
         self.PCIe = MiniPTM_PCIe(self.bar, self.bar_size)
         self.i2c = miniptm_i2c(adap_num)
+        self.best_clock_quality_seen = 255 - board_num # hacky
         print(f"Register MiniPTM device {devinfo[0]} I2C bus {adap_num}")
 
         self.dpll = DPLL(self.i2c, self.i2c.read_dpll_reg_direct,
@@ -188,23 +189,6 @@ class Single_MiniPTM:
         # it's a continous measurement, with register refreshing every 100us (irrelevant for i2c)
         # but it will rollover potentially , especially with large ppm
         # solution is to toggle DPLL between Synthesizer and Phase Measurement modes
-        if (restart_phase):
-            # set to synthesizer mode
-            # DPLL1 hard coding for now, didn't include DPLL in map yet
-            # 0x37[5:3] = mode, 0x4 for synthesizer, 0x5 for phase measurement
-            base_addr = 0xc400
-            reg_addr = 0x37
-
-            self.i2c.write_dpll_reg(
-                base_addr, reg_addr, 0x20)  # set synthesizer
-            # set phase measurement
-            self.i2c.write_dpll_reg(base_addr, reg_addr, 0x28)
-
-            # dont remove these debug reads, it makes it work for some reason????
-            debug = self.i2c.read_dpll_reg(0xc400, 0x36)
-            # print(f"Read pcie clk phase debug val 0xc436 = 0x{debug:x}")
-            debug = self.i2c.read_dpll_reg(0xc400, 0x37)
-            # print(f"Read pcie clk phase debug val 0xc437 = 0x{debug:x}")
 
         # time.sleep(0.1)
         # Phase status register is 5 bytes, read all 5
@@ -233,6 +217,7 @@ class Single_MiniPTM:
         #print(f"Read pcie clk phase board {self.board_num} val = {average}")
         return average
 
+
     def clear_all_dpll_sticky_status(self):
         # clear all stickies
         self.i2c.write_dpll_reg(0xc164, 0x5, 0x0)
@@ -253,6 +238,8 @@ class Single_MiniPTM:
         self.clear_all_dpll_sticky_status()
 
     def print_sfps_info(self):
+        self.i2c.read_sfp_module(1)
+        return
         for i in range(1, 5):
             self.i2c.read_sfp_module(i)
 
@@ -284,6 +271,33 @@ class Single_MiniPTM:
             # immediate delta TOD minus
             self.dpll.modules["TODWrite"].write_reg(tod_num, "TOD_WRITE_CMD", 0x21)
 
+
+
+
+
+    def adjust_tod(self, tod_num, local_tod, remote_tod):
+        print(f"Board {self.board_num} adjusting TOD{tod_num} to match far side")
+        tod_diff, flag = time_difference_with_flag(local_tod, remote_tod)
+        tod_subns = tod_diff[0]
+        tod_ns = 0
+        for i , byte in enumerate(tod_diff[1:5]):
+            tod_ns += byte << (i * 8) 
+        tod_sec = 0
+        for i, byte in enumerate(tod_diff[5:]):
+            tod_sec += byte << (i*8)
+        # tod_diff is only 9 bytes , ignoring top handshake bytes
+        if ( flag == 1 ):
+            print(f"Local TOD {local_tod_received} > remote {remote_tod_received}, shift {tod_diff}")
+            # flag = 1 , local_tod > remote_tod
+            self.write_tod_relative(tod_num, tod_subns, tod_ns, tod_sec, False)
+
+        elif ( flag == -1 ):
+            print(f"Local TOD {local_tod_received} < remote {remote_tod_received}, shift {tod_diff}")
+            # flag = -1 , local_tod < remote_tod
+            self.write_tod_relative(tod_num, tod_subns, tod_ns, tod_sec, True)
+        else:
+            # flag = 0, equal , do nothing
+            pass
 
 
 
@@ -374,9 +388,45 @@ class Single_MiniPTM:
                 break
             time.sleep(0.25)
 
+
+
     # call this periodically , non blocking "super-loop" function
     def dpll_over_fiber_loop(self):
         print(f"Board {self.board_num} dpll_over_fiber_loop")
         #self.dpof.run_loop()
         self.dpof.tick()
         print(f"Board {self.board_num} done dpll_over_fiber_loop")
+
+
+    def setup_dpll_track_and_priority_list(self, input_priorities=[]):
+        if ( len(input_priorities) == 0 ):
+            return
+
+        print(f"Board {self.board_num} setting input priorities and dpll mode {input_priorities}")
+        # configure DPLL3 (assuming global DPLL master) priority list 
+        for index, chan in enumerate(input_priorities):
+            reg_val = (chan << 1) + 1
+            print(f"Setting DPLL3 Priority {index} = {reg_val}")
+            self.dpll.modules["DPLL_Config"].write_reg(3, 
+                    f"DPLL_REF_PRIORITY_{index}", reg_val)
+
+        #disable combo modes
+        self.dpll.modules["DPLL_Config"].write_field(3,
+                "DPLL_COMBO_SLAVE_CFG_0", "PRI_COMBO_SRC_EN", 0)
+
+        self.dpll.modules["DPLL_Config"].write_field(3,
+                "DPLL_COMBO_SLAVE_CFG_1", "SEC_COMBO_SRC_EN", 0)
+
+        # reference inputs are setup, now switch to DPLL mode, just 0
+        self.dpll.modules["DPLL_Config"].write_reg(3,
+                    "DPLL_MODE", 0)
+
+    
+
+
+
+
+
+
+
+
