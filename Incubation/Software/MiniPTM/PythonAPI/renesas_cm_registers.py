@@ -121,6 +121,18 @@ INPUT_LAYOUT = {
     "INPUT_IN_MODE": {"offset": 0x00D, "fields": {"DPLL_PRED": BitField(7, 1), "MUX_GPIO_IN": BitField(6, 1), "IN_DIFF": BitField(5, 1), "IN_PNMODE": BitField(4, 1), "IN_INVERSE": BitField(3, 1), "IN_EN": BitField(0, 1)}}
 }
 
+
+# OUTPUT layout structure
+OUTPUT_LAYOUT = {
+    "OUT_PHASE_ADJ_7_0": {"offset": 0x00c, "fields": {"Value": BitField(0, 8)}},
+    "OUT_PHASE_ADJ_15_8": {"offset": 0x00d, "fields": {"Value": BitField(0, 8)}},
+    "OUT_PHASE_ADJ_23_16": {"offset": 0x00e, "fields": {"Value": BitField(0, 8)}},
+    "OUT_PHASE_ADJ_31_24": {"offset": 0x00f, "fields": {"Value": BitField(0, 8)}},
+    "OUT_CTRL_1":{"offset": 0x9, "fields": {"Value": BitField(0,8)}},
+
+}
+
+
 # REF_MON layout structure
 REF_MON_LAYOUT = {
     "REF_MON_IN_MON_FREQ_CFG": {"offset": 0x000, "fields": {"VLD_INTERVAL": BitField(3, 4), "FREQ_OFFS_LIM": BitField(0, 3)}},
@@ -424,6 +436,14 @@ PWM_RX_INFO_LAYOUT = {
 
 
 DPLL_CTRL_LAYOUT = {
+    "DPLL_PHASE_OFFSET_CFG_7_0": {"offset": 0x14, "fields": {"VALUE": BitField(0,8)}},
+    "DPLL_PHASE_OFFSET_CFG_15_8": {"offset": 0x15, "fields": {"VALUE": BitField(0,8)}},
+    "DPLL_PHASE_OFFSET_CFG_23_16": {"offset": 0x16, "fields": {"VALUE": BitField(0,8)}},
+    "DPLL_PHASE_OFFSET_CFG_31_24": {"offset": 0x17, "fields": {"VALUE": BitField(0,8)}},
+    "DPLL_PHASE_OFFSET_CFG_35_32": {"offset": 0x18, "fields": {"VALUE": BitField(0,4)}},
+    "DPLL_FINE_PHASE_ADV_CFG_7_0": {"offset": 0x1a, "fields": {"VALUE": BitField(0,8)}},
+    "DPLL_FINE_PHASE_ADV_CFG_12_8": {"offset": 0x1b, "fields": {"VALUE": BitField(0,5)}},
+
     "FOD_FREQ_M_7_0": {"offset": 0x1c, "fields": {"VALUE": BitField(0, 8)}},
     "FOD_FREQ_M_15_8": {"offset": 0x1d, "fields": {"VALUE": BitField(0, 8)}},
     "FOD_FREQ_M_23_16": {"offset": 0x1e, "fields": {"VALUE": BitField(0, 8)}},
@@ -432,6 +452,8 @@ DPLL_CTRL_LAYOUT = {
     "FOD_FREQ_M_47_40": {"offset": 0x21, "fields": {"VALUE": BitField(0, 8)}},
     "FOD_FREQ_N_7_0": {"offset": 0x22, "fields": {"VALUE": BitField(0, 8)}},
     "FOD_FREQ_N_15_8": {"offset": 0x23, "fields": {"VALUE": BitField(0, 8)}},
+
+    "DPLL_FRAME_PULSE_SYNC": {"offset":0x3b, "fields": {"VALUE": BitField(0,1)}},
 }
 
 
@@ -691,7 +713,15 @@ def time_divide_by_value(time1, value):
 # takes two TOD lists
 
 
-def time_difference_with_flag(time1, time2):
+def time_difference_signed_nanoseconds(time1, time2, include_decoder=False, encoder_freq=25e6):
+    # Compute the difference
+    diff_nanoseconds = time_to_nanoseconds(time1) - time_to_nanoseconds(time2)
+    if ( include_decoder ):
+        # PWM delays , 118 cycles at carrier
+        diff_nanoseconds -= ( 118 * ( 1 / encoder_freq )) * 1e9
+    return diff_nanoseconds
+
+def time_difference_with_flag(time1, time2, include_decoder=False, encoder_freq=25e6):
     """
     Compute the absolute difference between two time values in the specified 11-byte format.
     Also, return a flag indicating which time value was larger.
@@ -700,6 +730,10 @@ def time_difference_with_flag(time1, time2):
 
     # Compute the difference
     diff_nanoseconds = time_to_nanoseconds(time1) - time_to_nanoseconds(time2)
+
+    if ( include_decoder ):
+        # PWM delays , 118 cycles at carrier
+        diff_nanoseconds -= ( 118 * ( 1 / encoder_freq )) * 1e9
 
     # Determine the flag
     if diff_nanoseconds > 0:
@@ -889,6 +923,14 @@ class Input(Module):
         super().__init__("INPUT", Input.LAYOUT, Input.BASE_ADDRESSES)
 
 
+class Output(Module):
+    BASE_ADDRESSES = {0: 0xCA14, 1: 0xCA24, 2: 0xCA34, 3: 0xCA44, 4: 0xca54,
+            5:0xca64, 6:0xca80, 7:0xca90, 8:0xcaa0, 9:0xcab0, 10:0xcac0, 11:0xcad0}
+    LAYOUT = OUTPUT_LAYOUT
+
+    def __init__(self):
+        super().__init__("OUTPUT", Output.LAYOUT, Output.BASE_ADDRESSES)
+
 class REFMON(Module):
     BASE_ADDRESSES = {0: 0xC2E0, 1: 0xC2EC, 2: 0xC300, 3: 0xC30C, 4: 0xC318, 5: 0xC324, 6: 0xC330, 7: 0xC33C,
                       8: 0xC348, 9: 0xC354, 10: 0xC360, 11: 0xC36C, 12: 0xC380, 13: 0xC38C, 14: 0xC398, 15: 0xC3A4}
@@ -1022,7 +1064,7 @@ class DPLL():
         self.modules = {}
 
         modules_to_use = [Status, PWMEncoder, PWMDecoder, TOD, TODWrite, TODReadPrimary,
-                          TODReadSecondary, Input, REFMON, PWM_USER_DATA,
+                          TODReadSecondary, Input, Output, REFMON, PWM_USER_DATA,
                           OUTPUT_TDC_CFG, OUTPUT_TDC, INPUT_TDC, PWM_SYNC_ENCODER,
                           PWM_SYNC_DECODER, EEPROM, EEPROM_DATA, PWM_Rx_Info, DPLL_Ctrl,
                           DPLL_Freq_Write, DPLL_Config]

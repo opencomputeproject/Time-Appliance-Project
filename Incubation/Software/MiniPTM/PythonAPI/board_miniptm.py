@@ -14,6 +14,18 @@ from enum import Enum
 
 from dpll_over_fiber_miniptm import DPOF_Top
 
+class PIController:
+    def __init__(self, kp, ki):
+        self.kp = kp
+        self.ki = ki
+        self.integral = 0
+
+    def update(self, error):
+        self.integral += error
+        return self.kp * error + self.ki * self.integral
+
+
+
 
 class Single_MiniPTM:
     def __init__(self, board_num, devinfo, adap_num):
@@ -26,7 +38,7 @@ class Single_MiniPTM:
         self.PCIe = MiniPTM_PCIe(self.bar, self.bar_size)
         self.i2c = miniptm_i2c(adap_num)
         self.best_clock_quality_seen = 255 - board_num # hacky
-        print(f"Register MiniPTM device {devinfo[0]} I2C bus {adap_num}")
+        #print(f"Register MiniPTM device {devinfo[0]} I2C bus {adap_num}")
 
         self.dpll = DPLL(self.i2c, self.i2c.read_dpll_reg_direct,
                          self.i2c.read_dpll_reg_multiple_direct,
@@ -34,6 +46,10 @@ class Single_MiniPTM:
                          self.i2c.write_dpll_multiple)
 
         self.dpof = DPOF_Top(self)
+
+        self.tod_pi = []
+        for i in range(4):
+            self.tod_pi.append( PIController(0.6, 0.2) )
 
     def led_visual_test(self):
         for i in range(4):
@@ -238,69 +254,62 @@ class Single_MiniPTM:
         self.clear_all_dpll_sticky_status()
 
     def print_sfps_info(self):
-        self.i2c.read_sfp_module(1)
-        return
+        #self.i2c.read_sfp_module(1)
+        #return
         for i in range(1, 5):
             self.i2c.read_sfp_module(i)
 
-    def write_tod_absolute(self, tod_num=0, tod_subns=0, tod_ns=0, tod_sec=0):
-        data = []
-        data += [tod_subns & 0xff]
-        data += [byte for byte in tod_ns.to_bytes(4, byteorder='little')]
-        data += [byte for byte in tod_sec.to_bytes(6, byteorder='little')]
-        # print(f"Write TOD Absolute addr 0x{addr:x} -> {data}")
-        self.dpll.modules["TODWrite"].write_reg_mul(tod_num, "TOD_WRITE_SUBNS", 
-                data)
-        # write the trigger for immediate absolute
-        self.dpll.modules["TODWrite"].write_reg(tod_num, "TOD_WRITE_CMD", 0x0)
-        self.dpll.modules["TODWrite"].write_reg(tod_num, "TOD_WRITE_CMD", 0x1)
 
-    def write_tod_relative(self, tod_num, tod_subns=0, tod_ns=0, tod_sec=0, add=True):
-        data = []
-        data += [tod_subns & 0xff]
-        data += [byte for byte in tod_ns.to_bytes(4, byteorder='little')]
-        data += [byte for byte in tod_sec.to_bytes(6, byteorder='little')]
-        # print(f"Write TOD Absolute addr 0x{addr:x} -> {data}")
-        self.dpll.modules["TODWrite"].write_reg_mul(tod_num, "TOD_WRITE_SUBNS", 
-                data)
-        self.dpll.modules["TODWrite"].write_reg(tod_num, "TOD_WRITE_CMD", 0x0)
-        if ( add ):
-            # immediate delta TOD plus
-            self.dpll.modules["TODWrite"].write_reg(tod_num, "TOD_WRITE_CMD", 0x11)
+
+    def setup_phase_measurement(self, channel, ref_clk, meas_clk):
+        self.dpll.modules["DPLL_Config"].write_field(channel,
+                "DPLL_PHASE_MEASUREMENT_CFG", "PFD_FB_CLK_SEL", ref_clk)
+
+        self.dpll.modules["DPLL_Config"].write_field(channel,
+                "DPLL_PHASE_MEASUREMENT_CFG", "PFD_REF_CLK_SEL", meas_clk)
+
+        # set it to phase measurement mode
+        self.dpll.modules["DPLL_Config"].write_reg(channel,
+                "DPLL_MODE", (0x5 << 3) )
+
+
+    # need to do this if phase is rolling over
+    def restart_phase_measurement(self, channel):
+        ref_clk = self.dpll.modules["DPLL_Config"].read_field(channel,
+                "DPLL_PHASE_MEASUREMENT_CFG", "PFD_FB_CLK_SEL")
+
+        meas_clk = self.dpll.modules["DPLL_Config"].read_field(channel,
+                "DPLL_PHASE_MEASUREMENT_CFG", "PFD_REF_CLK_SEL")
+
+        # method 1: Swap these two
+        self.dpll.modules["DPLL_Config"].write_field(channel,
+                "DPLL_PHASE_MEASUREMENT_CFG", "PFD_FB_CLK_SEL", meas_clk)
+
+        self.dpll.modules["DPLL_Config"].write_field(channel,
+                "DPLL_PHASE_MEASUREMENT_CFG", "PFD_REF_CLK_SEL", ref_clk)
+
+        # set it to phase measurement mode
+        self.dpll.modules["DPLL_Config"].write_reg(channel,
+                "DPLL_MODE", (0x5 << 3) )
+
+
+    def read_phase_measurement_mode(self, channel, high_precision=True):
+        if ( high_precision ):
+            reg_name = f"DPLL{channel}_FILTER_STATUS_7_0"
+            phase_reg = self.dpll.modules["Status"].read_reg_mul(0, reg_name, 6)
+            phase_val = 0
+            for i, byte in enumerate(phase_reg):
+                phase_val += byte << (8*i)
+            phase_val = int_to_signed_nbit(phase_val, 48)
+            return phase_val
         else:
-            # immediate delta TOD minus
-            self.dpll.modules["TODWrite"].write_reg(tod_num, "TOD_WRITE_CMD", 0x21)
-
-
-
-
-
-    def adjust_tod(self, tod_num, local_tod, remote_tod):
-        print(f"Board {self.board_num} adjusting TOD{tod_num} to match far side")
-        tod_diff, flag = time_difference_with_flag(local_tod, remote_tod)
-        tod_subns = tod_diff[0]
-        tod_ns = 0
-        for i , byte in enumerate(tod_diff[1:5]):
-            tod_ns += byte << (i * 8) 
-        tod_sec = 0
-        for i, byte in enumerate(tod_diff[5:]):
-            tod_sec += byte << (i*8)
-        # tod_diff is only 9 bytes , ignoring top handshake bytes
-        if ( flag == 1 ):
-            print(f"Local TOD {local_tod_received} > remote {remote_tod_received}, shift {tod_diff}")
-            # flag = 1 , local_tod > remote_tod
-            self.write_tod_relative(tod_num, tod_subns, tod_ns, tod_sec, False)
-
-        elif ( flag == -1 ):
-            print(f"Local TOD {local_tod_received} < remote {remote_tod_received}, shift {tod_diff}")
-            # flag = -1 , local_tod < remote_tod
-            self.write_tod_relative(tod_num, tod_subns, tod_ns, tod_sec, True)
-        else:
-            # flag = 0, equal , do nothing
-            pass
-
-
-
+            reg_name = f"DPLL{channel}_PHASE_STATUS_7_0"
+            phase_reg = self.dpll.modules["Status"].read_reg_mul(0, reg_name, 5)
+            phase_val = 0
+            for i, byte in enumerate(phase_reg):
+                phase_val += byte << (8*i)
+            phase_val = int_to_signed_nbit(phase_val, 36)
+            return phase_val
 
     def init_pwm_dplloverfiber(self):
         # disable all decoders
@@ -311,7 +320,7 @@ class Single_MiniPTM:
 
         # initialize all TODs 
         for i in range(len(self.dpll.modules["TODWrite"].BASE_ADDRESSES)):
-            self.write_tod_absolute(i, 0, 0, 0)
+            self.dpof.write_tod_absolute(i, 0, 0, 0)
 
         # enable all encoders to transmit
         for i in range(len(self.dpll.modules["PWMEncoder"].BASE_ADDRESSES)):
@@ -333,98 +342,66 @@ class Single_MiniPTM:
             self.dpll.modules["PWMDecoder"].write_field(
                 decoder_num, "PWM_DECODER_CMD", "ENABLE", 1)
 
-    # experimental function -> THIS WORKS, global RX buffer
-
-    def read_pwm_tod_incoming(self):
-        # read global register set 0xce80, 11 bytes
-        data = self.i2c.read_dpll_reg_multiple(0xce80, 0x0, 11)
-        print(f"Debug pwm incoming, data={data}")
-
-    # This works as per app note and to properly align TOD you need this procedure
-    # However, for DPLL over fiber, using TOD as data channel
-    # this is not necessary
-
-    def read_pwm_tod_incoming_consumes_tod_as_rx(self):
-        # following APN ToD over PWM
-
-        # 3a. read TOD read primary counter, just use all TOD0 for now
-        count = self.dpll.modules["TODReadPrimary"].read_field(
-            0, "TOD_READ_PRIMARY_COUNTER", "READ_COUNTER")
-        print(f"Debug pwm incoming, TODReadPrimary count = {count}")
-
-        # 3b. clear any previous trigger
-        self.dpll.modules["TODReadPrimary"].write_field(
-            0, "TOD_READ_PRIMARY_CMD", "TOD_READ_TRIGGER", 0x0)
-
-        # 3c. Configure PWM Decoder for trigger, HARD CODE FOR INPUT 0
-        self.dpll.modules["TODReadPrimary"].write_field(
-            0, "TOD_READ_PRIMARY_SEL_CFG_0", "PWM_DECODER_INDEX", 0)
-
-        # 3c-i . Configure ToD read trigger mode to single shot. Configure trigger on PWM_read_primary
-        #   PWM internal clock by setting selected PWM decoder's 1PPS output
-        self.dpll.modules["TODReadPrimary"].write_reg(
-            0, "TOD_READ_PRIMARY_CMD", 0x4)
-
-        # 3c-ii . Poll Read counter until it increments for ~3 seconds
-        for i in range(3*5):
-            new_count = self.dpll.modules["TODReadPrimary"].read_field(
-                0, "TOD_READ_PRIMARY_COUNTER", "READ_COUNTER")
-            print(
-                f"Debug pwm incoming, TODReadPrimary count = {count}, new_count = {new_count}")
-            if (new_count != count):
-                print(f"Got incoming ToD!")
-                # 3c-iii . Read and store value of TOD_READ_PRIMARY
-                base_addr = self.dpll.modules["TODReadPrimary"].BASE_ADDRESSES[0]
-                reg_offset = self.dpll.modules["TODReadPrimary"].layout["TOD_READ_PRIMARY_SUBNS"]["offset"]
-                new_tod = self.i2c.read_dpll_reg_multiple(
-                    base_addr, reg_offset, 11)
-
-                # THIS DOES WORK!!!!!!!!
-                print(f"New TOD from read primary: {new_tod}")
-
-                # read global register set 0xce80, 11 bytes -> THIS DOES NOT WORK WITHOUT FIRMWARE
-                data = self.i2c.read_dpll_reg_multiple(0xce80, 0x0, 11)
-                print(f"Debug pwm incoming, data={data}")
-                break
-            time.sleep(0.25)
-
-
 
     # call this periodically , non blocking "super-loop" function
     def dpll_over_fiber_loop(self):
-        print(f"Board {self.board_num} dpll_over_fiber_loop")
+        #print(f"Board {self.board_num} dpll_over_fiber_loop")
         #self.dpof.run_loop()
         self.dpof.tick()
-        print(f"Board {self.board_num} done dpll_over_fiber_loop")
+        #print(f"Board {self.board_num} done dpll_over_fiber_loop")
 
 
-    def setup_dpll_track_and_priority_list(self, input_priorities=[]):
-        if ( len(input_priorities) == 0 ):
-            return
-
-        print(f"Board {self.board_num} setting input priorities and dpll mode {input_priorities}")
-        # configure DPLL3 (assuming global DPLL master) priority list 
-        for index, chan in enumerate(input_priorities):
-            reg_val = (chan << 1) + 1
-            print(f"Setting DPLL3 Priority {index} = {reg_val}")
-            self.dpll.modules["DPLL_Config"].write_reg(3, 
-                    f"DPLL_REF_PRIORITY_{index}", reg_val)
-
-        #disable combo modes
-        self.dpll.modules["DPLL_Config"].write_field(3,
-                "DPLL_COMBO_SLAVE_CFG_0", "PRI_COMBO_SRC_EN", 0)
-
-        self.dpll.modules["DPLL_Config"].write_field(3,
-                "DPLL_COMBO_SLAVE_CFG_1", "SEC_COMBO_SRC_EN", 0)
-
-        # reference inputs are setup, now switch to DPLL mode, just 0
-        self.dpll.modules["DPLL_Config"].write_reg(3,
-                    "DPLL_MODE", 0)
 
     
 
+    def setup_dpll_track_and_priority_list(self, dpll_num, input_priorities=[]):
+        if ( len(input_priorities) == 0 ):
+            return
+
+        print(f"Board {self.board_num} setting input priorities and dpll{dpll_num} mode {input_priorities}")
+        for index, chan in enumerate(input_priorities):
+            reg_val = (chan << 1) + 1
+            print(f"Setting DPLL{dpll_num} Priority {index} = {reg_val}")
+            self.dpll.modules["DPLL_Config"].write_reg(dpll_num, 
+                    f"DPLL_REF_PRIORITY_{index}", reg_val)
+
+        # keep primary combo slave for local TCXO, but disable secondary source
+        #self.dpll.modules["DPLL_Config"].write_field(2,
+        #        "DPLL_COMBO_SLAVE_CFG_0", "PRI_COMBO_SRC_EN", 0)
+        self.dpll.modules["DPLL_Config"].write_field(dpll_num,
+                "DPLL_COMBO_SLAVE_CFG_1", "SEC_COMBO_SRC_EN", 0)
+
+        # reference inputs are setup, now switch to DPLL mode, just 0
+        self.dpll.modules["DPLL_Config"].write_reg(dpll_num,
+                    "DPLL_MODE", 0)
 
 
+
+    # usually want to do relative adjustments, handle that here
+    def add_output_phase_offset(self, output_num, offset_nanoseconds):
+        print(f"Add output phase offset {output_num} by {offset_nanoseconds}")
+        cur_adjust = self.dpll.modules["Output"].read_reg_mul(output_num,
+                "OUT_PHASE_ADJ_7_0", 4)
+        cur_adjust_val = 0
+        for index,val in enumerate(cur_adjust):
+            cur_adjust_val += val << (8*index)
+        cur_adjust_val = int_to_signed_nbit(cur_adjust_val, 32)
+
+        # assume 500MHz FOD, units on this register are 2ns units
+        cur_adjust_val_ns = cur_adjust_val * 2
+        print(f"Current output phase adjust {cur_adjust_val}, {cur_adjust_val_ns} ns")
+
+        cur_adjust_val_ns += offset_nanoseconds
+
+        cur_adjust_val_ns = cur_adjust_val_ns // 2 # divide by 2 again to get into units
+
+        new_adjust_bytes = to_twos_complement_bytes( int(cur_adjust_val_ns), 32)
+        print(f"New output phase adjust {new_adjust_bytes}, {cur_adjust_val_ns*2} ns")
+
+        self.dpll.modules["Output"].write_reg_mul(output_num,
+                "OUT_PHASE_ADJ_7_0", new_adjust_bytes)
+
+        
 
 
 

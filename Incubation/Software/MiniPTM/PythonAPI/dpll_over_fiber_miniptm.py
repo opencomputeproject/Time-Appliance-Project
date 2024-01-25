@@ -65,14 +65,16 @@ Defined in the layout in registers map but description is here PWM_RX_INFO_LAYOU
 
 TOD_SEC[5][7] = Data Flag, set when the TOD field is being aliased for handshaking, 0 when normal TOD
 TOD_SEC[5][6:5] = Handshake flag
-TOD_SEC[5][0:4] = Transaction ID
+TOD_SEC[5][4] = Slave following flag, tells the other side that the slave
+    has started to follow TOD, valid with or without Data Flag
+TOD_SEC[5][0:3] = Transaction ID
     0x0 = Read chip info
             a. Status of all inputs, STATUS.INX_MON_STATUS bytes for 0-15 (16 bytes)
             b. DPLL Status of DPLLs , STATUS.DPLLX_STATUS bytes for 0-3 (4 bytes)
             c. Input frequency monitor info, STATUS.INX_MON_FREQ_STATUS for 0-15, (32 bytes)
             d. A name string, 16 bytes including null
             e. TOD delta seen between received TOD frame and local TOD counter, used for round trip calculations (11 bytes)
-            f.
+            f. TOD delta sign, one byte
 
     0x1 = Write to board
             a. LED values bit-wise, 1 byte
@@ -94,6 +96,23 @@ RX is the most constrained , so it needs the most logic
     b. is the PWM encoder on the other side trying to initiate a request
 """
 
+class AverageFilter:
+    def __init__(self):
+        self.values = []
+
+    def update(self, value):
+        self.values.append(value)
+
+    def get_count(self):
+        return len(self.values)
+
+    def get_average(self, clear_avg=False):
+        if ( len(self.values) ):
+            avg = sum(self.values) / len(self.values)
+            if ( clear_avg ):
+                self.values = []
+            return avg
+        return 0
 
 # basically control TOD , a single PWM Encoder, and a single decoder
 # Secondary feature of this,
@@ -128,8 +147,10 @@ class dpof_single_channel():
         # rx variables
         self.decoder = decoder_num
         # by default disable decoder
-        self.board.dpll.modules["PWMDecoder"].write_field(self.decoder,
-                                                          "PWM_DECODER_CMD", "ENABLE", 0)
+        # Probably shouldn't hard disable, just change ID
+        #self.board.dpll.modules["PWMDecoder"].write_field(self.decoder,
+        #                                                  "PWM_DECODER_CMD", "ENABLE", 0)
+
         self.rx_enabled = False
         self.decoder_time_slice_sec = decoder_time_slice_sec
         self.last_data_this_decoder = []
@@ -148,6 +169,13 @@ class dpof_single_channel():
         # counter value at time of PWM reception
         self.tod_compare_data = []
 
+        self.follow_far_side = False
+
+        self.far_side_following = False
+
+        self.last_tod_push = []
+
+
     def grant_fifo_control(self):
         self.fifo_grant = True
 
@@ -156,6 +184,50 @@ class dpof_single_channel():
 
     def get_fifo_grant_status(self):
         return self.fifo_grant
+
+
+    def set_follow_far_side(self):
+        if ( self.follow_far_side ):
+            return # already following
+
+        # read back current TOD
+        cur_tod = self.read_current_tx_tod_seconds()
+        print(f"Set follow far side, got tod {cur_tod}")
+
+        # flip the order
+        cur_tod.reverse()
+
+        # set the bit
+        jump_sec = (cur_tod[0] | (1<<4)) << (8*5)
+
+        # relative jump positive
+        self.board.dpof.write_tod_relative(
+            self.encoder, 0, 0, jump_sec, True)
+
+        # set the flag
+        self.follow_far_side = True
+
+
+    def stop_follow_far_side(self):
+        if ( not self.follow_far_side ):
+            return # already not following
+        # read back current TOD
+        cur_tod = self.read_current_tx_tod_seconds()
+
+        # flip the order
+        cur_tod.reverse()
+
+        # clear the bit
+        jump_sec = (cur_tod[0] & 0xef) << (8*5)
+
+        # relative jump negative
+        self.board.dpof.write_tod_relative(
+            self.encoder, 0, 0, jump_sec, False)
+
+        # set the flag
+        self.follow_far_side = False
+
+
 
     def run_idle_state(self):
         # only transition out of idle is if RX data detected
@@ -171,7 +243,7 @@ class dpof_single_channel():
             rand_id_rx = data[-2]
             data_flag = (top_byte >> 7) & 0x1
             handshake_state_rx = (top_byte >> 5) & 0x3
-            transaction_id_rx = top_byte & 0x1f
+            transaction_id_rx = top_byte & 0xf
             if (not data_flag):
                 return self.disable_decoder_if_time_over(), False
             else:
@@ -230,7 +302,7 @@ class dpof_single_channel():
             rand_id_rx = data[-2]
             data_flag = (top_byte >> 7) & 0x1
             handshake_state_rx = (top_byte >> 5) & 0x3
-            transaction_id_rx = top_byte & 0x1f
+            transaction_id_rx = top_byte & 0xf
             if (self.DEBUG_PRINT):
                 print(
                     f"Run rx slave respond query handshake_state_rx id={handshake_state_rx}")
@@ -318,11 +390,12 @@ class dpof_single_channel():
             rand_id_rx = data[-2]
             data_flag = (top_byte >> 7) & 0x1
             handshake_state_rx = (top_byte >> 5) & 0x3
-            transaction_id_rx = top_byte & 0x1f
+            transaction_id_rx = top_byte & 0xf
             if (not data_flag):
                 self.state = dpof_single_channel.IDLE
                 if (self.DEBUG_PRINT):
                     print(f"RX slave done wait state, going to idle")
+                self.stop_tx()
             else:
                 if (handshake_state_rx == 0x0):
                     self.state = dpof_single_channel.RX_SLAVE
@@ -386,7 +459,7 @@ class dpof_single_channel():
             rand_id_rx = data[-2]
             data_flag = (top_byte >> 7) & 0x1
             handshake_state_rx = (top_byte >> 5) & 0x3
-            transaction_id_rx = top_byte & 0x1f
+            transaction_id_rx = top_byte & 0xf
             if (data_flag):
                 if (handshake_state_rx == 0x1):
                     # I sent out 0x0, got back 0x1, I won negotiation, need FIFO
@@ -527,7 +600,7 @@ class dpof_single_channel():
                 rand_id_rx = data[-2]
                 data_flag = (top_byte >> 7) & 0x1
                 handshake_state_rx = (top_byte >> 5) & 0x3
-                transaction_id_rx = top_byte & 0x1f
+                transaction_id_rx = top_byte & 0xf
                 if (handshake_state_rx == 0x2):  # got ack from other side
                     if (self.DEBUG_PRINT):
                         print(f"Transmit query state got 0x2, done")
@@ -567,7 +640,7 @@ class dpof_single_channel():
             rand_id_rx = data[-2]
             data_flag = (top_byte >> 7) & 0x1
             handshake_state_rx = (top_byte >> 5) & 0x3
-            transaction_id_rx = top_byte & 0x1f
+            transaction_id_rx = top_byte & 0xf
             if (handshake_state_rx == 0x2):  # got ack from other side
                 if (self.DEBUG_PRINT):
                     print(f"Transmit done wait state got 0x2, done")
@@ -650,11 +723,12 @@ class dpof_single_channel():
 
         self.tx_rand_num = random.randint(0, 255)
         tod_sec_top = (1 << 7) + ((handshake_id & 0x3) << 5) + \
-            (transaction_id & 0x1f)
+            (transaction_id & 0xf)
         tod_sec_bot = self.tx_rand_num
         tod_to_jump = (tod_sec_top << (8*5)) + (tod_sec_bot << (8*4))
         # relative jump positive
-        self.board.write_tod_relative(self.encoder, 0, 0, tod_to_jump, True)
+        print(f"Start tx, write tod_relative encoder {self.encoder} tod_to_jump={tod_to_jump}")
+        self.board.dpof.write_tod_relative(self.encoder, 0, 0, tod_to_jump, True)
         self.tx_enabled = True
         self.time_tx_enabled = time.time()
         self.tx_nego_state = handshake_id
@@ -679,9 +753,10 @@ class dpof_single_channel():
         cur_tod.reverse()
 
         if (cur_tod[0] & 0x80):  # data bit is set , I need to clear it
-            cur_tod_to_sub = (cur_tod[0] << (8*5)) + (cur_tod[1] << (8*4))
+            # keep bit 4 of upper seconds
+            cur_tod_to_sub = ( (cur_tod[0] & 0xef) << (8*5)) + ( cur_tod[1] << (8*4))
             # relative jump negative
-            self.board.write_tod_relative(
+            self.board.dpof.write_tod_relative(
                 self.encoder, 0, 0, cur_tod_to_sub, False)
         self.tx_enabled = False
         self.tx_nego_state = 0
@@ -733,13 +808,14 @@ class dpof_single_channel():
             id_bytes += [0] * (16 - len(id_bytes))
 
            # TOD delta, get the latest TOD value and use self.decoder_num / 2
+
             if (len(self.tod_compare_data) > 0):
-                incoming_tod = self.tod_compare_data[1]  # the incoming TOD
+                incoming_tod = self.tod_compare_data[0][1]  # the incoming TOD
                 val = int(self.decoder / 2) + 2
                 print(f"Decoder {val} tod_compare_data={self.tod_compare_data}")
-                local_tod = self.tod_compare_data[val]
+                local_tod = self.tod_compare_data[0][val]
                 difference, flag = time_difference_with_flag(
-                    local_tod, incoming_tod)
+                    local_tod, incoming_tod, True)
                 tod_delta = difference + [0,0]
 
                 # flag is 1 if time1 > time 2 , -1 if time1 < time2 , 0 if equal
@@ -790,6 +866,8 @@ class dpof_single_channel():
         # record what PWM TOD is to detect change after enabling decoder
         self.pwm_tod_before_start_rx = self.read_raw_hardware_buffer()
 
+        self.last_tod_push = []
+
         # Secondary feature, record TOD at reception of PPS from this decoder
         # on each TOD using SecondaryTODRead
 
@@ -824,19 +902,71 @@ class dpof_single_channel():
             return time.time() - self.start_time_on_this_decoder
         return 0
 
+
+    def push_tod_compare_data(self, data):
+        tod_compare = []
+        tod_compare.append(self.decoder)
+        # ignore top two bytes, handshake bytes
+        tod_compare.append(data[:-2])
+        
+        local_tod_save = []
+
+        for i in range(4):  # read back TODs as well
+            local_tod = self.board.dpll.modules["TODReadSecondary"].read_reg_mul(i,
+                     "TOD_READ_SECONDARY_SUBNS", 11)
+            local_tod = local_tod[:-2]
+            tod_compare.append(local_tod)
+            if ( i == self.decoder/2 ):
+                local_tod_save = list(local_tod)
+
+        if ( data[-1] & 0x10 ): # slave follow flag
+            print(f"Decoder {self.decoder} far side is following!")
+            self.far_side_following = True
+            
+            # far side is following me
+            # keep an average of TOD values seen
+            # used for round trip estimation
+            remote_tod = data[:-2]
+            local_tod = local_tod_save
+
+            tod_diff = time_difference_signed_nanoseconds(local_tod, remote_tod,
+                    True)
+
+        else:
+            self.far_side_following = False
+
+        if (self.DEBUG_PRINT):
+            print(f"Board {self.board.board_num} Debug tod compare data {tod_compare}")
+        self.tod_compare_data = []
+        self.tod_compare_data.append(tod_compare)
+
+
+
     def check_decoder_new_data(self):
         if (self.rx_enabled):
             data = self.read_raw_hardware_buffer(True)
-            data_hs = data[-2:]
             # only keep handshake bytes, top two bytes
-            pwm_stale = data_hs == self.pwm_tod_before_start_rx
+            data_hs = data[-2:]
+            # non handshake bytes, "real" tod
+            data_nonhs = data[:-2]
+
+            pwm_stale = data_hs == self.pwm_tod_before_start_rx[-2:]
+            pwm_tod_stale = data_nonhs == self.last_tod_push 
+
             if self.state == dpof_single_channel.RX_SLAVE_DONE_WAIT:
                 pwm_stale = False # can't be stale, just went through full data
 
-
             if ((pwm_stale) or
                     (data_hs == self.last_data_this_decoder)):
-                print(f"Not new decoder data")
+                print(f"Not new decoder data, pwm_stale={pwm_stale} ")
+
+                if ( not pwm_tod_stale ): 
+                    # got new data, but not new handshake data
+                    #this is fine for TOD compare
+                    print(f"Pushing tod compare even though no new decoder data")
+                    self.push_tod_compare_data(data)
+                    self.last_tod_push = data_nonhs
+
                 # nothing new
                 return []
             else:
@@ -851,20 +981,8 @@ class dpof_single_channel():
                     print(f" Debug {self.last_data_this_decoder}")
 
                 # Secondary feature, record TODs from TODReadSecondary and this PWM frame
-                self.tod_compare_data = []
-                self.tod_compare_data.append(self.decoder)
-                # ignore top two bytes, handshake bytes
-                self.tod_compare_data.append(data[:-2])
-
-                for i in range(4):  # read back TODs as well
-                    local_tod = self.board.dpll.modules["TODReadSecondary"].read_reg_mul(i,
-                                                                                         "TOD_READ_SECONDARY_SUBNS", 11)
-                    local_tod = local_tod[:-2]
-                    self.tod_compare_data.append(local_tod)
-
-                if (self.DEBUG_PRINT):
-                    print(f"Debug tod compare data {self.tod_compare_data}")
-
+                self.push_tod_compare_data(data)
+                self.last_tod_push = data_nonhs
                 return data_hs
         return []
 
@@ -902,13 +1020,14 @@ class dpof_single_channel():
 # Top level dpll over fiber class for one MiniPTM / DPLL over fiber DPLL instnace
 
 class DPOF_Top():
-    def __init__(self, board):
+    def __init__(self, board, DEBUG_PRINT = True):
         self.board = board
 
+        # NEED TO CHANGE THIS, probably just mess with decoder IDs
         # disable all decoders
-        for i in range(len(self.board.dpll.modules["PWMDecoder"].BASE_ADDRESSES)):
-            self.board.dpll.modules["PWMDecoder"].write_field(i,
-                                                              "PWM_DECODER_CMD", "ENABLE", 0)
+        #for i in range(len(self.board.dpll.modules["PWMDecoder"].BASE_ADDRESSES)):
+        #    self.board.dpll.modules["PWMDecoder"].write_field(i,
+        #                                                      "PWM_DECODER_CMD", "ENABLE", 0)
 
         # RX Logic variables
         self.active_decoder = 0
@@ -919,26 +1038,42 @@ class DPOF_Top():
             self.board, i, i, i*2, 5) for i in range(1)]  # decoders skip one
 
         # enable one
-        self.channels[self.active_decoder].start_rx()
+        #self.channels[self.active_decoder].start_rx()
+
+        # channels following me as master
+        self.follow_channels = []
+
+        # who I'm following as master if anyone
+        self.master_decoder = -1
+        self.following_master = False
+
+        self.average_tod_errors = []
+        for index in range(4):
+            self.average_tod_errors.append( AverageFilter() )
+
 
         # TX Logic variables
+        self.DEBUG_PRINT = DEBUG_PRINT
 
     # top level function
 
     def tick(self):
         for index, chan in enumerate(self.channels):
-            print(f"Board {self.board.board_num} DPOF tick, chan {index}")
+            if ( self.DEBUG_PRINT ):
+                print(f"Board {self.board.board_num} DPOF tick, chan {index}")
             decoder_enabled, fifo_needed = chan.top_state_machine()
-            print(
-                f"Board {self.board.board_num} DPOF tick, chan {index}, {decoder_enabled} , {fifo_needed}")
+            if ( self.DEBUG_PRINT ):
+                print(
+                    f"Board {self.board.board_num} DPOF tick, chan {index}, {decoder_enabled} , {fifo_needed}")
 
             if (not decoder_enabled):  # it turned itself off
                 if (index == self.active_decoder):  # it was enabled
                     # enable next one
                     self.active_decoder = (
                         self.active_decoder + 1) % len(self.channels)
-                    print(
-                        f"Board {self.board.board_num} switch to decoder {self.active_decoder}")
+                    if ( self.DEBUG_PRINT ):
+                        print(
+                            f"Board {self.board.board_num} switch to decoder {self.active_decoder}")
                     self.channels[self.active_decoder].start_rx()
 
             if (fifo_needed):  # it's requesting FIFO control
@@ -953,11 +1088,12 @@ class DPOF_Top():
                     self.fifo_lock_chan = -1
 
             # check if any results
-            if (len(chan.pwm_write_data) > 0):
-                print(f"DPOF Top tick, got written to! {chan.pwm_write_data}")
-            elif (len(chan.pwm_query_data) > 0):
-                print(
-                    f"DPOF Top Tick, got query data back! {chan.pwm_query_data}")
+            if ( self.DEBUG_PRINT ):
+                if (len(chan.pwm_write_data) > 0):
+                    print(f"DPOF Top tick, got written to! {chan.pwm_write_data}")
+                elif (len(chan.pwm_query_data) > 0):
+                    print(
+                        f"DPOF Top Tick, got query data back! {chan.pwm_query_data}")
 
     # returns a single query data entry, [channel, query_id, [query data]]
     # or returns empty list
@@ -981,8 +1117,9 @@ class DPOF_Top():
 
     def dpof_query(self, channel_num=0, query_id=0):
         if (self.channels[channel_num].can_tx()):
-            print(
-                f"Board {self.board.board_num} can TX, starting TX chan={channel_num} query_id={query_id}")
+            if ( self.DEBUG_PRINT ):
+                print(
+                    f"Board {self.board.board_num} can TX, starting TX chan={channel_num} query_id={query_id}")
             self.channels[channel_num].start_tx(transaction_id=query_id)
             return True
         return False
@@ -996,7 +1133,135 @@ class DPOF_Top():
 
     def get_tod_compare(self):
         data = []
-        for chan in self.channels:
+        for index, chan in enumerate(self.channels):
             if (len(chan.tod_compare_data) > 0):
-                data.append(chan.tod_compare_data)
+                val = chan.tod_compare_data.pop(0)
+                print(f"Chan {index} had tod_compare_data {val}")
+                data.append( val )
         return data
+
+    def write_tod_absolute(self, tod_num=0, tod_subns=0, tod_ns=0, tod_sec=0):
+        data = []
+        data += [tod_subns & 0xff]
+        data += [byte for byte in tod_ns.to_bytes(4, byteorder='little')]
+        data += [byte for byte in tod_sec.to_bytes(6, byteorder='little')]
+        # print(f"Write TOD Absolute addr 0x{addr:x} -> {data}")
+        self.board.dpll.modules["TODWrite"].write_reg_mul(tod_num, "TOD_WRITE_SUBNS", 
+                data)
+        # write the trigger for immediate absolute
+        self.board.dpll.modules["TODWrite"].write_reg(tod_num, "TOD_WRITE_CMD", 0x0)
+        self.board.dpll.modules["TODWrite"].write_reg(tod_num, "TOD_WRITE_CMD", 0x1)
+
+    def write_tod_relative(self, tod_num, tod_subns=0, tod_ns=0, tod_sec=0, add=True):
+        data = []
+        data += [tod_subns & 0xff]
+        data += [byte for byte in tod_ns.to_bytes(4, byteorder='little')]
+        data += [byte for byte in tod_sec.to_bytes(6, byteorder='little')]
+        self.board.dpll.modules["TODWrite"].write_reg_mul(tod_num, "TOD_WRITE_SUBNS", 
+                data)
+        self.board.dpll.modules["TODWrite"].write_reg(tod_num, "TOD_WRITE_CMD", 0x0)
+        if ( add ):
+            print(f"Write TOD Add Relative tod{tod_num} -> {data}")
+            # immediate delta TOD plus
+            self.board.dpll.modules["TODWrite"].write_reg(tod_num, "TOD_WRITE_CMD", 0x11)
+        else:
+            print(f"Write TOD Minus Relative tod{tod_num} -> {data}")
+            # immediate delta TOD minus
+            self.board.dpll.modules["TODWrite"].write_reg(tod_num, "TOD_WRITE_CMD", 0x21)
+
+
+    def adjust_tod_signed_nanoseconds(self, tod_num, nanosecond_val, include_decoder=False):
+        print(f"Board {self.board.board_num} adjusting TOD{tod_num} nanosecondval={nanosecond_val}")
+        if include_decoder:
+            nanosecond_val -= (118 * ( 1 / 25e6 ) ) * 1e9
+        add = False 
+        if ( nanosecond_val < 0 ):
+            nanosecond_val *= -1
+            add = True
+
+
+        tod_diff = nanoseconds_to_time(nanosecond_val)
+        tod_subns = tod_diff[0]
+        tod_ns = 0
+        for i , byte in enumerate(tod_diff[1:5]):
+            tod_ns += byte << (i * 8) 
+        tod_sec = 0
+        for i, byte in enumerate(tod_diff[5:]):
+            tod_sec += byte << (i*8)
+
+        self.board.dpof.write_tod_relative(tod_num, tod_subns, tod_ns,
+                tod_sec, add)
+
+    def adjust_tod(self, tod_num, local_tod, remote_tod, include_decoder=False):
+        #print(f"Board {self.board_num} adjusting TOD{tod_num} to match far side")
+        tod_diff, flag = time_difference_with_flag(local_tod, remote_tod, include_decoder)
+
+        print(f"TOD_diff = {tod_diff}, flag = {flag}")
+        tod_subns = tod_diff[0]
+        tod_ns = 0
+        for i , byte in enumerate(tod_diff[1:5]):
+            tod_ns += byte << (i * 8) 
+        tod_sec = 0
+        for i, byte in enumerate(tod_diff[5:]):
+            tod_sec += byte << (i*8)
+        # tod_diff is only 9 bytes , ignoring top handshake bytes
+
+
+        hex_diff = [hex(val) for val in tod_diff]
+        if ( flag == 1 ):
+            print(f"Board {self.board.board_num} Local TOD{tod_num} {local_tod} > remote {remote_tod}, shift {hex_diff}")
+            #print(f"TOD {tod_num}, subns={tod_subns}, ns={tod_ns}, sec={tod_sec}")
+            # flag = 1 , local_tod > remote_tod
+            self.board.dpof.write_tod_relative(tod_num, tod_subns, tod_ns, tod_sec, False)
+
+        elif ( flag == -1 ):
+            print(f"Board {self.board.board_num} Local TOD{tod_num} {local_tod} < remote {remote_tod}, shift {hex_diff}")
+            #print(f"TOD {tod_num}, subns={tod_subns}, ns={tod_ns}, sec={tod_sec}")
+            # flag = -1 , local_tod < remote_tod
+            self.board.dpof.write_tod_relative(tod_num, tod_subns, tod_ns, tod_sec, True)
+        else:
+            # flag = 0, equal , do nothing
+            pass
+
+
+
+    def add_to_average_tod_error(self, channel_num, local_tod, remote_tod, include_decoder=False):
+        tod_diff = time_difference_signed_nanoseconds(local_tod, remote_tod, include_decoder)
+        self.add_to_average_tod_error_ns(channel_num, tod_diff)
+        
+    def add_to_average_tod_error_ns(self, channel_num, nanosecond_val):
+        self.average_tod_errors[channel_num].update(nanosecond_val)
+
+    def get_average_tod_error(self, channel_num, clear_avg=False):
+        return self.average_tod_errors[channel_num].get_average(clear_avg)
+
+    def get_average_tod_count(self, channel_num):
+        return self.average_tod_errors[channel_num].has_data()
+
+
+    def inform_new_master(self, decoder_num):
+        self.master_decoder = decoder_num
+        self.following_master = True
+        self.master_tod_differences = [] # for averaging
+
+    #### Top level call, when following far side,
+    # should call these after doing initial TOD adjustment to far side
+    def start_follow_far_side(self, decoder_num):
+        self.channels[decoder_num//2].set_follow_far_side()
+        self.inform_new_master(decoder_num//2)
+
+    def stop_follow_far_side(self):
+        self.channels[self.master_decoder//2].stop_follow_far_side()
+        self.master_decoder = -1
+        self.following_master = False
+
+    def get_channels_following(self):
+        channels_following = []
+        for index, chan in enumerate(self.channels):
+            if ( chan.far_side_following ):
+                channels_following.append(index)
+        return channels_following
+
+  
+
+
