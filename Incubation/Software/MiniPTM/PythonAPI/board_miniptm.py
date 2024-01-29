@@ -402,8 +402,103 @@ class Single_MiniPTM:
                 "OUT_PHASE_ADJ_7_0", new_adjust_bytes)
 
         
+    def get_tod_trigger_from_pps(self, tod_num = 0, use_sec=True, is_pwm_decoder=False, input_num=0, timeout=3):
+        if use_sec:
+            module = self.dpll.modules["TODReadSecondary"]
+            counter = "TOD_READ_SECONDARY_COUNTER"
+            cfg_name = "TOD_READ_SECONDARY_SEL_CFG_0"
+            cmd = "TOD_READ_SECONDARY_CMD"
+            tod_start = "TOD_READ_SECONDARY_SUBNS"
+        else:
+            module = self.dpll.modules["TODReadPrimary"]
+            counter = "TOD_READ_PRMIARY_COUNTER"
+            cfg_name = "TOD_READ_PRIMARY_SEL_CFG_0"
+            cmd = "TOD_READ_PRIMARY_CMD"
+            tod_start = "TOD_READ_PRIMARY_SUBNS"
+
+        module.write_reg(tod_num, cmd, 0x0) # disable any trigger
+        start_count = module.read_reg(tod_num, counter)
+
+        if ( is_pwm_decoder ):
+            module.write_reg(tod_num, cfg_name, (input_num & 0xf) << 4) # PWM decoder
+            module.write_reg(tod_num, cmd, 0x4)
+        else:
+            module.write_reg(tod_num, cfg_name, input_num & 0xf) # input reference
+            module.write_reg(tod_num, cmd, 0x3)
+        start_time = time.time()
+
+        while ( time.time() < ( start_time + timeout ) ):
+            cur_count = module.read_reg(tod_num, counter)
+            if ( cur_count != start_count ): # got trigger
+                tod_val = module.read_reg_mul(tod_num, tod_start, 11)
+                return tod_val
+            time.sleep(0.1) # don't spam i2c
+
+        # only hit here if timed out
+        print(f"Get tod trigger from PPS timed out!")
+        return []
 
 
+    # tod_num is which TOD to use to check frame sync mode with
+    # dpll_frame_sync is list of dplls that are frame syncing at the same time 
+    def wait_for_frame_sync_loopback_stable(self, tod_num=0, dpll_frame_sync=[0], clkin=13, timeout=30, good_count_threshold=10):
+        start_time = time.time()
+        tod_vals = []
+        count = 0
+        good_count = 0
 
+        # make sure frame sync mode is enabled and trigger it
+
+        for dpll_num in dpll_frame_sync:
+            self.dpll.modules["DPLL_Config"].write_field(dpll_num,
+                    "DPLL_CTRL_2", "FRAME_SYNC_MODE", 1)
+            self.dpll.modules["DPLL_Ctrl"].write_reg(dpll_num, 
+                    "DPLL_FRAME_PULSE_SYNC", 0x1)
+
+        while time.time() - start_time <= timeout:
+            # trigger TOD with frame sync loopback clkin
+            tod_val = self.get_tod_trigger_from_pps(tod_num, True, False, clkin)
+            if not len(tod_val):
+                continue # didnt get a valid reading, go again
+
+            # got a valid reading
+            tod_ns = time_to_nanoseconds(tod_val)
+            print(f"Count {count}, Board {self.board_num}, wait for frame sync, TOD{tod_num} = {tod_ns}")
+            count += 1
+            tod_vals.append(tod_ns)
+            if len(tod_vals) >= 2:
+                diff = tod_vals[-1] - tod_vals[-2]
+                print(f"Difference: {diff}")
+                if ( diff == 1e9 ):
+                    # difference is exactly 1e9 nanoseconds, as it should be
+                    good_count += 1
+                tod_vals = tod_vals[-2:]
+
+            if ( good_count >= good_count_threshold ):
+                # seen at least some number of exact 1e9 nanosecond tod values
+                # disable frame sync mode on both channels
+                print(f"Saw {good_count} exact 1e9 frame sync pulses, trying disable frame sync")
+                for dpll_num in dpll_frame_sync:
+                    self.dpll.modules["DPLL_Config"].write_field(dpll_num,
+                            "DPLL_CTRL_2", "FRAME_SYNC_MODE", 0)
+                 
+                # check tod again
+                tod_val = self.get_tod_trigger_from_pps(tod_num, True, False, clkin)
+                tod_ns = time_to_nanoseconds(tod_val)
+                tod_diff = tod_ns - tod_vals[-2]
+                if not len(tod_val) or tod_diff != 1e9:
+                    print(f"After frame sync disable, didn't get 1e9 timestamp, restart, {tod_ns} , {tod_vals[-2]}")
+                    for dpll_num in dpll_frame_sync:
+                        self.dpll.modules["DPLL_Config"].write_field(dpll_num,
+                                "DPLL_CTRL_2", "FRAME_SYNC_MODE", 1)
+                        self.dpll.modules["DPLL_Ctrl"].write_reg(dpll_num, 
+                                "DPLL_FRAME_PULSE_SYNC", 0x1)
+                    good_count = 0
+                    tod_vals = []
+                    count = 0
+                else:
+                    print(f"After frame sync disable, got 1e9 timestamp, slave frame sync good!")
+                    return True
+        return False # timeout expired
 
 

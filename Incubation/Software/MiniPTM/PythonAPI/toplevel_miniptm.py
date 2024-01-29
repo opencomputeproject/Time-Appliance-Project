@@ -1601,14 +1601,339 @@ class MiniPTM:
         self.boards[1].dpll.modules["Input"].write_reg(0,
                 "INPUT_IN_MODE", 0x31) #normal setting
 
-    def debug_me(self):
 
-        for i in range(1000):
-            self.boards[1].dpll.modules["Status"].print_all_registers(0)
-            time.sleep(0.25)
+    def debug_me_frame_sync(self):
+
+        # Do everything with 1pps measurements, TOD not necessary
+        # 1. Wait for round trip PPS measurement to stabilize
+        #       A.  Q7 -> CLK5 loopback on master is the "golden" 1PPS
+        #           Sync Channel 0 with Channel 3 with TOD sync one time in beginning
+        #       B.  Q5 -> CLK13 loopback on master is the round trip 1PPS based on 
+        #           frame sync and slave in constant resync mode
+        #
+        # Channel 0 = Phase measurement mode, CLK13 vs CLK5 , round trip measurement
+
+        slave_num = 1
+        master_num = 0
+
+        # Debug step. Master, Sync channel 0 / 1 / 2 with write to TOD0
+        self.boards[master_num].dpof.write_tod_absolute(0)
+
+        time.sleep(10)
+        self.boards[slave_num].dpll.modules["DPLL_Ctrl"].write_reg(0,
+                "DPLL_FRAME_PULSE_SYNC", 0x1)
+
 
         return
-        self.debug_frame_sync_trigger_from_second_chan()
+
+
+
+        # Real step 1. 
+        # On the slave, wait for DPLL to lock to master for a few seconds
+        # just clear sticky bit and make sure it stays locked and no sticky change
+        stable_count = 0
+        stable_count_pass = 100
+        while True: 
+            dpll_status = self.boards[slave_num].dpll.modules["Status"].read_reg(0,
+                    "DPLL0_STATUS")
+            if ( (dpll_status & 0xf) == 0x3 ):
+                if ( dpll_status & 0x10 ):
+                    #lock status change
+                    stable_count = 0
+                    # clear lock status
+                    self.boards[slave_num].i2c.write_dpll_reg_direct(0xc164 + 0x2,
+                            0x1)
+                else:
+                    stable_count = stable_count + 1
+
+            if ( stable_count >= stable_count_pass ):
+                print("Slave DPLL0 is stable!")
+                break
+            else:
+                print(f"Waiting for DPLL0 stable, status=0x{dpll_status:02x}, {stable_count}")
+                time.sleep(0.1)
+
+        time.sleep(1) # give it a grace period even
+
+        # Real step 2.
+        # On Slave, Trigger TOD0 (or whichever TOD is clocked by master) with slave frame sync output loopback
+        # For MiniPTMv3, this means read TOD0 with Q5 -> CLK13 loopback path
+        # manually force frame resync, then read TOD trigger 
+        # wait for the difference to be exactly 1 second for a number of times
+        # then disable frame sync mode, and make sure its still 1 second
+        # wrote a helper function for this
+
+        frame_sync_stable = self.boards[slave_num].wait_for_frame_sync_loopback_stable(0,
+                [0,2], 13, 20)
+
+        if ( not frame_sync_stable ):
+            print(f"Slave could not stablize frame sync!")
+            return
+        else:
+            print(f"Slave stabilized frame sync loopback!")
+       
+        return
+        tod_vals = []
+        count = 0
+        good_count = 0
+        good_count_threshold = 5
+
+        dpll = self.boards[slave_num].dpll
+        board = self.boards[slave_num]
+        # force resync on slave channel 0 and channel 2
+        dpll.modules["DPLL_Ctrl"].write_reg(0, 
+                "DPLL_FRAME_PULSE_SYNC", 0x1)
+        dpll.modules["DPLL_Ctrl"].write_reg(2, 
+                "DPLL_FRAME_PULSE_SYNC", 0x1)
+        while True:
+            # setup TOD
+            tod_val = board.get_tod_trigger_from_pps(0, True, False, 13)
+            if not len(tod_val):
+                continue # didnt get a valid reading, go again
+
+            # got a valid reading
+            tod_ns = time_to_nanoseconds(tod_val)
+            print(f"Count {count}, After force resync on slave, TOD0 = {tod_ns}")
+            count += 1
+            tod_vals.append(tod_ns)
+            if len(tod_vals) > 2:
+                diff = tod_vals[-1] - tod_vals[-2]
+                print(f"Difference: {diff}")
+                if ( diff == 1e9 ):
+                    # difference is exactly 1e9 nanoseconds, as it should be
+                    good_count += 1
+
+            if ( good_count >= good_count_threshold ):
+                # seen at least some number of exact 1e9 nanosecond tod values
+                # disable frame sync mode on both channels
+                print(f"Slave saw 5 exact 1e9 frame sync pulses, trying disable frame sync")
+                dpll.modules["DPLL_Ctrl"].write_field(0,
+                        "DPLL_CTRL_2", "FRAME_SYNC_MODE", 0)
+                dpll.modules["DPLL_Ctrl"].write_field(2,
+                        "DPLL_CTRL_2", "FRAME_SYNC_MODE", 0)
+                 
+                # check tod again
+                tod_val = board.get_tod_trigger_from_pps(0, True, False, 13)
+                tod_ns = time_to_nanoseconds(tod_val)
+                tod_diff = tod_ns - tod_vals[-2]
+                if not len(tod_val) or tod_diff != 1e9:
+                    print(f"After frame sync disable, didn't get 1e9 tiemstamp, restart")
+                    dpll.modules["DPLL_Ctrl"].write_field(0,
+                            "DPLL_CTRL_2", "FRAME_SYNC_MODE", 1)
+                    dpll.modules["DPLL_Ctrl"].write_field(2,
+                            "DPLL_CTRL_2", "FRAME_SYNC_MODE", 1)
+                    dpll.modules["DPLL_Ctrl"].write_reg(0, 
+                            "DPLL_FRAME_PULSE_SYNC", 0x1)
+                    dpll.modules["DPLL_Ctrl"].write_reg(2, 
+                            "DPLL_FRAME_PULSE_SYNC", 0x1)
+                    good_count = 0
+                    tod_vals = []
+                    count = 0
+                else:
+                    print(f"After frame sync disable, got 1e9 timestamp, slave frame sync good!")
+                    break
+
+
+
+
+            # Real step 3.
+            # Slave frame sync pulse is aligned and stable
+            # On master, do same procedure
+
+
+
+
+
+
+
+
+
+
+
+
+
+        # Clear on Read phase measurement from channel 0, wait for it to stabilize 
+
+        phase_vals = []
+        stable_length_required = 20
+        while True:
+           phase = self.boards[master_num].dpll.modules["Status"].read_reg_mul(0,
+                   "DPLL0_PHASE_STATUS_7_0", 5)
+           filt_phase = self.boards[master_num].dpll.modules["Status"].read_reg_mul(0,
+                   "DPLL0_FILTER_STATUS_7_0", 6)
+           print(f"Master phase status {phase}, filter = {filt_phase}")
+           phase_val = 0
+           for i, byte in enumerate(phase):
+               phase_val += byte << (8*i)
+           phase_val_ns = (int_to_signed_nbit(phase_val, 36) * ( 50e-12 )) * 1e9
+           phase_vals.append(phase_val_ns)
+           print(f"Phase_val_ns = {phase_val_ns}")
+
+           # take last 10 values, if its stable to within 20ns it's good
+           abs_diff = max(phase_vals) - min(phase_vals)
+           if ( len(phase_vals) == stable_length_required and abs_diff <= 20 ):
+               print(f"Phase measurement stabilized, good, history {phase_vals}")
+               break
+           
+           phase_vals = phase_vals[-1*(stable_length_required-1):]
+           
+           time.sleep(0.5)
+
+
+        return
+
+    def debug_frame_sync_working(self):
+
+
+        slave_num = 1
+        master_num = 0
+        
+        # Debug step. Master, Sync channel 0 / 1 / 2 with write to TOD0
+        self.boards[master_num].dpof.write_tod_absolute(0)
+
+        print(f"Waiting for master PWM encoders to set to new TOD")
+
+        for i in range(30):
+            # read the PWM frame received from PWM FIFO
+            rcvd_tod = self.boards[slave_num].i2c.read_dpll_reg_multiple(0xce80, 0x0, 11)
+            print(f"Count {i} slave received tod {rcvd_tod}")
+            time.sleep(1)
+
+
+        print(f"Discipling slave to master")
+        for i in range(2):
+            dpll = self.boards[slave_num].dpll
+            dpll.modules["TODReadSecondary"].write_reg(0, "TOD_READ_SECONDARY_CMD", 0x0)
+            start_sec_cnt = dpll.modules["TODReadSecondary"].read_reg(0, 
+                    "TOD_READ_SECONDARY_COUNTER")
+            dpll.modules["TODReadSecondary"].write_field(0, 
+                    "TOD_READ_SECONDARY_SEL_CFG_0", "PWM_DECODER_INDEX", 0)
+            dpll.modules["TODReadSecondary"].write_reg(0, 
+                    "TOD_READ_SECONDARY_CMD", 0x4) # 0x4 for decoder input
+
+            while True:
+                sec_cnt = dpll.modules["TODReadSecondary"].read_reg(0, 
+                        "TOD_READ_SECONDARY_COUNTER")
+                if ( start_sec_cnt != sec_cnt ):
+                    print(f"Slave board count changes, {start_sec_cnt} -> {sec_cnt}")
+                    break
+                else:
+                    print(f"Slave board {start_sec_cnt}, {sec_cnt}")
+                    pass
+                time.sleep(0.1)
+
+            # read secondary TOD0 value
+            sec_tod = dpll.modules["TODReadSecondary"].read_reg_mul(0, 
+                    "TOD_READ_SECONDARY_SUBNS", 11)
+
+            # read the PWM frame received from PWM FIFO
+            rcvd_tod = self.boards[slave_num].i2c.read_dpll_reg_multiple(0xce80, 0x0, 11)
+
+            # adjust TOD0 to match received TOD
+            print(f"Slave board TOD0 on trigger {sec_tod} , PWM FIFO frame {rcvd_tod}")
+
+            self.boards[slave_num].dpof.adjust_tod(0, sec_tod, rcvd_tod, True)
+
+            # give this some time
+            print("Slave wait for encoder to pick up new time")
+            for j in range(25):
+                # read the PWM frame received from PWM FIFO
+                rcvd_tod = self.boards[master_num].i2c.read_dpll_reg_multiple(0xce80, 0x0, 11)
+                print(f"Count {j} Master received PWM TOD: {rcvd_tod}")
+
+                time.sleep(1)
+
+        # TOD0 on slave is disciplined to master
+        # Step 1b. Read what master TOD is getting back
+        # compared to its own TOD at the same point
+        # using alternate PPS, its always the same TOD as the channel
+        # so here TOD0
+
+        for test_num in range(5):
+            board = self.boards[master_num]
+            dpll = self.boards[master_num].dpll
+
+            for tod_num in range(4):
+
+                dpll.modules["TODReadSecondary"].write_reg(tod_num, "TOD_READ_SECONDARY_CMD", 0x0)
+                start_sec_cnt = dpll.modules["TODReadSecondary"].read_reg(tod_num, 
+                        "TOD_READ_SECONDARY_COUNTER")
+                dpll.modules["TODReadSecondary"].write_field(tod_num, 
+                        "TOD_READ_SECONDARY_SEL_CFG_0", "PWM_DECODER_INDEX", 0)
+                dpll.modules["TODReadSecondary"].write_reg(tod_num, 
+                        "TOD_READ_SECONDARY_CMD", 0x4) # 0x4 for decoder input
+
+            # just need to check one counter
+            start_sec_cnt = dpll.modules["TODReadSecondary"].read_reg(0, 
+                    "TOD_READ_SECONDARY_COUNTER")
+
+
+            while True:
+                sec_cnt = dpll.modules["TODReadSecondary"].read_reg(0, 
+                        "TOD_READ_SECONDARY_COUNTER")
+                if ( start_sec_cnt != sec_cnt ):
+                    print(f"Master board count changes, {start_sec_cnt} -> {sec_cnt}")
+                    break
+                else:
+                    #print(f"Master board {start_sec_cnt}, {sec_cnt}")
+                    pass
+                time.sleep(0.1)
+
+            # read secondary TOD0 value
+            sec_tod = dpll.modules["TODReadSecondary"].read_reg_mul(0, 
+                    "TOD_READ_SECONDARY_SUBNS", 11)
+
+            for tod_num in range(4):
+                sec_tod = dpll.modules["TODReadSecondary"].read_reg_mul(tod_num, 
+                        "TOD_READ_SECONDARY_SUBNS", 11)
+                print(f"TOD{tod_num} master read back {sec_tod}")
+
+
+
+            # read the PWM frame got back as well
+            rcvd_tod = self.boards[master_num].i2c.read_dpll_reg_multiple(0xce80, 0x0, 11)
+
+            # calculate difference 
+            sec_tod_ns = time_to_nanoseconds(sec_tod)
+            rcvd_tod_ns = time_to_nanoseconds(rcvd_tod)
+            
+            # include decoder difference in sec_tod_ns 
+            diff_ns = -1 * int( sec_tod_ns - rcvd_tod_ns - ( ( 118 * ( 1/25e6 ) ) * 1e9 ) )
+            if ( diff_ns > 1e9 ):
+                while ( diff_ns > 1e9 ):
+                    diff_ns -= 1e9
+            if ( diff_ns < -1e9 ):
+                while ( diff_ns < -1e9):
+                    diff_ns += 1e9
+
+           
+            print(f"Master saw TOD round trip approximately {sec_tod}, rcvd_tod = {rcvd_tod}, diff={diff_ns}")
+
+
+
+
+
+    def debug_tod_both_boards(self):
+        master_num = 0
+        slave_num = 0
+        for i in range(100):
+            master_rcvd_tod = self.boards[master_num].i2c.read_dpll_reg_multiple(0xce80, 0x0, 11)
+            slave_rcvd_tod = self.boards[slave_num].i2c.read_dpll_reg_multiple(0xce80, 0x0, 11)
+            print(f"Debug TOD loop {i}, master={master_rcvd_tod}, slave={slave_rcvd_tod}")
+            time.sleep(0.4)
+
+
+    def debug_me(self):
+
+        self.debug_tod_both_boards()
+        return
+
+        self.debug_frame_sync_working()
+        return
+
+        self.debug_me_frame_sync()
+        return
+
 
         self.debug_me_coarse()
         #time.sleep(10)
