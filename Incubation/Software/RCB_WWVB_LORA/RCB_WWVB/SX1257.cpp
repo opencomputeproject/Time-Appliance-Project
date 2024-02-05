@@ -99,9 +99,11 @@ int SX1257Class::init() {
   // Init the GPIOs used just for control
   wwvb_gpio_pinmode(SX1257_NSS, OUTPUT);
   wwvb_gpio_pinmode(SX1257_RST, OUTPUT);
+  
 
   wwvb_digital_write(SX1257_NSS, 1);
-  wwvb_digital_write(SX1257_RST, 1);
+  wwvb_digital_write(SX1257_RST, 0); // RESET IS ACTIVE HIGH
+
 
 
   
@@ -132,7 +134,7 @@ int SX1257Class::init() {
   _spi_mgmt.Init.CLKPolarity = SPI_POLARITY_LOW;  // Clock polarity
   _spi_mgmt.Init.CLKPhase = SPI_PHASE_1EDGE;  // Clock phase
   _spi_mgmt.Init.NSS = SPI_NSS_SOFT;  // NSS signal is managed by software
-  _spi_mgmt.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_32;  // Baud rate prescaler
+  _spi_mgmt.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_64;  // Baud rate prescaler
   _spi_mgmt.Init.FirstBit = SPI_FIRSTBIT_MSB;  // Data is transmitted MSB first
   _spi_mgmt.Init.TIMode = SPI_TIMODE_DISABLE;  // Disable TI mode
   _spi_mgmt.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;  // Disable CRC calculation
@@ -219,9 +221,9 @@ int SX1257Class::init() {
   }
 
   // toggle the reset
-  wwvb_digital_write(SX1257_RST, 0);
-  delay(10);
   wwvb_digital_write(SX1257_RST, 1);
+  delay(10);
+  wwvb_digital_write(SX1257_RST, 0); 
   delay(10);
 
   // write some basic registers that should never change for current board design
@@ -232,6 +234,18 @@ int SX1257Class::init() {
 
   isTransmitting = 0;
   isReceiving = 0;
+
+
+  wwvb_gpio_pinmode(SDR_TX_RX_SEL, OUTPUT);
+  set_antenna(0);
+}
+
+void SX1257Class::debug() {
+  uint8_t val = 0;
+  writeRegister(REGMODE, 0xf);
+  val = readRegister(REGMODE);
+  Serial.print("SX1257 debug mode = 0x");
+  Serial.println(val, HEX);
 }
 
 
@@ -242,7 +256,9 @@ int SX1257Class::set_tx_mode(bool tx_frontend_pll, bool tx_pa_driver) {
   Serial.print("SX1257 Set TX frontend_pll=");
   Serial.print(tx_frontend_pll);
   Serial.print(" , pa_driver=");
-  Serial.println(tx_pa_driver);
+  Serial.print(tx_pa_driver);
+  Serial.print(" , cur mode = 0x");
+  Serial.println(cur_reg, HEX);
 
   if ( tx_frontend_pll ) cur_reg |= TX_FRONTEND_PLL_ENABLE;
   else cur_reg &= (~TX_FRONTEND_PLL_ENABLE);
@@ -361,28 +377,58 @@ void SX1257Class::dumpRegisters(Stream& out) {
 
 
 uint8_t SX1257Class::readRegister(uint8_t address) {
+  //Serial.println("SX1257 read register");
   return singleTransfer(address & 0x7f, 0x00);
 }
 void SX1257Class::writeRegister(uint8_t address, uint8_t value) {
+  //Serial.println("SX1257 write register");
   singleTransfer(address | 0x80, value);
 }
 
 uint8_t SX1257Class::singleTransfer(uint8_t address, uint8_t value) {
 
   uint8_t response;
-  wwvb_digital_write(_ss, LOW);
+  wwvb_digital_write(SX1257_NSS, LOW);
+  delayMicroseconds(10);
 
   HAL_SPI_TransmitReceive(&_spi_mgmt, &address, &response, sizeof(address), HAL_MAX_DELAY);  //ignore receive data
 
   HAL_SPI_TransmitReceive(&_spi_mgmt, &value, &response, sizeof(value), HAL_MAX_DELAY);
 
-  wwvb_digital_write(_ss, HIGH);
+  delayMicroseconds(10);
+  wwvb_digital_write(SX1257_NSS, HIGH);
+  delayMicroseconds(10);
+  
+  /*
+  Serial.print("SX1257 Single transfer addr=0x");
+  Serial.print(address,HEX);
+  Serial.print(", value = 0x");
+  Serial.print(value,HEX);
+  Serial.print(" , response = 0x");
+  Serial.println(response, HEX);
+  */
 
   return response;
 
 }
 
+int SX1257Class::set_antenna(bool tx) {
+  if ( tx ) {
+    wwvb_digital_write(SDR_TX_RX_SEL, 1); // 1 for output1, TX
+  } else {
+    wwvb_digital_write(SDR_TX_RX_SEL, 0); // 0 for output2, RX
+  }
+  return 0;
+}
 
+
+void SX1257Class::write_I(uint8_t val) {
+  HAL_SPI_Transmit(&_spi_I_Data, &val, sizeof(val), HAL_MAX_DELAY);
+}
+
+void SX1257Class::write_Q(uint8_t val) {
+  HAL_SPI_Transmit(&_spi_Q_Data, &val, sizeof(val), HAL_MAX_DELAY);
+}
 
 
 

@@ -126,7 +126,8 @@ int LoRaClass::init() {
     return -1;
   }
 
-
+  wwvb_gpio_pinmode(SX1276_DIO0,INPUT);
+  /*
   // Enable DIO0 interrupt by default
   GPIO_InitStruct.Pin = WWVB_Pins[SX1276_DIO0].GPIO_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
@@ -140,10 +141,20 @@ int LoRaClass::init() {
 
   HAL_NVIC_SetPriority(EXTI9_5_IRQn, 15,0);
   HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
+  */
+
+
+  wwvb_gpio_pinmode(LORA_SMA_UFL_SEL, OUTPUT);
+  wwvb_gpio_pinmode(LORA_LF_TXRX_SEL, OUTPUT);
+  wwvb_gpio_pinmode(LORA_HF_TXRX_SEL, OUTPUT);
+  wwvb_gpio_pinmode(LORA_LF_HF_SEL, OUTPUT);
+
+  setantenna(1,1,0); // default SMA -> HF -> RX
 
   return 0;
 }
 
+/*
 void EXTI9_5_IRQHandler(void) {
   HAL_GPIO_EXTI_IRQHandler(SX1276_DIO0);
 }
@@ -154,10 +165,29 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
       Serial.println("GOT GPIO INTERRUPT ON SX1276_DIO0 ");
   }
 }
+*/
+
+int LoRaClass::setantenna(bool sma, bool hf, bool tx) {
+  if ( sma ) wwvb_digital_write(LORA_SMA_UFL_SEL, 0); // 0 for output 2, SMA
+  else wwvb_digital_write(LORA_SMA_UFL_SEL, 1); // 1 for output 1, UFL
+
+  if ( hf ) {
+    wwvb_digital_write(LORA_LF_TXRX_SEL, 1); // set LF to RX, output 1
+    wwvb_digital_write(LORA_LF_HF_SEL, 0); // set to HF, output 2
+    if ( tx ) wwvb_digital_write(LORA_HF_TXRX_SEL, 1); // output 1 for HF TX
+    else wwvb_digital_write(LORA_HF_TXRX_SEL, 0); // output 2 for HF RX
+  } else {
+    wwvb_digital_write(LORA_LF_TXRX_SEL, 0); // set HF to RX, output 2
+    wwvb_digital_write(LORA_LF_HF_SEL, 1); // set to LF, output 1
+    if ( tx ) wwvb_digital_write(LORA_LF_TXRX_SEL, 0); // output 2 for LF TX
+    else wwvb_digital_write(LORA_LF_TXRX_SEL, 1); // output 1 for LF RX
+  }
+}
 
 
 int LoRaClass::begin(long frequency)
 {
+  Serial.println("SX1276 begin start");
   // setup pins
   wwvb_gpio_pinmode(_ss, OUTPUT);
   // set SS high
@@ -176,6 +206,7 @@ int LoRaClass::begin(long frequency)
 
 
   // check version
+  Serial.println("SX1276 version check");
   uint8_t version = readRegister(REG_VERSION);
   if (version != 0x12) {
     Serial.println("LORA Init read version register didn't get 0x12! FAIL");
@@ -183,6 +214,7 @@ int LoRaClass::begin(long frequency)
   }
 
   // put in sleep mode
+  Serial.println("SX1276 put in sleep");
   sleep();
 
   // set frequency
@@ -204,20 +236,25 @@ int LoRaClass::begin(long frequency)
 
   // put in standby mode
   idle();
+  Serial.println("SX1276 begin end");
 
   return 1;
 }
 
 void LoRaClass::end()
 {
+  Serial.println("SX1276 end start");
   // put in sleep mode
   sleep();
+  Serial.println("SX1276 end end");
 
 }
 
 int LoRaClass::beginPacket(int implicitHeader)
 {
+  //Serial.println("SX1276 Begin packet start");
   if (isTransmitting()) {
+    //Serial.println("LoRA begin packet end not transmitting");
     return 0;
   }
 
@@ -233,33 +270,45 @@ int LoRaClass::beginPacket(int implicitHeader)
   // reset FIFO address and paload length
   writeRegister(REG_FIFO_ADDR_PTR, 0);
   writeRegister(REG_PAYLOAD_LENGTH, 0);
+  //Serial.println("SX1276 Begin packet end");
 
   return 1;
 }
 
 int LoRaClass::endPacket(bool async)
 {
-  
-  if ((async) && (_onTxDone))
-      writeRegister(REG_DIO_MAPPING_1, 0x40); // DIO0 => TXDONE
-
+  uint8_t val = 0;
+  //Serial.println("SX1276 end packet start");
+  if ((async) && (_onTxDone)) {
+    //Serial.println("SX1276 end packet async start");
+    writeRegister(REG_DIO_MAPPING_1, 0x40); // DIO0 => TXDONE
+    //Serial.println("SX1276 end packet async end");
+  }
+  //Serial.println("SX1276 end packet point 1");
   // put in TX mode
   writeRegister(REG_OP_MODE, MODE_LONG_RANGE_MODE | MODE_TX);
-
+  //Serial.println("SX1276 end packet point 2");
   if (!async) {
     // wait for TX done
-    while ((readRegister(REG_IRQ_FLAGS) & IRQ_TX_DONE_MASK) == 0) {
-      yield();
+    //Serial.println("SX1276 end packet point 3");
+    val = readRegister(REG_IRQ_FLAGS);
+    //Serial.println("SX1276 end packet point 4");
+    while ( (val & IRQ_TX_DONE_MASK) == 0) {
+      val = readRegister(REG_IRQ_FLAGS);
+      //Serial.print("Wait TX done 0x");
+      //Serial.println(val, HEX);
     }
+    //Serial.println("SX1276 end packet point 5");
     // clear IRQ's
     writeRegister(REG_IRQ_FLAGS, IRQ_TX_DONE_MASK);
   }
-
+  //Serial.println("SX1276 end packet end");
   return 1;
 }
 
 bool LoRaClass::isTransmitting()
 {
+  //Serial.println("SX1276 is transmitting start");
   if ((readRegister(REG_OP_MODE) & MODE_TX) == MODE_TX) {
     return true;
   }
@@ -268,7 +317,7 @@ bool LoRaClass::isTransmitting()
     // clear IRQ's
     writeRegister(REG_IRQ_FLAGS, IRQ_TX_DONE_MASK);
   }
-
+  //Serial.println("SX1276 is not transmitting!");
   return false;
 }
 
@@ -417,54 +466,69 @@ void LoRaClass::flush()
 void LoRaClass::onReceive(void(*callback)(int))
 {
   _onReceive = callback;
+  Serial.println("SX1276 on receive start");
 
   if (callback) {
     wwvb_gpio_pinmode(SX1276_DIO0, INPUT);
+/*
 #ifdef SPI_HAS_NOTUSINGINTERRUPT
     SPI.usingInterrupt(digitalPinToInterrupt(_dio0));
 #endif
     attachInterrupt(digitalPinToInterrupt(_dio0), LoRaClass::onDio0Rise, RISING);
+*/
   } else {
+/*
     detachInterrupt(digitalPinToInterrupt(_dio0));
 #ifdef SPI_HAS_NOTUSINGINTERRUPT
     SPI.notUsingInterrupt(digitalPinToInterrupt(_dio0));
 #endif
+*/
   }
 }
 
 void LoRaClass::onCadDone(void(*callback)(boolean))
 {
   _onCadDone = callback;
+  Serial.println("SX1276 on cad done start");
 
   if (callback) {
-    pinMode(_dio0, INPUT);
+    wwvb_gpio_pinmode(SX1276_DIO0, INPUT);
+/*
 #ifdef SPI_HAS_NOTUSINGINTERRUPT
     SPI.usingInterrupt(digitalPinToInterrupt(_dio0));
 #endif
     attachInterrupt(digitalPinToInterrupt(_dio0), LoRaClass::onDio0Rise, RISING);
+*/
   } else {
+/*
     detachInterrupt(digitalPinToInterrupt(_dio0));
 #ifdef SPI_HAS_NOTUSINGINTERRUPT
     SPI.notUsingInterrupt(digitalPinToInterrupt(_dio0));
 #endif
+*/
   }
 }
 
 void LoRaClass::onTxDone(void(*callback)())
 {
   _onTxDone = callback;
+  Serial.println("SX1276 TX DONE start");
 
   if (callback) {
-    pinMode(_dio0, INPUT);
+/*
+    wwvb_gpio_pinmode(SX1276_DIO0, INPUT);
 #ifdef SPI_HAS_NOTUSINGINTERRUPT
     SPI.usingInterrupt(digitalPinToInterrupt(_dio0));
 #endif
     attachInterrupt(digitalPinToInterrupt(_dio0), LoRaClass::onDio0Rise, RISING);
+*/
   } else {
+/*
     detachInterrupt(digitalPinToInterrupt(_dio0));
 #ifdef SPI_HAS_NOTUSINGINTERRUPT
     SPI.notUsingInterrupt(digitalPinToInterrupt(_dio0));
 #endif
+*/
   }
 }
 
@@ -771,6 +835,7 @@ void LoRaClass::implicitHeaderMode()
 
 void LoRaClass::handleDio0Rise()
 {
+  Serial.println("SX1276 Handle DIO0 rise");
   int irqFlags = readRegister(REG_IRQ_FLAGS);
 
   // clear IRQ's
@@ -816,24 +881,47 @@ void LoRaClass::writeRegister(uint8_t address, uint8_t value)
 uint8_t LoRaClass::singleTransfer(uint8_t address, uint8_t value)
 {
   uint8_t response;
+  HAL_StatusTypeDef retval;
 
+
+  
   //_spi->beginTransaction(_spiSettings);
   wwvb_digital_write(_ss, LOW);
+  delayMicroseconds(50); // setup time for slave select, SPI is super fast API apparently
 
   //_spi->transfer(address);
-  HAL_SPI_TransmitReceive(&_spi, &address, &response, sizeof(address), HAL_MAX_DELAY);  //ignore receive data
+  retval = HAL_SPI_TransmitReceive(&_spi, &address, &response, sizeof(address), HAL_MAX_DELAY);  //ignore receive data
+  if ( retval != HAL_OK) {
+    Serial.println("SX1276 LORA Single transfer not ok 1");
+  }
 
   //response = _spi->transfer(value);
-  HAL_SPI_TransmitReceive(&_spi, &value, &response, sizeof(value), HAL_MAX_DELAY);
+  retval = HAL_SPI_TransmitReceive(&_spi, &value, &response, sizeof(value), HAL_MAX_DELAY);
+  if ( retval != HAL_OK) {
+    Serial.println("SX1276 LORA Single transfer not ok 2");
+  }
 
   wwvb_digital_write(_ss, HIGH);
+  delayMicroseconds(50); // needs some hold time for slave select , SPI HAL can be super fast
+
+
+  /*
+  Serial.print("SX1276 Lora single transfer 0x");
+  Serial.print(address, HEX);
+  Serial.print(" = 0x");
+  Serial.print(value,HEX);
+  Serial.print(" , response = 0x");
+  Serial.println(response,HEX);
+  */
+
+  
 
   return response;
 }
 
+/*
 ISR_PREFIX void LoRaClass::onDio0Rise()
 {
   LoRa.handleDio0Rise();
 }
-
-LoRaClass LoRa;
+*/

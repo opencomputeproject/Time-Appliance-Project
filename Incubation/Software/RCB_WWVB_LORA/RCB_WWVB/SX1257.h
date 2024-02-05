@@ -28,6 +28,8 @@ public:
 
   int get_status(bool * rx_pll_lock, bool * tx_pll_lock);
 
+  int set_antenna(bool tx);
+
   // from Print
   virtual size_t write(uint8_t byte);
   virtual size_t write(const uint8_t *buffer, size_t size);
@@ -46,6 +48,12 @@ public:
   */
 
   void dumpRegisters(Stream& out);
+
+  void debug();
+
+
+  void write_I(uint8_t val);
+  void write_Q(uint8_t val);
 
 private:
 

@@ -42,6 +42,9 @@ public:
 
   int rssi();
 
+  // select if sma or ufl (shared with SDR), high frequency mode or low frequency, and if tx or rx
+  int setantenna(bool sma, bool hf, bool tx);
+
   // from Print
   virtual size_t write(uint8_t byte);
   virtual size_t write(const uint8_t *buffer, size_t size);
@@ -62,7 +65,7 @@ public:
   void idle();
   void sleep();
 
-  void setTxPower(int level, int outputPin = PA_OUTPUT_PA_BOOST_PIN);
+  void setTxPower(int level, int outputPin = PA_OUTPUT_RFO_PIN); // WWVB board, PA boost is for LF, not sure API works for that but this works for HF
   void setFrequency(long frequency);
   void setSpreadingFactor(int sf);
   void setSignalBandwidth(long sbw);
