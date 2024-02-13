@@ -278,19 +278,19 @@ int LoRaClass::beginPacket(int implicitHeader)
 int LoRaClass::endPacket(bool async)
 {
   uint8_t val = 0;
-  //Serial.println("SX1276 end packet start");
+  Serial.println("SX1276 end packet start");
   if ((async) && (_onTxDone)) {
     //Serial.println("SX1276 end packet async start");
     writeRegister(REG_DIO_MAPPING_1, 0x40); // DIO0 => TXDONE
     //Serial.println("SX1276 end packet async end");
   }
-  //Serial.println("SX1276 end packet point 1");
+  Serial.println("SX1276 end packet point 1");
   // put in TX mode
   writeRegister(REG_OP_MODE, MODE_LONG_RANGE_MODE | MODE_TX);
-  //Serial.println("SX1276 end packet point 2");
+  Serial.println("SX1276 end packet point 2");
   if (!async) {
     // wait for TX done
-    //Serial.println("SX1276 end packet point 3");
+    Serial.println("SX1276 end packet point 3");
     val = readRegister(REG_IRQ_FLAGS);
     //Serial.println("SX1276 end packet point 4");
     while ( (val & IRQ_TX_DONE_MASK) == 0) {
@@ -298,11 +298,11 @@ int LoRaClass::endPacket(bool async)
       //Serial.print("Wait TX done 0x");
       //Serial.println(val, HEX);
     }
-    //Serial.println("SX1276 end packet point 5");
+    Serial.println("SX1276 end packet point 5");
     // clear IRQ's
     writeRegister(REG_IRQ_FLAGS, IRQ_TX_DONE_MASK);
   }
-  //Serial.println("SX1276 end packet end");
+  Serial.println("SX1276 end packet end");
   return 1;
 }
 

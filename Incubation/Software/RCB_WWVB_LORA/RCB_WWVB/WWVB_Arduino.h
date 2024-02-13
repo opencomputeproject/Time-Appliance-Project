@@ -6,7 +6,22 @@
 #include <stm32h7xx_hal_gpio.h>
 #include <Arduino.h>
 
+#include <stm32h7xx_hal_spi.h>
+#include <stm32h7xx_hal_dma.h>
+#include <stm32h7xx.h>
+
+//#include "mbed.h"
+//#include "rtos.h"
+//#include <RPC.h>
 // Low level library to make it easier to use WWVB board
+
+//using namespace mbed;
+//using namespace rtos;
+//using namespace std::chrono_literals;
+
+
+
+
 
 
 // just sequential, easy addressable
@@ -224,5 +239,65 @@ extern WWVB_Pin WWVB_Pins[];
 void wwvb_digital_write(int pin, bool val);
 bool wwvb_digital_read(int pin);
 void wwvb_gpio_pinmode(int pin, int dir);
+void wwvb_m4_print_val(char * name, uint32_t val);
+void wwvb_m4_print_bool(char * name, bool val);
+
+#define SX1257_I_RX_DMA_STREAM DMA2_Stream7
+#define SX1257_I_RX_DMA_STREAM_IRQ DMA2_Stream7_IRQn
+#define SX1257_I_RX_DMA_STREAM_HANDLER DMA2_Stream7_IRQHandler
+
+#define SX1257_I_TX_DMA_STREAM DMA2_Stream6
+#define SX1257_I_TX_DMA_STREAM_IRQ DMA2_Stream6_IRQn
+#define SX1257_I_TX_DMA_STREAM_HANDLER DMA2_Stream6_IRQHandler
+
+#define SX1257_Q_RX_DMA_STREAM DMA2_Stream5
+#define SX1257_Q_RX_DMA_STREAM_IRQ DMA2_Stream5_IRQn
+#define SX1257_Q_RX_DMA_STREAM_HANDLER DMA2_Stream5_IRQHandler
+
+#define SX1257_Q_TX_DMA_STREAM DMA2_Stream4
+#define SX1257_Q_TX_DMA_STREAM_IRQ DMA2_Stream4_IRQn
+#define SX1257_Q_TX_DMA_STREAM_HANDLER DMA2_Stream4_IRQHandler
+
+
+
+
+/* Use of CMSIS compiler intrinsics for register exclusive access */
+/* Atomic 32-bit register access macro to set one or several bits */
+#define ATOMIC_SET_BIT(REG, BIT)                             \
+  do {                                                       \
+    uint32_t val;                                            \
+    do {                                                     \
+      val = __LDREXW((__IO uint32_t *)&(REG)) | (BIT);       \
+    } while ((__STREXW(val,(__IO uint32_t *)&(REG))) != 0U); \
+  } while(0)
+
+/* Atomic 32-bit register access macro to clear one or several bits */
+#define ATOMIC_CLEAR_BIT(REG, BIT)                           \
+  do {                                                       \
+    uint32_t val;                                            \
+    do {                                                     \
+      val = __LDREXW((__IO uint32_t *)&(REG)) & ~(BIT);      \
+    } while ((__STREXW(val,(__IO uint32_t *)&(REG))) != 0U); \
+  } while(0)
+
+/* Atomic 32-bit register access macro to clear and set one or several bits */
+#define ATOMIC_MODIFY_REG(REG, CLEARMSK, SETMASK)                          \
+  do {                                                                     \
+    uint32_t val;                                                          \
+    do {                                                                   \
+      val = (__LDREXW((__IO uint32_t *)&(REG)) & ~(CLEARMSK)) | (SETMASK); \
+    } while ((__STREXW(val,(__IO uint32_t *)&(REG))) != 0U);               \
+  } while(0)
+
+
+// Fixing HAL SPI APIs to work for circular mode
+// Default HAL_SPI_IRQHandler does not work for circular DMA mode!
+void HAL_SPI_IRQHandler_CircFix(SPI_HandleTypeDef *hspi);
+HAL_StatusTypeDef HAL_SPI_DMAPause_Fix(SPI_HandleTypeDef *hspi);
+HAL_StatusTypeDef HAL_SPI_DMAResume_Fix(SPI_HandleTypeDef *hspi);
+HAL_StatusTypeDef HAL_SPI_DMAStop_Fix(SPI_HandleTypeDef *hspi);
+
+
+
 
 #endif
