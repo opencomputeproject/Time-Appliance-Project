@@ -92,76 +92,95 @@ void print_SDR_DMA_Stats() {
 
 
 void LoRA_WiWi_basic_test() {
+
+
   Serial.println("LORA WiWi basic test start");
-  uint32_t pll_start_time = 0;
-  uint32_t pll_end_time = 0;
 
-  // enable SDR
-  SX1257_SDR.set_antenna(0); // setup SDR for RX
-  SX1276_Lora.setantenna(1, 1, 0); // high frequency SMA SX1276->TX on standard transceiver
+  /*
+  // just use normal SPI 
+  HAL_StatusTypeDef stat_val = HAL_OK;
+  uint32_t spi_vals[100];
 
-  // setup SDR RX
-  SX1257_SDR.set_rx_parameters(0x6, 0xf, 0x7, 0x0, 0x3);
-  SX1257_SDR.set_rx_mode(1, 1); // enable SDR RX path
-
-  pll_start_time = millis();
-
-  // wait for SDR RX PLL to start
-  while ( (SX1257_SDR.readRegister(0x11) & 0x2) == 0 ) {    
+  for ( int i = 0; i < 100; i++ ) {
+    stat_val = HAL_SPI_Receive(&SX1257_SDR._spi_I_Data, (uint8_t*) &spi_vals[i], 1, 0xffffff );
+    if ( stat_val != HAL_OK ) {
+      Serial.print("FAILED TO HAL SPI Receive! 0x");
+      Serial.println(SX1257_SDR._spi_I_Data.ErrorCode, HEX);
+      return;
+    } 
   }
-
-
-  pll_end_time = millis();
-  Serial.print("Waited for SDR PLL for ");
-  Serial.print(pll_end_time - pll_start_time);
-  Serial.println("");
-
+  for ( int i = 0; i < 100; i++ ) {
+    Serial.print(i);
+    Serial.print(" HAL SPI Receive on I: 0x");
+    Serial.print(spi_vals[i], HEX);
+    Serial.print(" , num 1 bits - num 0 bits = ");
+    Serial.println( bitDifference(spi_vals[i]) );
+  }
+  */
   //SX1257_SDR.dumpRegisters(Serial);
   
   SX1257_SDR.reset_dma_buffers();
 
   uint32_t i_start_count = 0;
-  uint32_t q_start_count = 0;
   uint32_t i_end_count = 0;
-  uint32_t q_end_count = 0;
 
+  SX1257_SDR.set_rx_mode(0, 0); // disable RX SDR path
 
   // enable SDR DMA
   SX1257_SDR.enable_rx_dma();
+
+  SX1257_SDR.set_rx_mode(1, 1); // enable RX SDR path
+
+  SX1257_SDR.debug_print_rx_dma_registers();
   i_start_count = __HAL_DMA_GET_COUNTER(&SX1257_SDR.hdma_spi1_rx);
-  q_start_count = __HAL_DMA_GET_COUNTER(&SX1257_SDR.hdma_spi2_rx);
 
-  // USING EXTERNAL GENERATOR, DONT NEED SX1276
-
-  // send a packet with SX1276
-  /*
-  SX1276_Lora.beginPacket();
-  SX1276_Lora.print("hello ");
-  SX1276_Lora.endPacket(false);
-  */
-  //delay(10);
-  while ( __HAL_DMA_GET_COUNTER(&SX1257_SDR.hdma_spi1_rx) > 200 ) {
-
-  }
+  
+  //while ( __HAL_DMA_GET_COUNTER(&SX1257_SDR.hdma_spi1_rx) > 1000 ) {
+  //}
+  
 
   // packet was sent, disable SDR DMA
-  SX1257_SDR.disable_dma();
+  //SX1257_SDR.disable_dma();
+
+  // HACK FOR NON CIRCULAR
+  delay(100);
 
   i_end_count = __HAL_DMA_GET_COUNTER(&SX1257_SDR.hdma_spi1_rx);
-  q_end_count = __HAL_DMA_GET_COUNTER(&SX1257_SDR.hdma_spi2_rx);
-
   Serial.print("I start ");
   Serial.print(i_start_count);
   Serial.print(" end ");
-  Serial.print(i_end_count);
+  Serial.println(i_end_count);
 
-  Serial.print(" Q start ");
-  Serial.print(q_start_count);
-  Serial.print(" end ");
-  Serial.println(q_end_count);
-
-  // dump out DMA data
-  SX1257_SDR.print_rx_iq_data();
+  __DSB();
+  __ISB();
+  __DMB(); // just to guarantee what I read back next is up to date
+  SCB_InvalidateDCache_by_Addr ((uint32_t *)I_rxBuffer, IQ_BUFFER_SIZE); // NEED THIS!!!!!
+  // if running on M7, data cache will get in the way!
+  char print_buf[1024];
+  sprintf(print_buf, "Interrupt counters: spi_I_irq_counter=%d"
+    " spi_I_RX_DMA_IRQHandler_counter=%d spi_I_RX_DMAHalfComplete_counter=%d"
+    " spi_I_RX_DMAComplete_counter=%d SPI_DMAReceiveCplt_run=%d"
+    " SPI_DMAHalfReceiveCplt_run=%d HAL_SPI_RxCpltCallback_counter=%d"
+    " HAL_SPI_RxHalfCpltCallback_counter=%d ", SX1257_SDR.sx1257_stats.spi_I_irq_counter,
+    SX1257_SDR.sx1257_stats.spi_I_RX_DMA_IRQHandler_counter,SX1257_SDR.sx1257_stats.spi_I_RX_DMAHalfComplete_counter,
+    SX1257_SDR.sx1257_stats.spi_I_RX_DMAComplete_counter, SX1257_SDR.sx1257_stats.SPI_DMAReceiveCplt_run,
+    SX1257_SDR.sx1257_stats.SPI_DMAHalfReceiveCplt_run, SX1257_SDR.sx1257_stats.HAL_SPI_RxCpltCallback_counter,
+    SX1257_SDR.sx1257_stats.HAL_SPI_RxHalfCpltCallback_counter
+    );
+  Serial.println(print_buf);
+  
+  for ( int i = 0; i < IQ_BUFFER_SIZE; i++ ) {
+    if ( i % 5 == 0 ) {
+      Serial.println("");
+      sprintf(print_buf, "%04d: ", i);
+      Serial.print(print_buf);
+    }
+    sprintf(print_buf, "Q=0x%08x=>%03d I=0x%08x=>%03d, ",
+      Q_rxBuffer[i], bitDifference(Q_rxBuffer[i]),
+      I_rxBuffer[i], bitDifference(I_rxBuffer[i]) );
+    Serial.print(print_buf);
+  }
+  Serial.println("");
 
   Serial.println("LORA WIWI basic test end");  
 }
@@ -211,7 +230,7 @@ void processSingleCharCommand(char command) {
       break;
     case '4':
       Serial.println("Printing IQ rx buffer");
-      SX1257_SDR.print_rx_iq_data();
+      SX1257_SDR.print_rx_iq_data(1);
       break;
     case '5':
       LoRA_WiWi_basic_test();
@@ -323,6 +342,12 @@ void setup() {
   __HAL_RCC_DMA1_CLK_ENABLE();
   __HAL_RCC_DMA2_CLK_ENABLE();
 
+  __HAL_RCC_DFSDM1_CLK_ENABLE();
+  //__HAL_RCC_DFSDM2_CLK_ENABLE();
+
+  __HAL_RCC_D2SRAM1_CLK_ENABLE();
+  __HAL_RCC_C1_D2SRAM1_CLK_ENABLE();
+
   wwvb_gpio_pinmode(WLED_RED, OUTPUT);
   wwvb_gpio_pinmode(WLED_GREEN, OUTPUT);
   wwvb_gpio_pinmode(WLED_BLUE, OUTPUT);
@@ -337,6 +362,7 @@ void setup() {
   while ( !Serial ) {
     delay(1);
   }
+  init_sram2_nocache();
   init_sitime(10e6);
   init_si5341b();
 
@@ -350,7 +376,7 @@ void setup() {
   
   SX1276_Lora.init(); 
   Serial.println("Beginning SX1276 LORA");
-  if ( !SX1276_Lora.begin(915e6) ) {
+  if ( !SX1276_Lora.begin(900e6) ) {
     Serial.println("LoRA SX1276 init failed!");
   } else {
     Serial.println("LoRA SX1276 init successful!");
@@ -359,8 +385,16 @@ void setup() {
   
 
   SX1257_SDR.init(1);
-  SX1257_SDR.set_tx_freq(915e6);
-  SX1257_SDR.set_rx_freq(915e6);
+  SX1257_SDR.set_tx_freq(900e6);
+  SX1257_SDR.set_rx_freq(900e6); 
+
+  // enable SDR
+  SX1257_SDR.set_antenna(0); // setup SDR for RX
+  SX1276_Lora.setantenna(1, 1, 0); // high frequency SMA SX1276->TX on standard transceiver
+
+  // setup SDR RX
+  SX1257_SDR.set_rx_parameters(0x1, 0xf, 0x7, 0x0, 0x0);
+  SX1257_SDR.set_rx_mode(1, 1); // enable SDR RX path
 
   SX1257_SDR.dumpRegisters(Serial);
 
@@ -375,7 +409,7 @@ int led_count = 0;
 
 void led_loop() {
   if ( millis() - last_led_toggle_millis >= 1000 ) {
-	  Serial.println("LED Loop start");
+	  //Serial.println("LED Loop start");
     if ( leds_on ) {      
       wwvb_digital_write(WLED_RED, HIGH);
       wwvb_digital_write(WLED_BLUE, HIGH);

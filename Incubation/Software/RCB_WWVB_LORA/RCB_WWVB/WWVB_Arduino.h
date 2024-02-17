@@ -290,6 +290,10 @@ void wwvb_m4_print_bool(char * name, bool val);
   } while(0)
 
 
+
+
+void init_sram2_nocache();
+
 // Fixing HAL SPI APIs to work for circular mode
 // Default HAL_SPI_IRQHandler does not work for circular DMA mode!
 void HAL_SPI_IRQHandler_CircFix(SPI_HandleTypeDef *hspi);
@@ -298,6 +302,18 @@ HAL_StatusTypeDef HAL_SPI_DMAResume_Fix(SPI_HandleTypeDef *hspi);
 HAL_StatusTypeDef HAL_SPI_DMAStop_Fix(SPI_HandleTypeDef *hspi);
 
 
+extern "C" {
+void __attribute__((weak)) SPI_DMAHalfReceiveCplt(DMA_HandleTypeDef *hdma);
+void __attribute__((weak)) SPI_DMAReceiveCplt(DMA_HandleTypeDef *hdma);
+void __attribute__((weak)) SPI_DMAError(DMA_HandleTypeDef *hdma);
+}
 
+#define SPI_2LINES_RX(__HANDLE__) MODIFY_REG((__HANDLE__)->Instance->CFG2, SPI_CFG2_COMM, SPI_CFG2_COMM_1)
+// pretty much same as normal API, but doesn't enable SPI peripheral at the end 
+HAL_StatusTypeDef HAL_SPI_Receive_DMA_NoStart(SPI_HandleTypeDef *hspi, uint8_t *pData, uint16_t Size);
+
+int32_t extend_sign_24bit(uint32_t value);
+int countOneBits(uint32_t n);
+int bitDifference(uint32_t value);
 
 #endif
