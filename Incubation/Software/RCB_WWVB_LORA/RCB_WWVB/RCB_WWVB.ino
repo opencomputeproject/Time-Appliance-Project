@@ -6,13 +6,14 @@
 #include "SiTime.h"
 #include "SX1276_LORA.h"
 #include "SX1257.h"
+#include "stm32_sdr.h"
 //#include <arm_math.h> // Arduino CMSIS DSP library for signal processing 
 //#include "mbed.h"
 
 
 // the setup function runs once when you press reset or power the board
 
-LoRaClass SX1276_Lora;
+
 
 extern SX1257Class SX1257_SDR;
 
@@ -91,7 +92,41 @@ void print_SDR_DMA_Stats() {
 }
 
 
+
 void LoRA_WiWi_basic_test() {
+  /*
+  char print_buf[256];
+
+  Serial.println("LORA WiWi basic test start");
+
+  sprintf(print_buf, "MDMA Debug, sdr_I_Ch0_setup_lookup=0x%p, sdr_I_Ch0_dummy4_node=0x%p "
+    "sdr_I_Ch1_setup_lookup=0x%p sdr_I_Ch1_dummy4_node=0x%p lookuptable=0x%p spi1_rx_data=0x%p",
+    &sdr_I_Ch0_setup_lookup, &sdr_I_Ch0_dummy4_node,
+    &sdr_I_Ch1_setup_lookup, &sdr_I_Ch1_dummy4_node,
+    SDR_lookup_table, &spi1_rx_data);
+  Serial.println(print_buf);
+
+
+
+
+
+  SX1257_SDR.set_rx_mode(0, 0); // disable RX SDR path
+  stm32_sdr_spi_init();
+  stm32_sdr_dma_init();
+  stm32_sdr_dfsdm_init();
+
+  //SX1257_SDR.set_rx_mode(1, 1); // enable RX SDR path -> For actual data, only enable this after SPI pipeline is running
+
+  //stm32_sdr_spi_test(); // THIS WORKED, I and Q both changing!
+  //stm32_sdr_dma_test(); // THIS WORKS WOWWWWWW
+  stm32_sdr_dfsdm_test();
+  */
+
+  stm32_sdr_init();
+  stm32_lora_test();
+}
+
+void LoRA_WiWi_basic_test_old() {
 
 
   Serial.println("LORA WiWi basic test start");
@@ -119,7 +154,7 @@ void LoRA_WiWi_basic_test() {
   */
   //SX1257_SDR.dumpRegisters(Serial);
   
-  SX1257_SDR.reset_dma_buffers();
+  //SX1257_SDR.reset_dma_buffers();
 
   uint32_t i_start_count = 0;
   uint32_t i_end_count = 0;
@@ -127,12 +162,14 @@ void LoRA_WiWi_basic_test() {
   SX1257_SDR.set_rx_mode(0, 0); // disable RX SDR path
 
   // enable SDR DMA
-  SX1257_SDR.enable_rx_dma();
+  //SX1257_SDR.enable_rx_dma();
+
+
 
   SX1257_SDR.set_rx_mode(1, 1); // enable RX SDR path
 
-  SX1257_SDR.debug_print_rx_dma_registers();
-  i_start_count = __HAL_DMA_GET_COUNTER(&SX1257_SDR.hdma_spi1_rx);
+  //SX1257_SDR.debug_print_rx_dma_registers();
+  //i_start_count = __HAL_DMA_GET_COUNTER(&SX1257_SDR.hdma_spi1_rx);
 
   
   //while ( __HAL_DMA_GET_COUNTER(&SX1257_SDR.hdma_spi1_rx) > 1000 ) {
@@ -143,6 +180,7 @@ void LoRA_WiWi_basic_test() {
   //SX1257_SDR.disable_dma();
 
   // HACK FOR NON CIRCULAR
+  /*
   delay(100);
 
   i_end_count = __HAL_DMA_GET_COUNTER(&SX1257_SDR.hdma_spi1_rx);
@@ -183,6 +221,7 @@ void LoRA_WiWi_basic_test() {
   Serial.println("");
 
   Serial.println("LORA WIWI basic test end");  
+  */
 }
 
 void debug_spi1_print() {
@@ -214,11 +253,11 @@ void processSingleCharCommand(char command) {
       // setup SDR RX
       SX1257_SDR.set_rx_parameters(0x6, 0xf, 0x7, 0x1, 0x1);
       SX1257_SDR.set_rx_mode(1, 1); // enable SDR RX path
-      SX1257_SDR.enable_rx_dma();
+      //SX1257_SDR.enable_rx_dma();
       break;
     case '1':      
       Serial.println("Stopping RX IQ");
-      SX1257_SDR.disable_dma();
+      //SX1257_SDR.disable_dma();
       break;
     case '2':
       wwvb_digital_write(WLED_RED, LOW);
@@ -230,7 +269,7 @@ void processSingleCharCommand(char command) {
       break;
     case '4':
       Serial.println("Printing IQ rx buffer");
-      SX1257_SDR.print_rx_iq_data(1);
+      //SX1257_SDR.print_rx_iq_data(1);
       break;
     case '5':
       LoRA_WiWi_basic_test();
@@ -342,6 +381,10 @@ void setup() {
   __HAL_RCC_DMA1_CLK_ENABLE();
   __HAL_RCC_DMA2_CLK_ENABLE();
 
+  __HAL_RCC_MDMA_CLK_ENABLE();
+  __HAL_RCC_C1_MDMA_CLK_ENABLE();
+  __HAL_RCC_C2_MDMA_CLK_ENABLE();
+
   __HAL_RCC_DFSDM1_CLK_ENABLE();
   //__HAL_RCC_DFSDM2_CLK_ENABLE();
 
@@ -370,6 +413,8 @@ void setup() {
   Serial.println("");
   Serial.println("");
 
+  init_sram1_data();
+
 
   /****** INTERRUPT IS DEFINITELY NOT RIGHT FOR PROPER LORA OPERATION IN SX1276_LORA ***/
   // SX1276 can use external interrupt
@@ -397,6 +442,7 @@ void setup() {
   SX1257_SDR.set_rx_mode(1, 1); // enable SDR RX path
 
   SX1257_SDR.dumpRegisters(Serial);
+
 
 }
 

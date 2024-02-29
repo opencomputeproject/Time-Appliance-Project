@@ -23,6 +23,8 @@
 #define PA_OUTPUT_RFO_PIN          0
 #define PA_OUTPUT_PA_BOOST_PIN     1
 
+
+
 class LoRaClass : public Stream {
 public:
   LoRaClass();
@@ -124,7 +126,6 @@ private:
   void (*_onCadDone)(boolean);
   void (*_onTxDone)();
 };
-
-extern LoRaClass LoRa;
+extern LoRaClass SX1276_Lora;
 
 #endif

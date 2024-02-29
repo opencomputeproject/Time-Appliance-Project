@@ -5,6 +5,7 @@
 #include <stm32h7xx_hal.h>
 #include <stm32h7xx_hal_gpio.h>
 #include <Arduino.h>
+#include <stm32h7xx_hal_exti.h>
 
 #include <stm32h7xx_hal_spi.h>
 #include <stm32h7xx_hal_dma.h>
@@ -245,6 +246,14 @@ void wwvb_m4_print_bool(char * name, bool val);
 #define SX1257_I_RX_DMA_STREAM DMA2_Stream7
 #define SX1257_I_RX_DMA_STREAM_IRQ DMA2_Stream7_IRQn
 #define SX1257_I_RX_DMA_STREAM_HANDLER DMA2_Stream7_IRQHandler
+#define SX1257_I_RX_DMA_MDMA_TRIG MDMA_REQUEST_DMA2_Stream7_TC
+#define SX1257_I_RX_DMA_TC_INT_CLEAR_REG (DMA2->HIFCR)
+#define SX1257_I_RX_DMA_TC_INT_CLEAR_VAL (DMA_FLAG_TCIF3_7)
+#define SX1257_I_DFSDM_CHANNEL DFSDM1_Channel0
+#define SX1257_I_DFSDM_FILTER DFSDM1_Filter0
+#define SX1257_I_MDMA_PINGPONG_0 MDMA_Channel0
+#define SX1257_I_MDMA_PINGPONG_1 MDMA_Channel1
+
 
 #define SX1257_I_TX_DMA_STREAM DMA2_Stream6
 #define SX1257_I_TX_DMA_STREAM_IRQ DMA2_Stream6_IRQn
@@ -253,12 +262,21 @@ void wwvb_m4_print_bool(char * name, bool val);
 #define SX1257_Q_RX_DMA_STREAM DMA2_Stream5
 #define SX1257_Q_RX_DMA_STREAM_IRQ DMA2_Stream5_IRQn
 #define SX1257_Q_RX_DMA_STREAM_HANDLER DMA2_Stream5_IRQHandler
+#define SX1257_Q_RX_DMA_MDMA_TRIG MDMA_REQUEST_DMA2_Stream5_TC
+#define SX1257_Q_RX_DMA_TC_INT_CLEAR_REG (DMA2->HIFCR)
+#define SX1257_Q_RX_DMA_TC_INT_CLEAR_VAL (DMA_FLAG_TCIF1_5)
+#define SX1257_Q_DFSDM_CHANNEL DFSDM1_Channel1
+#define SX1257_Q_DFSDM_FILTER DFSDM1_Filter1
+#define SX1257_Q_MDMA_PINGPONG_0 MDMA_Channel2
+#define SX1257_Q_MDMA_PINGPONG_1 MDMA_Channel3
 
 #define SX1257_Q_TX_DMA_STREAM DMA2_Stream4
 #define SX1257_Q_TX_DMA_STREAM_IRQ DMA2_Stream4_IRQn
 #define SX1257_Q_TX_DMA_STREAM_HANDLER DMA2_Stream4_IRQHandler
 
 
+#define STM32_SDR_DFSDM_I_STREAM DMA2_Stream3
+#define STM32_SDR_DFSDM_Q_STREAM DMA2_Stream2
 
 
 /* Use of CMSIS compiler intrinsics for register exclusive access */
@@ -291,8 +309,32 @@ void wwvb_m4_print_bool(char * name, bool val);
 
 
 
+#define BUFFER_SIZE 10000
+#define FILTERED_BUFFER_SIZE BUFFER_SIZE/4
+
+typedef volatile struct sram1_data_struct_name {
+  int8_t SDR_lookup_table[256];
+
+  uint8_t I_data[BUFFER_SIZE];
+  uint8_t Q_data[BUFFER_SIZE];
+
+  int32_t filtered_I_buffer[FILTERED_BUFFER_SIZE];
+  int32_t filtered_Q_buffer[FILTERED_BUFFER_SIZE];
+
+} sram1_data_struct;
+
+extern sram1_data_struct * sram1_data;
+
+#define DMA_PAUSED 0
+#define DMA_RUNNING 1
+#define DMA_STOPPED 2
+
 
 void init_sram2_nocache();
+
+unsigned int countSetBits(unsigned char n);
+
+void init_sram1_data();
 
 // Fixing HAL SPI APIs to work for circular mode
 // Default HAL_SPI_IRQHandler does not work for circular DMA mode!
@@ -310,8 +352,21 @@ void __attribute__((weak)) SPI_DMAError(DMA_HandleTypeDef *hdma);
 
 #define SPI_2LINES_RX(__HANDLE__) MODIFY_REG((__HANDLE__)->Instance->CFG2, SPI_CFG2_COMM, SPI_CFG2_COMM_1)
 // pretty much same as normal API, but doesn't enable SPI peripheral at the end 
-HAL_StatusTypeDef HAL_SPI_Receive_DMA_NoStart(SPI_HandleTypeDef *hspi, uint8_t *pData, uint16_t Size);
+HAL_StatusTypeDef HAL_SPI_Receive_DMA_NoStart_NoInterrupt(SPI_HandleTypeDef *hspi, uint8_t *pData, uint16_t Size);
+HAL_StatusTypeDef HAL_SPI_Receive_DMA_NoStart_HackWriteMDMA(SPI_HandleTypeDef *hspi, uint32_t * mdma_reg, uint32_t * mdma_val_to_write);
 
+
+
+
+// using to debug DFSDM
+HAL_StatusTypeDef HAL_DFSDM_ChannelInit_Debug(DFSDM_Channel_HandleTypeDef *hdfsdm_channel);
+HAL_StatusTypeDef HAL_DFSDM_FilterInit_Debug(DFSDM_Filter_HandleTypeDef *hdfsdm_filter);
+HAL_StatusTypeDef HAL_DFSDM_FilterConfigRegChannel_Debug(DFSDM_Filter_HandleTypeDef *hdfsdm_filter,
+                                                   uint32_t                    Channel,
+                                                   uint32_t                    ContinuousMode);
+HAL_StatusTypeDef HAL_DFSDM_FilterRegularStart_DMA_Debug(DFSDM_Filter_HandleTypeDef *hdfsdm_filter,
+                                                   int32_t                    *pData,
+                                                   uint32_t                    Length);
 int32_t extend_sign_24bit(uint32_t value);
 int countOneBits(uint32_t n);
 int bitDifference(uint32_t value);

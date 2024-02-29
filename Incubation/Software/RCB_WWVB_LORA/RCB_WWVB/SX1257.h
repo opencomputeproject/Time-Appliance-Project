@@ -6,33 +6,6 @@
 #include <stm32h7xx_hal_dfsdm.h>
 #include <stm32h7xx.h>
 
-/*
-void HAL_SPI_RxCpltCallback(struct __DMA_HandleTypeDef * hdma);
-void HAL_SPI_RxHalfCpltCallback(struct __DMA_HandleTypeDef * hdma);
-void HAL_SPI_ErrorCallback(struct __DMA_HandleTypeDef * hdma);
-*/
-#define IQ_BUFFER_SIZE 2048
-extern ALIGN_32BYTES(volatile uint32_t I_rxBuffer[IQ_BUFFER_SIZE])  __attribute__((section(".RAM_D2")));
-extern ALIGN_32BYTES(volatile uint32_t I_txBuffer[IQ_BUFFER_SIZE])  __attribute__((section(".RAM_D2")));
-extern ALIGN_32BYTES(volatile uint32_t Q_rxBuffer[IQ_BUFFER_SIZE])  __attribute__((section(".RAM_D2")));
-extern ALIGN_32BYTES(volatile uint32_t Q_txBuffer[IQ_BUFFER_SIZE])  __attribute__((section(".RAM_D2")));
-//extern uint32_t * I_rxBuffer;
-//extern uint32_t * I_txBuffer;
-//extern uint32_t * Q_rxBuffer;
-//extern uint32_t * Q_txBuffer;
-
-
-// RAM_D2 defiend in AppData\Local\Arduino15\packages\arduino\hardware\mbed_giga\4.1.1\variants\GIGA\linker_script.ld
-/*
-  FLASH (rx) : ORIGIN = 0x8040000, LENGTH = CM4_BINARY_START - 0x8040000
-  DTCMRAM (rwx) : ORIGIN = 0x20000000 + (((166 * 4) + 7) & 0xFFFFFFF8), LENGTH = 128K - (((166 * 4) + 7) & 0xFFFFFFF8)
-  RAM (xrw) : ORIGIN = 0x24000000, LENGTH = 0x80000
-  RAM_D2 (xrw) : ORIGIN = 0x30000000, LENGTH = 288K
-  RAM_D3 (xrw) : ORIGIN = 0x38000000, LENGTH = 64K
-  ITCMRAM (xrw) : ORIGIN = 0x00000000, LENGTH = 64K
-*/
-
-
 
 extern "C" {
   typedef struct SDR_stats_struct {
@@ -67,11 +40,6 @@ extern "C" {
 }
 
 
-#define DMA_PAUSED 0
-#define DMA_RUNNING 1
-#define DMA_STOPPED 2
-
-
 class SX1257Class {
 public:
   SX1257Class();
@@ -97,9 +65,7 @@ public:
 
   int set_antenna(bool tx);
 
-  int enable_rx_dma();
-  void debug_print_rx_dma_registers();
-  int disable_dma();
+
 
   // from Print
   virtual size_t write(uint8_t byte);
@@ -152,17 +118,19 @@ public:
   SPI_HandleTypeDef _spi_Q_Data;
   DMA_HandleTypeDef hdma_spi2_rx;
   DMA_HandleTypeDef hdma_spi2_tx; // SPI2 for Q data
-  //DFSDM_Channel_HandleTypeDef  hdfsdm_Q;
+  DFSDM_Channel_HandleTypeDef  hdfsdm_Q;
+  DFSDM_Filter_HandleTypeDef hdfsdm_filt_Q; // Just need a filter, data is from SPI
 
   SDR_stats sx1257_stats;
 
 
+  /*
+  int enable_rx_dma();
+  void debug_print_rx_dma_registers();
+  int disable_dma();
+  */
 
 
-
-  void print_rx_iq_data(bool long_run);
-  void debug_dfsdm();
-  void reset_dma_buffers();
 
   void (*_onReceive)(int);
   void (*_onCadDone)(boolean);
@@ -174,9 +142,6 @@ public:
 
 };
 
-
-inline int16_t convert_spi_to_dfsdm(uint32_t val);
-inline uint32_t calc_ampl(uint32_t i_val, uint32_t q_val);
-
+extern SX1257Class SX1257_SDR;
 
 #endif
