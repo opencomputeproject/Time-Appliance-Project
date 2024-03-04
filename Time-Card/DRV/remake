@@ -15,7 +15,7 @@ fi
 
 case "$DIST" in
     debian*|ubuntu)
-        KDIR=/usr/src/linux-headers-${KVER}
+        KDIR=/usr/src/linux-${KVER}
         ;;
     centos*)
         KDIR=/usr/src/kernels/${KVER}
