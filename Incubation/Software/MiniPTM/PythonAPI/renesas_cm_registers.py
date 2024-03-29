@@ -470,6 +470,16 @@ DPLL_FREQ_WRITE_LAYOUT = {
 }
 
 
+DPLL_GENERAL_STATUS_LAYOUT = {
+    "EEPROM_STATUS": {"offset": 0x8, "fields": {"VALUE": BitField(0, 8)}},
+    "MAJOR RELEASE": {"offset": 0x10, "fields": {"VALUE": BitField(0, 8)}},
+    "MINOR RELEASE": {"offset": 0x11, "fields": {"VALUE": BitField(0, 8)}},
+    "HOTFIX RELEASE": {"offset": 0x12, "fields": {"VALUE": BitField(0, 8)}},
+    "JTAG DEVICE ID": {"offset": 0x1c, "fields": {"VALUE": BitField(0, 8)}},
+    "PRODUCT ID": {"offset": 0x1e, "fields": {"VALUE": BitField(0, 8)}},
+}
+
+
 # Common bitfield structure for DPLL_REF_PRIORITY registers
 DPLL_REF_PRIORITY_FIELDS = {
     "PRIORITY_GROUP_NUMBER": BitField(6, 2),
@@ -1056,6 +1066,14 @@ class DPLL_Config(Module):
                          DPLL_Config.BASE_ADDRESSES)
 
 
+
+class DPLL_GeneralStatus(Module):
+    BASE_ADDRESSES = {0: 0xc014}
+    LAYOUT = DPLL_GENERAL_STATUS_LAYOUT
+
+    def __init__(self):
+        super().__init__("DPLL_GeneralStatus", DPLL_GeneralStatus.LAYOUT,
+                         DPLL_GeneralStatus.BASE_ADDRESSES)
 # holder of registers
 class DPLL():
     def __init__(self, i2c_dev,
@@ -1067,7 +1085,7 @@ class DPLL():
                           TODReadSecondary, Input, Output, REFMON, PWM_USER_DATA,
                           OUTPUT_TDC_CFG, OUTPUT_TDC, INPUT_TDC, PWM_SYNC_ENCODER,
                           PWM_SYNC_DECODER, EEPROM, EEPROM_DATA, PWM_Rx_Info, DPLL_Ctrl,
-                          DPLL_Freq_Write, DPLL_Config]
+                          DPLL_Freq_Write, DPLL_Config, DPLL_GeneralStatus]
 
         for mod in modules_to_use:
             self.modules[mod.__name__] = mod()

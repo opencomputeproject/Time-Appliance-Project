@@ -158,6 +158,8 @@ class MiniPTM:
             for future in concurrent.futures.as_completed(futures):
                 pass
 
+
+
     def board_led_blink_test(self):
         # do ID test with GPIOs, toggle DPLL GPIO, then toggle I225 LEDs
         for index, board in enumerate(self.boards):
@@ -1788,16 +1790,59 @@ class MiniPTM:
         slave_num = 1
         master_num = 0
         
-        # Debug step. Master, Sync channel 0 / 1 / 2 with write to TOD0
-        self.boards[master_num].dpof.write_tod_absolute(0)
 
-        print(f"Waiting for master PWM encoders to set to new TOD")
 
-        for i in range(30):
-            # read the PWM frame received from PWM FIFO
-            rcvd_tod = self.boards[slave_num].i2c.read_dpll_reg_multiple(0xce80, 0x0, 11)
-            print(f"Count {i} slave received tod {rcvd_tod}")
-            time.sleep(1)
+
+        # disable slave dpll0 auto frame resync
+        self.boards[slave_num].dpll.modules["DPLL_Config"].write_reg(0,
+                "DPLL_CTRL_2", 0x26)
+
+        # trigger register
+        val = self.boards[slave_num].dpll.modules["DPLL_Config"].read_reg(0,
+                "DPLL_MODE")
+        self.boards[slave_num].dpll.modules["DPLL_Config"].write_reg(0,
+                "DPLL_MODE",val) 
+
+        print(f"Disabled auto slave frame pulse sync, waiting")
+        time.sleep(5)
+
+        # disable master dpll3 auto frame resync
+        self.boards[master_num].dpll.modules["DPLL_Config"].write_reg(3,
+                "DPLL_CTRL_2", 0x35)
+
+        # trigger register
+        val = self.boards[master_num].dpll.modules["DPLL_Config"].read_reg(3,
+                "DPLL_MODE")
+        self.boards[master_num].dpll.modules["DPLL_Config"].write_reg(3,
+                "DPLL_MODE",val) 
+        print(f"Disabled auto master frame pulse sync, waiting")
+        time.sleep(5)
+
+
+        # force slave frame resync once
+        print(f"Forcing slave frame pulse sync")
+        self.boards[slave_num].dpll.modules["DPLL_Ctrl"].write_reg(0,
+                "DPLL_FRAME_PULSE_SYNC", 1)
+
+
+
+        return
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
         print(f"Discipling slave to master")
@@ -1844,10 +1889,15 @@ class MiniPTM:
                 time.sleep(1)
 
         # TOD0 on slave is disciplined to master
+        
+
+
         # Step 1b. Read what master TOD is getting back
         # compared to its own TOD at the same point
         # using alternate PPS, its always the same TOD as the channel
         # so here TOD0
+
+        return
 
         for test_num in range(5):
             board = self.boards[master_num]
@@ -1923,7 +1973,18 @@ class MiniPTM:
             time.sleep(0.4)
 
 
+
+        print(f"Discipling slave to master")
+
+
+
+
     def debug_me(self):
+
+
+        self.debug_frame_sync_working()
+        return
+
 
         self.debug_tod_both_boards()
         return
@@ -1950,16 +2011,20 @@ class MiniPTM:
         # self.boards[1].dpll.modules["DPLL_Config"].print_all_registers(2)
         # self.boards[1].dpll.modules["DPLL_Config"].print_all_registers(3)
         print(f"\n\n************** BOARD 0 ***********************\n\n")
+        self.boards[0].dpll.modules["DPLL_GeneralStatus"].print_all_registers(0)
         self.boards[0].dpll.modules["Status"].print_all_registers(0)
-        self.boards[0].dpll.modules["DPLL_Config"].print_all_registers(2)
-
-        print(f"\n\n************** BOARD 1 ***********************\n\n")
-        self.boards[1].dpll.modules["Status"].print_all_registers(0)
-        self.boards[1].dpll.modules["DPLL_Config"].print_all_registers(2)
+        self.boards[0].dpll.modules["DPLL_Config"].print_all_registers(0)
+        #self.boards[0].dpll.modules["DPLL_Config"].print_all_registers(5)
 
         # clear all stickies
         for board in self.boards:
             board.i2c.write_dpll_reg_direct(0xc169, 0x1)
+        return
+
+        print(f"\n\n************** BOARD 1 ***********************\n\n")
+        self.boards[1].dpll.modules["Status"].print_all_registers(0)
+        self.boards[1].dpll.modules["DPLL_Config"].print_all_registers(0)
+
 
 
 

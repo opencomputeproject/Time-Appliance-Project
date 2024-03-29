@@ -45,8 +45,9 @@ class miniptm_i2c:
     def open_i2c_dpll(self):
         # Set up I2C mux to access DPLL
         if (self.cur_mux_open != 0x8):
-            #print(f"Opening mux to DPLL")
+            print(f"Opening mux to DPLL")
             self.bus.write_byte_data(self.MUX_ADDRESS, 0x0, 0x8)
+            self.cur_mux_open = 0x8
         self.cur_base_addr = None
 
     def write_dpll_reg(self, base_addr, offset, value):
@@ -62,7 +63,7 @@ class miniptm_i2c:
             self.cur_base_addr = baseaddr_upper
 
         self.bus.write_byte_data(self.DPLL_ADDRESS, baseaddr_lower, value)
-        # print(f"Write DPLL register, module {base_addr:#04x}, addr {offset:#02x} = {value:#02x}")
+        #print(f"Write DPLL register, module {base_addr:#04x}, addr {offset:#02x} = {value:#02x}")
 
     def write_dpll_reg_direct(self, addr, value):
         self.open_i2c_dpll()

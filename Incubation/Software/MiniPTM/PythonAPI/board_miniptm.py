@@ -73,49 +73,20 @@ class Single_MiniPTM:
         self.set_board_led(3, (self.board_num >> 3) & 0x1)
 
     def set_board_led(self, led_num, val):
-        if (led_num < 0 or led_num > 3):
+        if (led_num < 0 or led_num > 2):
             print(f"Invalid LED number {led_num}")
             return
+        if ( led_num == 0 ):
+            #GPIO13
+            self.dpll.gpio.configure_pin(13, gpiomode.OUTPUT,val)
+        if ( led_num == 1 ):
+            #GPIO5
+            self.dpll.gpio.configure_pin(5, gpiomode.OUTPUT,val)
+        if ( led_num == 2 ):
+            #GPIO6
+            self.dpll.gpio.configure_pin(6, gpiomode.OUTPUT,val)
 
-        # USING BOARD LAYOUT, LEDS FROM BOTTOM TO TOP
-        # LED0 = I225 LED_SPEED_2500# , LED1
-        # LED1 = I225 LINK_ACT# , LED2
-        # LED2 = DPLL GPIO2
-        # LED3 = DPLL GPIO3
 
-        if val:
-            val = 0
-        else:
-            val = 1
-        if led_num == 2 or led_num == 3:
-            if (val):
-                self.dpll.gpio.configure_pin(led_num, gpiomode.OUTPUT, 1)
-            else:
-                self.dpll.gpio.configure_pin(led_num, gpiomode.OUTPUT, 0)
-        else:
-            # need to do PCIe access to I225
-            # LEDx_MODE , 0x0 = LED_ON (always on), 0x1 = LED_OFF (always low)
-            # LED1 MODE = 0xE00[11:8]
-            # LED1 BLINK = 0xE00[15] , turn this off otherwise it auto blinks when always on
-            # LED2 MODE = 0xE00[19:16]
-            # LED2 BLINK = 0xE00[23]
-
-            led_mode = 0
-            if (val):
-                led_mode = 1
-
-            if (led_num == 1):  # LED2
-                val = self.PCIe.read32(0xe00)
-                val = val & ~(1 << 23)  # turn off blink
-                val = val & ~(0xf << 16)
-                val = val | (led_mode << 16)
-                self.PCIe.write32(0xe00, val)
-            else:
-                val = self.PCIe.read32(0xe00)
-                val = val & ~(1 << 15)  # turn off blink
-                val = val & ~(0xf << 8)
-                val = val | (led_mode << 8)
-                self.PCIe.write32(0xe00, val)
 
     def init_eeprom_addr(self, block=0):
         addr = 0x54

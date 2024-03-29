@@ -17,8 +17,9 @@ class cm_gpios:
     def __init__(self, i2c_dev):
         self.i2c_dev = i2c_dev
         self.base_addrs = [0xc8c2, 0xc8d4, 0xc8e6, 0xc900, 0xc912,
-                0xc924]
-        self.valid_num = [i for i in range(0,6)]
+                0xc924, 0xc936, 0xc948, 0xc95a, 0xc980, 0xc992, 
+                0xc9a4, 0xc9b6, 0xc9c8, 0xc9da, 0xca00]
+        self.valid_num = [i for i in range(0,16)]
 
     # mode can be lots of values in theory
     # coding for 1 = output, 0 = input
@@ -32,14 +33,24 @@ class cm_gpios:
             self.i2c_dev.write_dpll_reg(self.base_addrs[pin_num], 0x10, 0x0) # trigger register
         elif ( mode == gpiomode.OUTPUT ):            
             # 0x2 in 5.3, 0x0 in v4.9, assume 4.9
-            read_val = self.i2c_dev.read_dpll_reg(0xc160, 0x0)
-            if ( value ):                
-                read_val |= (1 << pin_num)
+            if ( pin_num >= 8 ):
+                read_val = self.i2c_dev.read_dpll_reg(0xc161, 0x0)
+                if ( value ):                
+                    read_val |= (1 << pin_num-8)
+                else:
+                    read_val &= ~(1 << pin_num-8)
+                self.i2c_dev.write_dpll_reg(0xc161, 0x0, read_val)
+                self.i2c_dev.write_dpll_reg(0xc161, 0x0, self.i2c_dev.read_dpll_reg(0xc161, 0x0) ) #trigger register
+                self.i2c_dev.write_dpll_reg(self.base_addrs[pin_num], 0x10, 0x4) # GPIO trigger register and set to output
             else:
-                read_val &= ~(1 << pin_num)
-            self.i2c_dev.write_dpll_reg(0xc160, 0x0, read_val)
-            self.i2c_dev.write_dpll_reg(0xc160, 0x1, self.i2c_dev.read_dpll_reg(0xc160, 0x1) ) #trigger register
-            self.i2c_dev.write_dpll_reg(self.base_addrs[pin_num], 0x10, 0x4) # GPIO trigger register and set to output
+                read_val = self.i2c_dev.read_dpll_reg(0xc160, 0x0)
+                if ( value ):                
+                    read_val |= (1 << pin_num)
+                else:
+                    read_val &= ~(1 << pin_num)
+                self.i2c_dev.write_dpll_reg(0xc160, 0x0, read_val)
+                self.i2c_dev.write_dpll_reg(0xc160, 0x1, self.i2c_dev.read_dpll_reg(0xc160, 0x1) ) #trigger register
+                self.i2c_dev.write_dpll_reg(self.base_addrs[pin_num], 0x10, 0x4) # GPIO trigger register and set to output
 
     # returns [mode, value]
     def read_pin_mode(self, pin_num: int) -> [int, int]:
