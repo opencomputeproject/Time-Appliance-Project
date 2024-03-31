@@ -5,6 +5,7 @@ to get testptp independently run the following commands
 cd~
 mkdir testptp
 cd testptp
+wget https://raw.githubusercontent.com/opencomputeproject/Time-Appliance-Project/master/Incubation/Software/testptp/Makefile
 wget https://raw.githubusercontent.com/opencomputeproject/Time-Appliance-Project/master/Incubation/Software/testptp/ptp_clock.h
 ```
 Use the following command for compiling:
