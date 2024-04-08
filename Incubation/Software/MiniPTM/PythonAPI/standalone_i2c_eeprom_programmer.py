@@ -4,7 +4,7 @@ from smbus2 import SMBus
 import time
 
 eeprom_file="MiniPTMV4_BaseConfig_3-20-2024.hex"
-i2c_bus=11
+i2c_bus=1
 eeprom_addr=0x54
 block_select_bit=1
 write_delay=0.005 #5ms delay after write

@@ -1035,7 +1035,7 @@ class DPOF_Top():
 
         # HUGE HACK, ONLY USE CHANNEL 0 FOR BENCHTOP DEBUG
         self.channels = [dpof_single_channel(
-            self.board, i, i, i*2, 5) for i in range(1)]  # decoders skip one
+            self.board, i, i, i*2, 5) for i in range(4)]  # decoders skip one
 
         # enable one
         #self.channels[self.active_decoder].start_rx()

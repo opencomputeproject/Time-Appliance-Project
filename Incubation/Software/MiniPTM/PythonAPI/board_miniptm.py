@@ -205,6 +205,27 @@ class Single_MiniPTM:
         return average
 
 
+
+    # loopbw_units same as DPL_CTRL_0.DPLL_BW definitions
+    def set_dpll_loop_params(self, dpll_num=0,
+            loopbw=1000, loopbw_units = 1,
+            decimator_bw_mult=4, psl=0):
+
+        self.dpll.modules["DPLL_Ctrl"].write_reg(dpll_num,
+                "DPLL_PSL_7_0", psl & 0xff)
+        self.dpll.modules["DPLL_Ctrl"].write_reg(dpll_num,
+                "DPLL_PSL_15_8", (psl >> 8) & 0xff)
+        self.dpll.modules["DPLL_Ctrl"].write_reg(dpll_num,
+                "DPLL_DECIMATOR_BW_MULT", decimator_bw_mult & 0xff)
+        self.dpll.modules["DPLL_Ctrl"].write_reg(dpll_num,
+                "DPLL_BW_0", loopbw & 0xff)
+        self.dpll.modules["DPLL_Ctrl"].write_reg(dpll_num,
+                "DPLL_BW_1", ((loopbw>>8) & 0x3f) + (loopbw_units << 6) )
+
+        
+
+
+
     def clear_all_dpll_sticky_status(self):
         # clear all stickies
         self.i2c.write_dpll_reg(0xc164, 0x5, 0x0)

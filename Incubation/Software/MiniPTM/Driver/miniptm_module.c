@@ -38,8 +38,7 @@
 #define SDP3_DATA (1<<7)
 
 // LED1 config register
-#define LED1_CONFIG 0x1c
-#define LED02_CONFIG 0x1f
+#define LED_CONFIG 0xe00
 #define LED_ALWAYS_ON (0x0)
 #define LED_ALWAYS_OFF (0x1)
 
@@ -410,14 +409,14 @@ static int __init miniptm_module_init(void)
 	// V4 MiniPTM specific changes
 	// 1. Disable LED functions for 1G, LED_SPEED_1000# (LED0) / LED_LINK_ACT# (LED2)
 	// 	This is a workaround for hardware mistake, next rev should fix
-	iowrite32( (LED_ALWAYS_ON << 8) + (LED_ALWAYS_ON), 
-		dev_list->mapped_address + LED02_CONFIG ); // is this off??
-
 	// 2. LED_SPEED_2500# (LED1) is a board reset, 
 	// 	Set it to output and set it high
 	// 	Reserved for future software use
-	iowrite32( (LED_ALWAYS_ON), 
-		dev_list->mapped_address + LED1_CONFIG ); // is this off??
+	iowrite32( (LED_ALWAYS_OFF << 0) + // LED0
+			(LED_ALWAYS_OFF << 8) + // LED1
+			(LED_ALWAYS_OFF << 16), // LED2
+		dev_list->mapped_address + LED_CONFIG ); // is this off??
+
 
 	pr_info("Done Insert 1 MiniPTM Basic module\n");
     }

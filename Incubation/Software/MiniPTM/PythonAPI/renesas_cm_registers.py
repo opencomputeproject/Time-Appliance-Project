@@ -436,6 +436,11 @@ PWM_RX_INFO_LAYOUT = {
 
 
 DPLL_CTRL_LAYOUT = {
+    "DPLL_DECIMATOR_BW_MULT": {"offset": 0x3, "fields": {"VALUE": BitField(0,8)}},
+    "DPLL_BW_0": {"offset": 0x4, "fields": {"BW_7_0": BitField(0,8)}},
+    "DPLL_BW_1": {"offset": 0x5, "fields": {"BW_13_8": BitField(0, 6) , "BW_UNIT": BitField(6,2)}},
+    "DPLL_PSL_7_0": {"offset": 0x6, "fields": {"VALUE": BitField(0,8)}},
+    "DPLL_PSL_15_8": {"offset": 0x7, "fields": {"VALUE": BitField(0,8)}},
     "DPLL_PHASE_OFFSET_CFG_7_0": {"offset": 0x14, "fields": {"VALUE": BitField(0,8)}},
     "DPLL_PHASE_OFFSET_CFG_15_8": {"offset": 0x15, "fields": {"VALUE": BitField(0,8)}},
     "DPLL_PHASE_OFFSET_CFG_23_16": {"offset": 0x16, "fields": {"VALUE": BitField(0,8)}},
@@ -1040,7 +1045,8 @@ class PWM_Rx_Info(Module):
 
 
 class DPLL_Ctrl(Module):
-    BASE_ADDRESSES = {0: 0xc600, 1: 0xc63c, 2: 0xc680, 3: 0xc6bc}
+    BASE_ADDRESSES = {0: 0xc600, 1: 0xc63c, 2: 0xc680, 3: 0xc6bc,
+            4: 0xc700, 5: 0xc73c, 6: 0xc780, 7: 0xc7bc}
     LAYOUT = DPLL_CTRL_LAYOUT
 
     def __init__(self):
@@ -1049,7 +1055,8 @@ class DPLL_Ctrl(Module):
 
 
 class DPLL_Freq_Write(Module):
-    BASE_ADDRESSES = {0: 0xc838, 1: 0xc840, 2: 0xc848, 3: 0xc850}
+    BASE_ADDRESSES = {0: 0xc838, 1: 0xc840, 2: 0xc848, 3: 0xc850,
+            4: 0xc858, 5: 0xc860, 6: 0xc868, 7: 0xc870}
     LAYOUT = DPLL_FREQ_WRITE_LAYOUT
 
     def __init__(self):
@@ -1058,7 +1065,8 @@ class DPLL_Freq_Write(Module):
 
 
 class DPLL_Config(Module):
-    BASE_ADDRESSES = {0: 0xc3b0, 1: 0xc400, 2: 0xc438, 3: 0xc480}
+    BASE_ADDRESSES = {0: 0xc3b0, 1: 0xc400, 2: 0xc438, 3: 0xc480,
+            4: 0xc4b8, 5: 0xc500, 6: 0xc538, 7: 0xc580}
     LAYOUT = DPLL_LAYOUT
 
     def __init__(self):
