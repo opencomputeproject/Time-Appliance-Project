@@ -18,6 +18,7 @@ or use the full command
 ```
 gcc -Wall -lrt testptp.c -o testptp
 ```
+If up get error errno.h, you should install libc6-dev.
 For installation use:
 ```
 sudo make install
