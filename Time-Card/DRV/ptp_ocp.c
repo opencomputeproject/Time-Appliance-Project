@@ -5220,7 +5220,7 @@ ptp_ocp_enable_ptm(struct ptp_ocp *bp)
 			continue;
 
 		dev_err(&bp->pdev->dev, "Enable and trigger PTM failed: Status = 0x%X, try: %d\n", status, 2 - try);
-  }
+  	}
 	bp->ptm_t4_prev = (((u64) ioread32(&reg->t4_time[0]) << 32) |
 		(ioread32(&reg->t4_time[1]) & 0xffffffff));
 
@@ -5409,6 +5409,9 @@ ptp_ocp_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 		goto out;
 
 	if (bp->ptm) {
+		err = pci_enable_ptm(bp->pdev, NULL);
+		if (err)
+			goto out;
 		ptp_ocp_disable_ptm(bp);
 		ptp_ocp_enable_ptm(bp);
 	} else {
