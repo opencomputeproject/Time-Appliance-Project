@@ -149,19 +149,47 @@ struct tod_reg {
 	u32	__pad1[3];
 	u32	utc_status;
 	u32	leap;
+	u32	__pad2[2];
+	u32 gnss_status;
+	u32 num_sat;
 };
 
-#define TOD_CTRL_PROTOCOL	BIT(28)
-#define TOD_CTRL_DISABLE_FMT_A	BIT(17)
-#define TOD_CTRL_DISABLE_FMT_B	BIT(16)
-#define TOD_CTRL_ENABLE		BIT(0)
-#define TOD_CTRL_GNSS_MASK	((1U << 4) - 1)
-#define TOD_CTRL_GNSS_SHIFT	24
+#define TOD_CTRL_PROTOCOL			BIT(28)
+#define TOD_CTRL_PROTOCOL_MASK		((1U << 3) - 1)
+#define TOD_CTRL_PROTOCOL_SHIFT		28
+#define TOD_CTRL_DISABLE_FMT_A		BIT(17)
+#define TOD_CTRL_DISABLE_FMT_B		BIT(16)
+#define TOD_CTRL_ENABLE				BIT(0)
+#define TOD_CTRL_GNSS_MASK			((1U << 4) - 1)
+#define TOD_CTRL_GNSS_SHIFT			24
 
-#define TOD_STATUS_UTC_MASK		0xff
+#define TOD_STATUS_UTC_MASK			0xff
 #define TOD_STATUS_UTC_VALID		BIT(8)
 #define TOD_STATUS_LEAP_ANNOUNCE	BIT(12)
 #define TOD_STATUS_LEAP_VALID		BIT(16)
+
+#define TOD_UART_BAUD_MASK			((1U << 4) - 1)
+#define TOD_UART_BAUD_SHIFT			0
+
+#define TOD_GNSS_ANT_STATUS_MASK	((1U << 3) - 1)
+#define TOD_GNSS_ANT_STATUS_SHIFT	0
+#define TOD_GNSS_JAM_STATE_MASK		((1U << 2) - 1)
+#define TOD_GNSS_JAM_STATE_SHIFT	3
+#define TOD_GNSS_JAM_STRENGTH_MASK	((1U << 7) - 1)
+#define TOD_GNSS_JAM_STRENGTH_SHIFT	5
+#define TOD_GNSS_FIX_OK				BIT(16)
+#define TOD_GNSS_FIX_MASK			((1U << 8) - 1)
+#define TOD_GNSS_FIX_SHIFT			17
+#define TOD_GNSS_SPOOF_STATE_MASK	((1U << 2) - 1)
+#define TOD_GNSS_SPOOF_STATE_SHIFT	25
+#define TOD_GNSS_FIX_SPOOF_VAL		BIT(28)
+#define TOD_GNSS_ANT_JAM_VAL		BIT(29)
+
+#define TOD_SAT_SEEN_MASK			((1U << 8) - 1)
+#define TOD_SAT_SEEN_SHIFT			0
+#define TOD_SAT_LOCKED_MASK			((1U << 8) - 1)
+#define TOD_SAT_LOCKED_SHIFT		8
+#define TOD_SAT_VAL					BIT(16)
 
 struct ts_reg {
 	u32	enable;
@@ -1240,6 +1268,31 @@ static const struct ocp_selector ptp_ocp_clock[] = {
 	{ }
 };
 
+static const struct ocp_selector ptp_ocp_tod_protocol[] = {
+	{ .name = "NMEA",	.value = 0 },
+	{ .name = "UBX",	.value = 1 },
+	{ .name = "TSIP",	.value = 2 },
+	{ .name = "ESIP",	.value = 3 },
+	{ }
+};
+
+static const struct ocp_selector ptp_ocp_tod_baud_rates[] = {
+	{ .name = "1200",	.value = 0 },
+	{ .name = "2400",	.value = 1 },
+	{ .name = "4800",	.value = 2 },
+	{ .name = "9600",	.value = 3 },
+	{ .name = "19200",	.value = 4 },
+	{ .name = "38400",	.value = 5 },
+	{ .name = "57600",	.value = 6 },
+	{ .name = "115200",	.value = 7 },
+	{ .name = "230400",	.value = 8 },
+	{ .name = "460800",	.value = 9 },
+	{ .name = "921600",	.value = 10 },
+	{ .name = "1000000",.value = 11 },
+	{ .name = "2000000",.value = 12 },
+	{ }
+};
+
 #define SMA_ENABLE		BIT(15)
 #define SMA_SELECT_MASK		((1U << 15) - 1)
 #define SMA_DISABLE		0x10000
@@ -1922,12 +1975,17 @@ ptp_ocp_tod_init(struct ptp_ocp *bp)
 }
 
 static const char *
-ptp_ocp_tod_proto_name(const int idx)
+ptp_ocp_tod_proto_name(int idx)
 {
 	static const char * const proto_name[] = {
 		"NMEA", "NMEA_ZDA", "NMEA_RMC", "NMEA_none",
-		"UBX", "UBX_UTC", "UBX_LS", "UBX_none"
+		"UBX", "UBX_UTC", "UBX_LS", "UBX_none",
+		"TSIP", "TSIP_UTC", "TSIP_LS", "TSIP_none",
+		"ESIP", "ESIP_ZDA", "ESIP_RMC", "ESIP_none",
+		"unknown"
 	};
+	if (idx >= ARRAY_SIZE(proto_name))
+		idx = ARRAY_SIZE(proto_name) - 1;
 	return proto_name[idx];
 }
 
@@ -1941,6 +1999,54 @@ ptp_ocp_tod_gnss_name(int idx)
 	if (idx >= ARRAY_SIZE(gnss_name))
 		idx = ARRAY_SIZE(gnss_name) - 1;
 	return gnss_name[idx];
+}
+
+static const char *
+ptp_ocp_tod_gnss_ant_status(int idx)
+{
+	static const char * const ant_status[] = {
+		"INIT", "DONTKNOW", "OK", "SHORT", "OPEN",
+		"Unknown"
+	};
+	if (idx >= ARRAY_SIZE(ant_status))
+		idx = ARRAY_SIZE(ant_status) - 1;
+	return ant_status[idx];
+}
+
+static const char *
+ptp_ocp_tod_gnss_jam_state(int idx)
+{
+	static const char * const jam_state[] = {
+		"Unknown or feature disabled", "OK",
+		"Warning", "Critical"
+	};
+	if (idx >= ARRAY_SIZE(jam_state))
+		idx = 0;
+	return jam_state[idx];
+}
+
+static const char *
+ptp_ocp_tod_gnss_fix(int idx)
+{
+	static const char * const fix_name[] = {
+		"No fix", "Dead reckning only", "2-D fix",
+		"3-D fix", "GPS+dead reckoning combined", "Unknown"
+	};
+	if (idx >= ARRAY_SIZE(fix_name))
+		idx = ARRAY_SIZE(fix_name) - 1;
+	return fix_name[idx];
+}
+
+static const char *
+ptp_ocp_tod_gnss_spoof_state(int idx)
+{
+	static const char * const spoof_state[] = {
+		"Unknown or deactivated", "No spoofing indicated",
+		"Spoofing indicated"
+	};
+	if (idx >= ARRAY_SIZE(spoof_state))
+		idx = 0;
+	return spoof_state[idx];
 }
 
 struct ptp_ocp_nvmem_match_info {
@@ -4205,6 +4311,113 @@ clock_status_offset_show(struct device *dev,
 static DEVICE_ATTR_RO(clock_status_offset);
 
 static ssize_t
+tod_protocol_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct ptp_ocp *bp = dev_get_drvdata(dev);
+	const char *p;
+	u32 select;
+
+	select = ioread32(&bp->tod->ctrl);
+	select = (select >> TOD_CTRL_PROTOCOL_SHIFT) & TOD_CTRL_PROTOCOL_MASK;
+	p = ptp_ocp_select_name_from_val(ptp_ocp_tod_protocol, select);
+
+	return sysfs_emit(buf, "%s\n", p);
+}
+
+static ssize_t
+tod_protocol_store(struct device *dev, struct device_attribute *attr,
+		   const char *buf, size_t count)
+{
+	struct ptp_ocp *bp = dev_get_drvdata(dev);
+	unsigned long flags;
+	u32 ctrl_reg;
+	int val;
+
+	val = ptp_ocp_select_val_from_name(ptp_ocp_tod_protocol, buf);
+	if (val < 0)
+		return val;
+
+	ctrl_reg = ioread32(&bp->tod->ctrl);
+	ctrl_reg &= ~(TOD_CTRL_PROTOCOL_MASK << TOD_CTRL_PROTOCOL_SHIFT);
+	ctrl_reg |= (val & TOD_CTRL_PROTOCOL_MASK) << TOD_CTRL_PROTOCOL_SHIFT;
+
+	spin_lock_irqsave(&bp->lock, flags);
+	iowrite32(ctrl_reg, &bp->tod->ctrl);
+	spin_unlock_irqrestore(&bp->lock, flags);
+
+	return count;
+}
+static DEVICE_ATTR_RW(tod_protocol);
+
+static ssize_t
+available_tod_protocols_show(struct device *dev,
+			     struct device_attribute *attr, char *buf)
+{
+	return ptp_ocp_select_table_show(ptp_ocp_tod_protocol, buf);
+}
+static DEVICE_ATTR_RO(available_tod_protocols);
+
+static ssize_t
+tod_baud_rate_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct ptp_ocp *bp = dev_get_drvdata(dev);
+	const char *p;
+	u32 select;
+
+	select = ioread32(&bp->tod->uart_baud);
+	select = (select >> TOD_UART_BAUD_SHIFT) & TOD_UART_BAUD_MASK;
+	p = ptp_ocp_select_name_from_val(ptp_ocp_tod_baud_rates, select);
+
+	return sysfs_emit(buf, "%s\n", p);
+}
+
+static ssize_t
+tod_baud_rate_store(struct device *dev, struct device_attribute *attr,
+		   const char *buf, size_t count)
+{
+	struct ptp_ocp *bp = dev_get_drvdata(dev);
+	unsigned long flags;
+	u32 uart_baud_reg;
+	u32 ctrl_reg;
+	int val;
+
+	val = ptp_ocp_select_val_from_name(ptp_ocp_tod_baud_rates, buf);
+	if (val < 0)
+		return val;
+
+	// When overwriting the UART baud rate the TOD Slave must get restarted
+	ctrl_reg = ioread32(&bp->tod->ctrl);
+	ctrl_reg &= ~TOD_CTRL_ENABLE;
+	
+	spin_lock_irqsave(&bp->lock, flags);
+	iowrite32(ctrl_reg, &bp->tod->ctrl);
+	spin_unlock_irqrestore(&bp->lock, flags);
+
+	uart_baud_reg = ioread32(&bp->tod->uart_baud);
+	uart_baud_reg &= ~(TOD_UART_BAUD_MASK << TOD_UART_BAUD_SHIFT);
+	uart_baud_reg |= (val & TOD_UART_BAUD_MASK) << TOD_UART_BAUD_SHIFT;
+
+	ctrl_reg = ioread32(&bp->tod->ctrl);
+	ctrl_reg |= TOD_CTRL_ENABLE;
+
+	spin_lock_irqsave(&bp->lock, flags);
+	iowrite32(uart_baud_reg, &bp->tod->uart_baud);
+	iowrite32(ctrl_reg, &bp->tod->ctrl);
+	spin_unlock_irqrestore(&bp->lock, flags);
+
+	return count;
+}
+static DEVICE_ATTR_RW(tod_baud_rate);
+
+static ssize_t
+available_tod_baud_rates_show(struct device *dev,
+			     struct device_attribute *attr, char *buf)
+{
+	return ptp_ocp_select_table_show(ptp_ocp_tod_baud_rates, buf);
+}
+static DEVICE_ATTR_RO(available_tod_baud_rates);
+
+static ssize_t
 tod_correction_show(struct device *dev,
 		    struct device_attribute *attr, char *buf)
 {
@@ -4537,6 +4750,10 @@ static struct attribute *fb_timecard_attrs[] = {
 	&dev_attr_irig_b_mode.attr,
 	&dev_attr_utc_tai_offset.attr,
 	&dev_attr_ts_window_adjust.attr,
+	&dev_attr_tod_protocol.attr,
+	&dev_attr_available_tod_protocols.attr,
+	&dev_attr_tod_baud_rate.attr,
+	&dev_attr_available_tod_baud_rates.attr,
 	&dev_attr_tod_correction.attr,
 	NULL,
 };
@@ -4979,6 +5196,45 @@ ptp_ocp_tod_status_show(struct seq_file *s, void *data)
 
 	val = ioread32(&bp->tod->leap);
 	seq_printf(s, "Time to next leap second (in sec): %d\n", (s32) val);
+
+	val = ioread32(&bp->tod->gnss_status);
+	seq_printf(s, "GNSS status register: 0x%08X\n", val);
+
+	idx = (val >> TOD_GNSS_ANT_STATUS_SHIFT) & TOD_GNSS_ANT_STATUS_MASK;
+	seq_printf(s, "GNSS Antenna status: %s valid: %d\n",
+		ptp_ocp_tod_gnss_ant_status(idx),
+		val & TOD_GNSS_ANT_JAM_VAL ? 1 : 0);
+
+	idx = (val >> TOD_GNSS_JAM_STATE_SHIFT) & TOD_GNSS_JAM_STATE_MASK;
+	seq_printf(s, "GNSS Jam state: %s valid: %d\n",
+		ptp_ocp_tod_gnss_jam_state(idx),
+		val & TOD_GNSS_ANT_JAM_VAL ? 1 : 0);
+
+	seq_printf(s, "GNSS Jam indication: %d valid: %d\n",
+		(val >> TOD_GNSS_JAM_STRENGTH_SHIFT) & TOD_GNSS_JAM_STRENGTH_MASK,
+		val & TOD_GNSS_ANT_JAM_VAL ? 1 : 0);
+
+	idx = (val >> TOD_GNSS_FIX_SHIFT) & TOD_GNSS_FIX_MASK;
+	seq_printf(s, "GNSS Fix: %s fix ok: %d valid: %d\n",
+		ptp_ocp_tod_gnss_fix(idx),
+		val & TOD_GNSS_FIX_OK ? 1 : 0,
+		val & TOD_GNSS_FIX_SPOOF_VAL ? 1 : 0);
+
+	idx = (val >> TOD_GNSS_SPOOF_STATE_SHIFT) & TOD_GNSS_SPOOF_STATE_MASK;
+	seq_printf(s, "GNSS Spoof state: %s valid: %d\n",
+		ptp_ocp_tod_gnss_spoof_state(idx),
+		val & TOD_GNSS_FIX_SPOOF_VAL ? 1 : 0);
+
+	val = ioread32(&bp->tod->num_sat);
+	seq_printf(s, "Number of Satellites register: 0x%08X\n", val);
+
+	seq_printf(s, "Number of seen satellites: %d valid: %d\n",
+		(val >> TOD_SAT_SEEN_SHIFT) & TOD_SAT_SEEN_MASK,
+		val & TOD_SAT_VAL ? 1 : 0);
+
+	seq_printf(s, "Number of locked satellites: %d valid: %d\n",
+		(val >> TOD_SAT_LOCKED_SHIFT) & TOD_SAT_LOCKED_MASK,
+		val & TOD_SAT_VAL ? 1 : 0);
 
 	return 0;
 }
