@@ -1978,10 +1978,10 @@ static const char *
 ptp_ocp_tod_proto_name(int idx)
 {
 	static const char * const proto_name[] = {
-		"NMEA", "NMEA_ZDA", "NMEA_RMC", "NMEA_none",
-		"UBX", "UBX_UTC", "UBX_LS", "UBX_none",
-		"TSIP", "TSIP_UTC", "TSIP_LS", "TSIP_none",
-		"ESIP", "ESIP_ZDA", "ESIP_RMC", "ESIP_none",
+		"NMEA",
+		"UBX",
+		"TSIP",
+		"ESIP",
 		"unknown"
 	};
 	if (idx >= ARRAY_SIZE(proto_name))
@@ -5167,8 +5167,7 @@ ptp_ocp_tod_status_show(struct seq_file *s, void *data)
 	}
 	seq_printf(s, "TOD Slave enabled, Control Register 0x%08X\n", val);
 
-	idx = val & TOD_CTRL_PROTOCOL ? 4 : 0;
-	idx += (val >> 16) & 3;
+	idx = (val >> TOD_CTRL_PROTOCOL_SHIFT) & TOD_CTRL_PROTOCOL_MASK;
 	seq_printf(s, "Protocol %s\n", ptp_ocp_tod_proto_name(idx));
 
 	idx = (val >> TOD_CTRL_GNSS_SHIFT) & TOD_CTRL_GNSS_MASK;
