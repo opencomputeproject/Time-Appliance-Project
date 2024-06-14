@@ -27,271 +27,6 @@ inline uint32_t calc_ampl(uint32_t i_val, uint32_t q_val) {
 }
 
 
-// C++ -> C world pointers, annoying but HAL being in C needs it
-// DONT USE ANY C++ THINGS IN THESE EXTERN C BLOCKS
-// make bridge pointers / structures as needed
-SDR_stats * my_stats = &SX1257_SDR.sx1257_stats;
-SPI_HandleTypeDef * spi1_handler = &SX1257_SDR._spi_I_Data;
-DMA_HandleTypeDef * spi1_rx_dma_handler = &SX1257_SDR.hdma_spi1_rx;
-DMA_HandleTypeDef * spi1_tx_dma_handler = &SX1257_SDR.hdma_spi1_tx;
-
-SPI_HandleTypeDef * spi2_handler = &SX1257_SDR._spi_Q_Data;
-DMA_HandleTypeDef * spi2_rx_dma_handler = &SX1257_SDR.hdma_spi2_rx;
-DMA_HandleTypeDef * spi2_tx_dma_handler = &SX1257_SDR.hdma_spi2_tx;
-extern "C" {
-
-  // mandatory IRQ handlers to clear interrupts and keep things running
-  void SPI1_IRQHandler(void) {
-    // normal HAL_SPI_IRQHandler does not work for circular mode!
-    my_stats->spi_I_irq_counter++;
-    //HAL_SPI_IRQHandler_CircFix(spi1_handler); 
-    HAL_SPI_IRQHandler(spi1_handler);
-  }
-  void SPI2_IRQHandler(void) {
-    // normal HAL_SPI_IRQHandler does not work for circular mode!
-    my_stats->spi_Q_irq_counter++;
-    //HAL_SPI_IRQHandler_CircFix(spi2_handler); 
-    HAL_SPI_IRQHandler(spi2_handler);
-  }
-  void SX1257_I_RX_DMA_STREAM_HANDLER(void) { 
-    my_stats->spi_I_RX_DMA_IRQHandler_counter++;   
-    HAL_DMA_IRQHandler(spi1_rx_dma_handler);
-  }
-  void SX1257_Q_RX_DMA_STREAM_HANDLER(void) {
-    HAL_DMA_IRQHandler(spi2_rx_dma_handler);
-  }
-  void SX1257_I_TX_DMA_STREAM_HANDLER(void) {
-    my_stats->spi_I_TX_DMA_IRQHandler_counter++;
-    HAL_DMA_IRQHandler(spi1_tx_dma_handler);
-  }
-  void SX1257_Q_TX_DMA_STREAM_HANDLER(void) {
-    HAL_DMA_IRQHandler(spi2_tx_dma_handler);
-  }
-
-  // User callbacks to handle events
-  void SPI_DMAError(DMA_HandleTypeDef *hdma) {   
-    my_stats->SPI_DMAError_run = 1; 
-  }
-  void SPI_DMAAbort(DMA_HandleTypeDef *hdma) {    
-    my_stats->SPI_DMAAbort_run = 1;
-  }
-
-  void SPI_DMAReceiveCplt(DMA_HandleTypeDef *hdma) {
-    my_stats->SPI_DMAReceiveCplt_run = 1;
-    if ( hdma == spi1_rx_dma_handler ) {
-      my_stats->spi_I_RX_DMAComplete_counter++;
-    } 
-    else if ( hdma == spi2_rx_dma_handler) {
-      my_stats->spi_Q_RX_DMAComplete_counter++;
-    }
-  }
-  void SPI_DMAHalfReceiveCplt(DMA_HandleTypeDef *hdma) {  
-    my_stats->SPI_DMAHalfReceiveCplt_run = 1;
-    if ( hdma == spi1_rx_dma_handler ) {
-      my_stats->spi_I_RX_DMAHalfComplete_counter++;
-    } 
-    else if ( hdma == spi2_rx_dma_handler) {
-      my_stats->spi_Q_RX_DMAHalfComplete_counter++;
-    }
-  }
-  void SPI_DMATransmitCplt(DMA_HandleTypeDef *hdma) {
-    if ( hdma == spi1_tx_dma_handler ) {
-      my_stats->spi_I_TX_DMAComplete_counter++;
-    } 
-    else if ( hdma == spi2_tx_dma_handler) {
-      my_stats->spi_Q_TX_DMAComplete_counter++;
-    }
-  }
-  void SPI_DMAHalfTransmitCplt(DMA_HandleTypeDef *hdma) {   
-    if ( hdma == spi1_tx_dma_handler ) {
-      my_stats->spi_I_TX_DMAHalfComplete_counter++;
-    } 
-    else if ( hdma == spi2_tx_dma_handler) {
-      my_stats->spi_Q_TX_DMAHalfComplete_counter++;
-    }
-  }
-
-  void HAL_DMA_ErrorCallback(DMA_HandleTypeDef *hdma) {
-    // DMA error handling
-    my_stats->HAL_DMA_ErrorCallback_run = 1;
-  }
-
-  void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi) {
-    my_stats->HAL_SPI_RxCpltCallback_counter++;
-  }
-  void HAL_SPI_RxHalfCpltCallback(SPI_HandleTypeDef *hspi) {
-    my_stats->HAL_SPI_RxHalfCpltCallback_counter++;
-  }
-  void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi) {
-    my_stats->HAL_SPI_ErrorCallback_run = 1;
-  }
-  void HAL_SPI_SuspendCallback(SPI_HandleTypeDef *hspi) {
-    my_stats->HAL_SPI_SuspendCallback_run = 1;
-  }
-
-  void HAL_SPI_MspInit(SPI_HandleTypeDef *hspi) // called by HAL_SPI_Init
-  {
-    my_stats->HAL_SPI_MspInit_run = 1;
-    if (hspi == spi1_handler ){ 
-      // Init the STM32 SPI1 interface
-      my_stats->HAL_SPI_MspInit_SPI1_run = 1;
-      GPIO_InitTypeDef GPIO_InitStruct = {0};
-
-      // SPI1 SCK Pin Configuration
-      GPIO_InitStruct.Pin = WWVB_Pins[SX1257_CLK_OUT_SPI1].GPIO_Pin;  
-      GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-      GPIO_InitStruct.Pull = GPIO_NOPULL;
-      GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-      GPIO_InitStruct.Alternate = GPIO_AF5_SPI1;  // Alternate function for SPI1
-      HAL_GPIO_Init(WWVB_Pins[SX1257_CLK_OUT_SPI1].GPIO_Group, &GPIO_InitStruct);
-
-      // SPI1 MISO Pin Configuration
-      GPIO_InitStruct.Pin = WWVB_Pins[SX1257_I_IN].GPIO_Pin;  
-      HAL_GPIO_Init(WWVB_Pins[SX1257_I_IN].GPIO_Group, &GPIO_InitStruct);
-
-      // SPI1 MOSI Pin Configuration
-      GPIO_InitStruct.Pin = WWVB_Pins[SX1257_I_OUT].GPIO_Pin; 
-      HAL_GPIO_Init(WWVB_Pins[SX1257_I_OUT].GPIO_Group, &GPIO_InitStruct);
-
-
-      // I , RX DMA , NOT USING AS NORMAL SPI DMA!!!!
-      spi1_rx_dma_handler->Instance = SX1257_I_RX_DMA_STREAM; // Example stream, adjust as needed
-      spi1_rx_dma_handler->Init.Request = DMA_REQUEST_SPI1_RX; // Make sure to use the correct request number
-      spi1_rx_dma_handler->Init.Direction = DMA_PERIPH_TO_MEMORY;
-      spi1_rx_dma_handler->Init.PeriphInc = DMA_PINC_DISABLE;
-      spi1_rx_dma_handler->Init.MemInc = DMA_MINC_ENABLE;
-      spi1_rx_dma_handler->Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
-      spi1_rx_dma_handler->Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD; 
-      spi1_rx_dma_handler->Init.FIFOMode = DMA_FIFOMODE_DISABLE;
-      spi1_rx_dma_handler->Init.FIFOThreshold = DMA_FIFO_THRESHOLD_FULL;
-      //spi1_rx_dma_handler->Init.MemBurst = DMA_MBURST_INC4; 
-      spi1_rx_dma_handler->Init.Mode = DMA_CIRCULAR; // Or DMA_CIRCULAR for continuous reception
-      //spi1_rx_dma_handler->Init.Mode = DMA_NORMAL; // HACK NON CIRCULAR
-      spi1_rx_dma_handler->Init.Priority = DMA_PRIORITY_HIGH;
-
-      HAL_DMA_Init(spi1_rx_dma_handler);
-
-      // __HAL_DMA_LINK(spi1_handler, spi1_rx_dma_handler)
-      spi1_handler->hdmarx = spi1_rx_dma_handler; 
-      spi1_rx_dma_handler->Parent = spi1_handler; // Link DMA to SPI1 RX, NEED BOTH 
-
-      //HAL_DMA_RegisterCallback(spi1_rx_dma_handler, HAL_DMA_XFER_CPLT_CB_ID, SPI_DMAReceiveCplt);
-      //HAL_DMA_RegisterCallback(spi1_rx_dma_handler, HAL_DMA_XFER_HALFCPLT_CB_ID, SPI_DMAHalfReceiveCplt);
-      //HAL_DMA_RegisterCallback(spi1_rx_dma_handler, HAL_DMA_XFER_ERROR_CB_ID, SPI_DMAError);
-      //HAL_DMA_RegisterCallback(spi1_rx_dma_handler, HAL_DMA_XFER_ABORT_CB_ID, SPI_DMAAbort);
-      //HAL_NVIC_SetPriority(SX1257_I_RX_DMA_STREAM_IRQ, 1, 0);
-      //HAL_NVIC_EnableIRQ(SX1257_I_RX_DMA_STREAM_IRQ); 
-
-      // I , TX DMA
-      spi1_tx_dma_handler->Instance = SX1257_I_TX_DMA_STREAM; // Example stream, adjust as needed
-      spi1_tx_dma_handler->Init.Request = DMA_REQUEST_SPI1_TX; // Make sure to use the correct request number
-      spi1_tx_dma_handler->Init.Direction = DMA_MEMORY_TO_PERIPH;
-      spi1_tx_dma_handler->Init.PeriphInc = DMA_PINC_DISABLE;
-      spi1_tx_dma_handler->Init.MemInc = DMA_MINC_ENABLE;
-      spi1_tx_dma_handler->Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
-      spi1_tx_dma_handler->Init.MemDataAlignment = DMA_PDATAALIGN_BYTE;
-      spi1_tx_dma_handler->Init.Mode = DMA_CIRCULAR; // Or DMA_CIRCULAR for continuous reception
-      spi1_tx_dma_handler->Init.Priority = DMA_PRIORITY_HIGH;
-
-      HAL_DMA_Init(spi1_tx_dma_handler);
-
-      spi1_handler->hdmatx = spi1_tx_dma_handler;
-      spi1_tx_dma_handler->Parent = spi1_handler;
-
-      /* Data rate is very high, too many interrupts, don't use interrupts
-      HAL_DMA_RegisterCallback(&SX1257_SDR.hdma_spi1_tx, HAL_DMA_XFER_CPLT_CB_ID, SPI_DMATransmitCplt);
-      HAL_DMA_RegisterCallback(&SX1257_SDR.hdma_spi1_tx, HAL_DMA_XFER_HALFCPLT_CB_ID, SPI_DMAHalfTransmitCplt);
-      HAL_DMA_RegisterCallback(&SX1257_SDR.hdma_spi1_tx, HAL_DMA_XFER_ERROR_CB_ID, SPI_DMAError);
-      HAL_DMA_RegisterCallback(&SX1257_SDR.hdma_spi1_tx, HAL_DMA_XFER_ABORT_CB_ID, SPI_DMAAbort);
-      HAL_NVIC_SetPriority(SX1257_I_TX_DMA_STREAM_IRQ, 9, 0);
-      HAL_NVIC_EnableIRQ(SX1257_I_TX_DMA_STREAM_IRQ);   
-      */
-
-      //HAL_NVIC_SetPriority(SPI1_IRQn, 1, 0);
-      //HAL_NVIC_EnableIRQ(SPI1_IRQn);  
-
-      
-    } 
-    else if (hspi == spi2_handler  )
-    {
-      //Serial.println("HAL SPI MSPINIT for Q Interface start");  
-      // Init the STM32 SPI1 interface
-      GPIO_InitTypeDef GPIO_InitStruct = {0};
-
-      // SPI1 SCK Pin Configuration
-      GPIO_InitStruct.Pin = WWVB_Pins[SX1257_CLK_OUT_SPI2].GPIO_Pin;  
-      GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-      GPIO_InitStruct.Pull = GPIO_NOPULL;
-      GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-      GPIO_InitStruct.Alternate = GPIO_AF5_SPI2;  // Alternate function for SPI2
-      HAL_GPIO_Init(WWVB_Pins[SX1257_CLK_OUT_SPI2].GPIO_Group, &GPIO_InitStruct);
-
-      // SPI1 MISO Pin Configuration
-      GPIO_InitStruct.Pin = WWVB_Pins[SX1257_Q_IN].GPIO_Pin;  
-      HAL_GPIO_Init(WWVB_Pins[SX1257_Q_IN].GPIO_Group, &GPIO_InitStruct);
-
-      // SPI1 MOSI Pin Configuration
-      GPIO_InitStruct.Pin = WWVB_Pins[SX1257_Q_OUT].GPIO_Pin; 
-      HAL_GPIO_Init(WWVB_Pins[SX1257_Q_OUT].GPIO_Group, &GPIO_InitStruct);
-
-
-      // I , RX DMA
-      spi2_rx_dma_handler->Instance = SX1257_Q_RX_DMA_STREAM; // Example stream, adjust as needed
-      spi2_rx_dma_handler->Init.Request = DMA_REQUEST_SPI2_RX; // Make sure to use the correct request number
-      spi2_rx_dma_handler->Init.Direction = DMA_PERIPH_TO_MEMORY;
-      spi2_rx_dma_handler->Init.PeriphInc = DMA_PINC_DISABLE;
-      spi2_rx_dma_handler->Init.MemInc = DMA_MINC_ENABLE;
-      spi2_rx_dma_handler->Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
-      spi2_rx_dma_handler->Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
-      spi2_rx_dma_handler->Init.FIFOMode = DMA_FIFOMODE_DISABLE;
-      spi2_rx_dma_handler->Init.FIFOThreshold = DMA_FIFO_THRESHOLD_FULL;
-      spi2_rx_dma_handler->Init.Mode = DMA_CIRCULAR; // Or DMA_CIRCULAR for continuous reception
-      spi2_rx_dma_handler->Init.Priority = DMA_PRIORITY_HIGH;
-
-      HAL_DMA_Init(spi2_rx_dma_handler);
-
-      spi2_handler->hdmarx = spi2_rx_dma_handler; 
-      spi2_rx_dma_handler->Parent = spi2_handler; // Link DMA to SPI2 RX , NEED BOTH, SAME AS __HAL_DMA_LINK
-
-      /* Data rate is very high, too many interrupts, don't use interrupts
-      HAL_DMA_RegisterCallback(spi2_rx_dma_handler, HAL_DMA_XFER_CPLT_CB_ID, SPI_DMAReceiveCplt);
-      HAL_DMA_RegisterCallback(spi2_rx_dma_handler, HAL_DMA_XFER_HALFCPLT_CB_ID, SPI_DMAHalfReceiveCplt);
-      HAL_DMA_RegisterCallback(spi2_rx_dma_handler, HAL_DMA_XFER_ERROR_CB_ID, SPI_DMAError);
-      HAL_DMA_RegisterCallback(spi2_rx_dma_handler, HAL_DMA_XFER_ABORT_CB_ID, SPI_DMAAbort);
-      HAL_NVIC_SetPriority(SX1257_Q_RX_DMA_STREAM_IRQ, 9, 0);
-      HAL_NVIC_EnableIRQ(SX1257_Q_RX_DMA_STREAM_IRQ); 
-      */
-
-      // I , TX DMA
-      spi2_tx_dma_handler->Instance = SX1257_Q_TX_DMA_STREAM; // Example stream, adjust as needed
-      spi2_tx_dma_handler->Init.Request = DMA_REQUEST_SPI2_TX; // Make sure to use the correct request number
-      spi2_tx_dma_handler->Init.Direction = DMA_MEMORY_TO_PERIPH;
-      spi2_tx_dma_handler->Init.PeriphInc = DMA_PINC_DISABLE;
-      spi2_tx_dma_handler->Init.MemInc = DMA_MINC_ENABLE;
-      spi2_tx_dma_handler->Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
-      spi2_tx_dma_handler->Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
-      spi2_tx_dma_handler->Init.Mode = DMA_CIRCULAR; // Or DMA_CIRCULAR for continuous reception
-      spi2_tx_dma_handler->Init.Priority = DMA_PRIORITY_HIGH;
-
-      HAL_DMA_Init(spi2_tx_dma_handler);
-      spi2_handler->hdmatx = spi2_tx_dma_handler;
-      spi2_tx_dma_handler->Parent = spi2_handler;
-
-      /* Data rate is very high, too many interrupts, don't use interrupts
-      HAL_DMA_RegisterCallback(&SX1257_SDR.hdma_spi2_tx, HAL_DMA_XFER_CPLT_CB_ID, SPI_DMATransmitCplt);
-      HAL_DMA_RegisterCallback(&SX1257_SDR.hdma_spi2_tx, HAL_DMA_XFER_HALFCPLT_CB_ID, SPI_DMAHalfTransmitCplt);
-      HAL_DMA_RegisterCallback(&SX1257_SDR.hdma_spi2_tx, HAL_DMA_XFER_ERROR_CB_ID, SPI_DMAError);
-      HAL_DMA_RegisterCallback(&SX1257_SDR.hdma_spi2_tx, HAL_DMA_XFER_ABORT_CB_ID, SPI_DMAAbort);
-      HAL_NVIC_SetPriority(SX1257_Q_TX_DMA_STREAM_IRQ, 9, 0);
-      HAL_NVIC_EnableIRQ(SX1257_Q_TX_DMA_STREAM_IRQ); 
-      HAL_NVIC_SetPriority(SPI2_IRQn, 10, 0);
-      HAL_NVIC_EnableIRQ(SPI2_IRQn);  
-      */
-
-    }
-  }
-}
-
 
 
 void print_spi_registers(char * name, SPI_HandleTypeDef * hspi)
@@ -312,7 +47,7 @@ void print_spi_registers(char * name, SPI_HandleTypeDef * hspi)
 void print_dma_registers(char * name, DMA_Stream_TypeDef * hdma) 
 {
   char print_buf[256];  
-  sprintf(print_buf, "%s regs: LISR=0x%x HISR=0x%x SCR=0x%x SNDTR=0x%x SPAR=0x%x SFCR=0x%x" , 
+  sprintf(print_buf, "%s regs: LISR=0x%x HISR=0x%x CR=0x%x NDTR=0x%x PAR=0x%x M0AR=0x%x M1AR=0x%x FCR=0x%x" , 
     name, DMA2->LISR, DMA2->HISR, 
      hdma->CR,
      hdma->NDTR,
@@ -408,9 +143,9 @@ void stm32_sdr_spi_init()
   }
 
   Serial.println("STM32 SDR SPI DMA Init successful!");
-  Serial.println("ENABLING STM32 SDR SPI");
-  __HAL_SPI_ENABLE(&SX1257_SDR._spi_I_Data); 
-  __HAL_SPI_ENABLE(&SX1257_SDR._spi_Q_Data); 
+  //Serial.println("ENABLING STM32 SDR SPI");
+  //__HAL_SPI_ENABLE(&SX1257_SDR._spi_I_Data); 
+  //__HAL_SPI_ENABLE(&SX1257_SDR._spi_Q_Data); 
 }
 
 void stm32_sdr_spi_test() 
@@ -486,6 +221,7 @@ DMA_HandleTypeDef dma_dfsdm_Q;
 
 
 void start_dfsdm_dma() {
+  /*
   Serial.println("Starting DFSDM DMA");
   // start the DMA
   if ( HAL_DFSDM_FilterRegularStart_DMA_Debug(&SX1257_SDR.hdfsdm_filt_I,
@@ -496,6 +232,7 @@ void start_dfsdm_dma() {
     (int32_t*)&sram1_data->filtered_Q_buffer[0],FILTERED_BUFFER_SIZE) != HAL_OK ) {
     Serial.println("FAILED TO START DFSDM FILTER START DMA FOR Q");
   }
+  */
 }
 
 void stop_dfsdm_dma() {
@@ -661,7 +398,7 @@ void stm32_sdr_init()
     sdr_init_done = 1;
 
     // init in reverse order of how the data flows, basically setup the pipeline
-    stm32_sdr_dfsdm_init();
+    //stm32_sdr_dfsdm_init();
     stm32_sdr_spi_init();
 
     // Enable DIO0 from SX1276 as interrupt

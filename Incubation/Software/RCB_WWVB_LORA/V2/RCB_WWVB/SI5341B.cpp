@@ -8,10 +8,13 @@ static uint8_t i2c_tx_buf[32];
 static uint8_t i2c_rx_buf[32];
 static SoftWire SI5341_I2C(PLL_SDA, PLL_SCL);
 
+
+uint8_t si5341_i2c_addr = 0x77; // SI5341B-D-GM boards use 0x77
+
 int si5341b_write_reg(uint8_t page, uint8_t reg, uint8_t val) {
   if ( page != cur_page ) {
     // write page
-    SI5341_I2C.beginTransmission(SI5341_I2C_ADDR);
+    SI5341_I2C.beginTransmission(si5341_i2c_addr);
     SI5341_I2C.write(PAGE_REG);
     SI5341_I2C.write(page);
     i2c_status = SI5341_I2C.endTransmission();
@@ -22,7 +25,7 @@ int si5341b_write_reg(uint8_t page, uint8_t reg, uint8_t val) {
     cur_page = page;
   }
 
-  SI5341_I2C.beginTransmission(SI5341_I2C_ADDR);
+  SI5341_I2C.beginTransmission(si5341_i2c_addr);
   SI5341_I2C.write(reg);
   SI5341_I2C.write(val);
   i2c_status = SI5341_I2C.endTransmission();
@@ -36,7 +39,7 @@ int si5341b_read_reg(uint8_t page, uint8_t reg, uint8_t * val) {
 
   if ( page != cur_page ) {
     // write page
-    SI5341_I2C.beginTransmission(SI5341_I2C_ADDR);
+    SI5341_I2C.beginTransmission(si5341_i2c_addr);
     SI5341_I2C.write(PAGE_REG);
     SI5341_I2C.write(page);
     i2c_status = SI5341_I2C.endTransmission();
@@ -47,11 +50,11 @@ int si5341b_read_reg(uint8_t page, uint8_t reg, uint8_t * val) {
     cur_page = page;
   }
 
-  SI5341_I2C.beginTransmission(SI5341_I2C_ADDR);
+  SI5341_I2C.beginTransmission(si5341_i2c_addr);
   SI5341_I2C.write(reg);
   SI5341_I2C.endTransmission(false);
 
-  SI5341_I2C.requestFrom(SI5341_I2C_ADDR, 1);
+  SI5341_I2C.requestFrom(si5341_i2c_addr, 1);
   byte readByte = SI5341_I2C.read();
   //i2c_status = SI5341_I2C.endTransmission();
   //if ( i2c_status != 0x0 ) {
@@ -84,6 +87,8 @@ bool init_si5341b()
 {
 
   int i2c_status = 0;
+  uint8_t id_reg0 = 0;
+  uint8_t id_reg1 = 0;
 
   wwvb_gpio_pinmode(PLL_RST, OUTPUT);
   // toggle reset quick
@@ -106,9 +111,34 @@ bool init_si5341b()
   // just do i2c scan during debug
   //https://github.com/stevemarple/SoftWire/blob/master/examples/ListDevices/ListDevices.ino
 
+  // SI5341B enumeration, some boards are SI5341B-D-GM , some are SI5341B-B05071-GM
+  // D uses 0x77 address, B05071 uses 0x37 address
+  si5341_i2c_addr = 0x77;
+  uint8_t startResult = si5341b_read_reg(0x0, 0x2, &id_reg0);
+  if ( startResult == 0 )
+  {
+    Serial.println("Si5341 enumerated SI5341B-D-GM board, address 0x77");
+    si5341_i2c_addr = 0x77;
+  }
+  else {
+    si5341_i2c_addr = 0x37;
+    startResult = si5341b_read_reg(0x0, 0x2, &id_reg0);
+    SI5341_I2C.stop();
+    if ( startResult == 0 )
+    {
+      Serial.println("Si5341 enumerated SI5341B-B05071-GM board, address 0x37");
+      si5341_i2c_addr = 0x37;
+    }
+    else {
+      Serial.println("SI5341 failed to detect 0x77 or 0x37 , BAD!");
+      return 1;
+    }
+  }
+
+
+
   // try to read a register
-  uint8_t id_reg0 = 0;
-  uint8_t id_reg1 = 0;
+
   if ( si5341b_read_reg(0x0, 0x2, &id_reg0) == 0 &&
         si5341b_read_reg(0x0, 0x3, &id_reg1) == 0 )
   {
@@ -138,10 +168,36 @@ bool init_si5341b()
   uint8_t reg = 0;
   uint8_t val = 0;
   bool found_first_data_reg = 0;
+  bool is_preamble = 1;
+  int i2c_retry_count = 3;
   for (int i = 0; i < SI5341_REVD_REG_CONFIG_NUM_REGS; i++ ) {
     val = si5341_revd_registers[i].value;
     page = (uint8_t) ((si5341_revd_registers[i].address & 0xff00) >> 8);
     reg = (uint8_t) ( si5341_revd_registers[i].address & 0xff );
+
+
+    // https://www.skyworksinc.com/-/media/Skyworks/SL/documents/public/application-notes/AN1006-Si534x-8x-RevB-RevD-Differences.pdf
+    // HACK to support rev B Si5341B boards
+    // Preamble / postamble sequences need to change
+    if (si5341_i2c_addr == 0x37) {
+      // Rev B device
+      if ( is_preamble && page == 0xb && reg == 0x24 ) {
+        Serial.println("Si5341B RevB preamble change to 0xD8!");
+        val = 0xd8;
+        is_preamble = 0;
+      }
+      else if ( !is_preamble && page == 0xb && reg == 0x24 ) {
+        Serial.println("Si5341B RevB postamble sequence change to 0xDB!");
+        val = 0xdb;
+      }
+      if ( page == 0x0 && reg == 0xb) // i2c address register, skip this!
+      {
+        Serial.println("Si5341B RevB skip changing i2c address!");
+        continue;
+      }
+    }
+
+
 
     if ( page == 0x0 && !found_first_data_reg ){
       Serial.println("Waiting before writing first data registers");
@@ -157,17 +213,28 @@ bool init_si5341b()
     Serial.print(" = 0x");
     Serial.print(val, HEX);
 
-    if ( si5341b_write_reg(page, reg, val) != 0x0 ) {
-      Serial.println(" FAILED");
-      return 1;
-    } else {
-      Serial.println("");
+    i2c_retry_count = 3;
+
+
+    while ( i2c_retry_count >= 0 ) {
+      if ( si5341b_write_reg(page, reg, val) != 0x0 ) {
+        Serial.println(" FAILED");
+        i2c_retry_count -= 1;
+        delay(50);
+      } else {
+        Serial.println("");
+        delay(2);
+        break;
+      }
+      delay(2);      
     }
+
   }
 
 
 
   Serial.print("Si5341B init end\r\n");
+  delay(50);
 
   return 0;
   

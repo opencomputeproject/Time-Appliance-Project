@@ -351,17 +351,17 @@ void wwvb_m4_print_bool(char * name, bool val);
 
 
 
-#define BUFFER_SIZE 10000
-#define FILTERED_BUFFER_SIZE BUFFER_SIZE/4
+#define BUFFER_SIZE 10000 // 131072 = max size for sram1 in bytes
+//#define FILTERED_BUFFER_SIZE BUFFER_SIZE/4
 
 typedef volatile struct sram1_data_struct_name {
   //int8_t SDR_lookup_table[256];
 
-  uint16_t I_data[BUFFER_SIZE];
-  uint16_t Q_data[BUFFER_SIZE];
+  int16_t I_data[BUFFER_SIZE]; // int16_t from FPGA
+  int16_t Q_data[BUFFER_SIZE];
 
-  int32_t filtered_I_buffer[FILTERED_BUFFER_SIZE];
-  int32_t filtered_Q_buffer[FILTERED_BUFFER_SIZE];
+  //int32_t filtered_I_buffer[FILTERED_BUFFER_SIZE];
+  //int32_t filtered_Q_buffer[FILTERED_BUFFER_SIZE];
 
 } sram1_data_struct;
 

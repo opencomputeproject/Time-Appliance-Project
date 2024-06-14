@@ -15,7 +15,7 @@
 */
 
 
-#define SI5341_I2C_ADDR 0x77 // 7 bit address
+//#define SI5341_I2C_ADDR 0x77 // 7 bit address
 
 #define PAGE_REG 0x1
 

@@ -123,7 +123,7 @@ void LoRA_WiWi_basic_test() {
   //stm32_lora_test();
 
   // V2 board code here
-  // pipeline should be running non stop, stop DMA and read back
+  // pipeline should be up, just need to enable SPI
 
 
 
@@ -133,20 +133,46 @@ void LoRA_WiWi_basic_test() {
   print_dma_registers("SPI1 I DMA before SPI test",(DMA_Stream_TypeDef *)(SX1257_SDR.hdma_spi1_rx.Instance) );
   print_dma_registers("SPI2 Q DMA before SPI test",(DMA_Stream_TypeDef *)(SX1257_SDR.hdma_spi2_rx.Instance) );
 
+  SX1257_SDR.dumpRegisters(Serial);
   uint8_t last_I_data_num = 0;
   uint8_t last_Q_data_num = 0;
   char printbuf[256];
 
-  for ( int i =0; i < 10; i++ ) {
+  // slow but fine, init all the buffers
+  for ( int i =0; i < BUFFER_SIZE; i++ ){
+    sram1_data->I_data[i] = 0x0;
+    sram1_data->Q_data[i] = 0x0;
+  }
+
+  Serial.println("ENABLING STM32 SDR SPI WITH ICE40 RESET HELD");
+  hold_ice40_reset();
+  __HAL_SPI_ENABLE(&SX1257_SDR._spi_I_Data); 
+  __HAL_SPI_ENABLE(&SX1257_SDR._spi_Q_Data); 
+  delay(5);
+  release_ice40_reset();
+  delay(100);
+
+  Serial.println("DISABLING STM32 SDR SPI");
+  __HAL_SPI_DISABLE(&SX1257_SDR._spi_I_Data); 
+  __HAL_SPI_DISABLE(&SX1257_SDR._spi_Q_Data); 
+
+  last_I_data_num = __HAL_DMA_GET_COUNTER(&SX1257_SDR.hdma_spi1_rx);
+  last_Q_data_num = __HAL_DMA_GET_COUNTER(&SX1257_SDR.hdma_spi2_rx);
+  sprintf(printbuf, "Last I num=%d, Last Q num=%d\r\n", last_I_data_num, last_Q_data_num);
+  Serial.print(printbuf);
+
+  for ( int i =0; i < BUFFER_SIZE; i++ ) {
     //last_I_data_num = SX1257_SDR._spi_I_Data.Instance->RXDR;
     //last_Q_data_num = SX1257_SDR._spi_Q_Data.Instance->RXDR;
 
     last_I_data_num = __HAL_DMA_GET_COUNTER(&SX1257_SDR.hdma_spi1_rx);
     last_Q_data_num = __HAL_DMA_GET_COUNTER(&SX1257_SDR.hdma_spi2_rx);
 
-    sprintf(printbuf,"I=%08d, I=0x%x, Q=0x%x\r\n", i, sram1_data->I_data[last_I_data_num], sram1_data->Q_data[last_Q_data_num] );
-    Serial.println(printbuf);
+    sprintf(printbuf,"I=%08d, I=0x%x, Q=0x%x\r\n", i, sram1_data->I_data[i] & 0xffff, sram1_data->Q_data[i] & 0xffff );
+    Serial.print(printbuf);
   }
+
+
   return;
 
 
@@ -248,10 +274,16 @@ void processSingleCharCommand(char command) {
       SX1257_SDR.dumpRegisters(Serial);
       break;
     case '7':
-      Serial.println("Resetting SDR!");
-      SX1257_SDR.init(0);
+      Serial.println("Enabling SDR TX!");
+      SX1257_SDR.set_antenna(1); // setup SDR for TX
+      SX1257_SDR.set_tx_parameters(0x3, 0xf,
+        0x0, 0x0, 0x0); // max gain, bandwidth doesnt matter
+      SX1257_SDR.set_tx_mode(1,1);
+      break;
     case '8':
-      debug_spi1_print();
+      Serial.println("Disabling SDR TX!");      
+      SX1257_SDR.set_tx_mode(0,0);
+      SX1257_SDR.set_antenna(0); // setup SDR for TX
       break;
     case '&':
       Serial.print("User command, restarting STM32!\r\n");
@@ -435,8 +467,9 @@ void setup() {
   SX1276_Lora.setantenna(1, 1, 0); // high frequency SMA SX1276->TX on standard transceiver
 
   // setup SDR RX
-  SX1257_SDR.set_rx_parameters(0x1, 0xf, 0x7, 0x0, 0x0);
+  SX1257_SDR.set_rx_parameters(0x6, 0xf, 0x7, 0x1, 0x1);
   SX1257_SDR.set_rx_mode(1, 1); // enable SDR RX path
+  Serial.println("****SX1257 registers during init****");
   SX1257_SDR.dumpRegisters(Serial);
 
 
@@ -444,8 +477,9 @@ void setup() {
 
   // now SDR is setup in receive mode, good, enable DMA paths in STM32 for SPI and DFSDM
   // enable DFSDM first then SPI, basically reverse order of data flow
-  Serial.println("Enabling DFSDM DMA pipelines!");
-  stm32_sdr_dfsdm_init();
+  // V2 , moving away from DFSDM, push it into FPGA 
+  //Serial.println("Enabling DFSDM DMA pipelines!");
+  //stm32_sdr_dfsdm_init();
 
   Serial.println("Enabling SPI DMA pipeline!");
   stm32_sdr_spi_init();

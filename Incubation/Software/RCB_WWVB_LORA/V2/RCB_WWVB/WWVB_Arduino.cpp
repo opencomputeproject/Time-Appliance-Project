@@ -704,8 +704,8 @@ HAL_StatusTypeDef HAL_SPI_Receive_DMA_NoStart_NoInterrupt(SPI_HandleTypeDef *hsp
   /* Set the DMA AbortCpltCallback */
   hspi->hdmarx->XferAbortCallback = NULL;
 
-  Serial.println("Enabling DMA TC interrupt for MDMA");
-  ((DMA_Stream_TypeDef   *)hspi->hdmarx->Instance)->CR |= DMA_IT_TC;
+  //Serial.println("Enabling DMA TC interrupt for MDMA");
+  //((DMA_Stream_TypeDef   *)hspi->hdmarx->Instance)->CR |= DMA_IT_TC;
 
   /* Enable the Rx DMA Stream/Channel  */
   if (HAL_OK != HAL_DMA_Start(hspi->hdmarx, (uint32_t)&hspi->Instance->RXDR, (uint32_t)hspi->pRxBuffPtr,

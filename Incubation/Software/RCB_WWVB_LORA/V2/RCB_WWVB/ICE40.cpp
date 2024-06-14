@@ -8,12 +8,16 @@
 
 void hold_ice40_reset() {
   wwvb_gpio_pinmode(ICE_SPARE4, OUTPUT);
+  wwvb_gpio_pinmode(ICE_SPARE1, OUTPUT);
   wwvb_digital_write(ICE_SPARE4, 1); // using SPARE4 as reset
+  wwvb_digital_write(ICE_SPARE1, 1); // using SPARE1 as mux control to sx1257, 0 to connect direct to sx1257
 }
 
 void release_ice40_reset() {
   wwvb_gpio_pinmode(ICE_SPARE4, OUTPUT);
+  wwvb_gpio_pinmode(ICE_SPARE1, OUTPUT);
   wwvb_digital_write(ICE_SPARE4, 0); // using SPARE4 as reset
+  wwvb_digital_write(ICE_SPARE1, 0); // connect SPI6 to SX1257
 }
 
 
