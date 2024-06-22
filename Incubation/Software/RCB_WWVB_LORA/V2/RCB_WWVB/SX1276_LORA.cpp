@@ -129,22 +129,6 @@ int LoRaClass::init() {
   }
 
   wwvb_gpio_pinmode(SX1276_DIO0,INPUT);
-  /*
-  // Enable DIO0 interrupt by default
-  GPIO_InitStruct.Pin = WWVB_Pins[SX1276_DIO0].GPIO_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Alternate = 0;
-  HAL_GPIO_Init(WWVB_Pins[SX1276_DIO0].GPIO_Group, &GPIO_InitStruct);
-
-  // Configure the EXTI line for pin B9
-  SYSCFG->EXTICR[2] &= ~(0xFU << 4);  // Clear any previous setting for EXTI9
-  SYSCFG->EXTICR[2] |= (0x1U << 4);  // Connect EXTI9 line to GPIO port B (0x1 corresponds to port B)
-
-  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 15,0);
-  HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
-  */
-
 
   wwvb_gpio_pinmode(LORA_SMA_UFL_SEL, OUTPUT);
   wwvb_gpio_pinmode(LORA_LF_TXRX_SEL, OUTPUT);
@@ -155,19 +139,6 @@ int LoRaClass::init() {
 
   return 0;
 }
-
-/*
-void EXTI9_5_IRQHandler(void) {
-  HAL_GPIO_EXTI_IRQHandler(SX1276_DIO0);
-}
-
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-  if (GPIO_Pin == SX1276_DIO0) {
-      // Your code here to handle the rising edge interrupt on pin B9
-      Serial.println("GOT GPIO INTERRUPT ON SX1276_DIO0 ");
-  }
-}
-*/
 
 int LoRaClass::setantenna(bool sma, bool hf, bool tx) {
   if ( sma ) wwvb_digital_write(LORA_SMA_UFL_SEL, 0); // 0 for output 2, SMA
@@ -256,7 +227,7 @@ int LoRaClass::beginPacket(int implicitHeader)
 {
   //Serial.println("SX1276 Begin packet start");
   if (isTransmitting()) {
-    //Serial.println("LoRA begin packet end not transmitting");
+    Serial.println("LoRA begin packet end not transmitting");
     return 0;
   }
 
@@ -887,7 +858,7 @@ uint8_t LoRaClass::singleTransfer(uint8_t address, uint8_t value)
   
   //_spi->beginTransaction(_spiSettings);
   wwvb_digital_write(_ss, LOW);
-  delayMicroseconds(50); // setup time for slave select, SPI is super fast API apparently
+  delayMicroseconds(20); // setup time for slave select, SPI is super fast API apparently
 
   //_spi->transfer(address);
   retval = HAL_SPI_TransmitReceive(&_spi, &address, &response, sizeof(address), HAL_MAX_DELAY);  //ignore receive data
@@ -902,7 +873,7 @@ uint8_t LoRaClass::singleTransfer(uint8_t address, uint8_t value)
   }
 
   wwvb_digital_write(_ss, HIGH);
-  delayMicroseconds(50); // needs some hold time for slave select , SPI HAL can be super fast
+  delayMicroseconds(20); // needs some hold time for slave select , SPI HAL can be super fast
 
 
   /*
