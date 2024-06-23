@@ -3,8 +3,8 @@ from renesas_cm_configfiles import *
 from smbus2 import SMBus
 import time
 
-eeprom_file="MiniPTMV4_BaseConfig_3-20-2024.hex"
-i2c_bus=1
+eeprom_file="MiniPTMV4_BaseConfig_4-10-2024.hex"
+i2c_bus=4
 eeprom_addr=0x54
 block_select_bit=1
 write_delay=0.005 #5ms delay after write

@@ -476,7 +476,8 @@ DPLL_FREQ_WRITE_LAYOUT = {
 
 
 DPLL_GENERAL_STATUS_LAYOUT = {
-    "EEPROM_STATUS": {"offset": 0x8, "fields": {"VALUE": BitField(0, 8)}},
+    "EEPROM_STATUS_7_0": {"offset": 0x8, "fields": {"VALUE": BitField(0, 8)}},
+    "EEPROM_STATUS_8_15": {"offset": 0x9, "fields": {"VALUE": BitField(0, 8)}},
     "MAJOR RELEASE": {"offset": 0x10, "fields": {"VALUE": BitField(0, 8)}},
     "MINOR RELEASE": {"offset": 0x11, "fields": {"VALUE": BitField(0, 8)}},
     "HOTFIX RELEASE": {"offset": 0x12, "fields": {"VALUE": BitField(0, 8)}},

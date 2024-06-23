@@ -2268,8 +2268,47 @@ class MiniPTM:
 
         return
 
-    def debug_frame_sync_working(self, master_num=0, slave_num=1):
 
+    def disable_resync_trigger_frame_sync(self, board_num=0, dpll_num=0):
+        # disable auto frame resync
+        val = self.boards[board_num].dpll.modules["DPLL_Config"].read_reg(
+            dpll_num, "DPLL_CTRL_2")
+        val = val & ~(1<<7) #disable bit 7
+        self.boards[board_num].dpll.modules["DPLL_Config"].write_reg(
+            dpll_num, "DPLL_CTRL_2", val)
+
+        # trigger register
+        val = self.boards[board_num].dpll.modules["DPLL_Config"].read_reg(
+            dpll_num, "DPLL_MODE")
+        self.boards[board_num].dpll.modules["DPLL_Config"].write_reg(
+            dpll_num, "DPLL_MODE", val)
+
+        print(f"Disabled Board{board_num} chan{dpll_num} auto frame pulse sync, waiting")
+        time.sleep(5)
+
+        # enable frame mode
+        val = self.boards[board_num].dpll.modules["DPLL_Config"].read_reg(
+            dpll_num, "DPLL_CTRL_2")
+        val = val & ~(3 << 5)
+        val = val | (1 << 5)  # frame sync mode
+        self.boards[board_num].dpll.modules["DPLL_Config"].write_reg(
+            dpll_num, "DPLL_CTRL_2", val)
+
+        # trigger register
+        val = self.boards[board_num].dpll.modules["DPLL_Config"].read_reg(
+            dpll_num, "DPLL_MODE")
+        self.boards[board_num].dpll.modules["DPLL_Config"].write_reg(
+            dpll_num, "DPLL_MODE", val)
+
+        # force slave frame resync once
+        print(f"Forcing Board{board_num} chan{dpll_num} frame pulse sync")
+        self.boards[board_num].dpll.modules["DPLL_Ctrl"].write_reg(
+            dpll_num, "DPLL_FRAME_PULSE_SYNC", 1)
+
+        time.sleep(5)
+
+
+    def debug_frame_sync_initial_frame_alignment(self, master_num=0, slave_num=1):
         # Step 1. Align master TOD to golden pps
         # print(f"Debug frame sync step 1, discipline master TOD0 based on local 1PPS")
         # for i in range(2):
@@ -2286,49 +2325,91 @@ class MiniPTM:
         #    self.boards[master_num].dpof.adjust_tod(0, sec_tod, rcvd_tod, False)
         #    time.sleep(4)
 
-        # disable slave dpll0 auto frame resync
-        self.boards[slave_num].dpll.modules["DPLL_Config"].write_reg(
-            2, "DPLL_CTRL_2", 0x6)
+        slave_dpll_num = 0
+        master_dpll_num = 3
+        self.disable_resync_trigger_frame_sync(slave_num, slave_dpll_num) # SFP channel
+        self.disable_resync_trigger_frame_sync(slave_num, 5) # channel 5 for SMA
 
-        # trigger register
-        val = self.boards[slave_num].dpll.modules["DPLL_Config"].read_reg(
-            2, "DPLL_MODE")
-        self.boards[slave_num].dpll.modules["DPLL_Config"].write_reg(
-            2, "DPLL_MODE", val)
+        # master 1pps round trip channel 
+        self.disable_resync_trigger_frame_sync(master_num, 7)
+        # doing this for ease of measurement as well on master
+        self.disable_resync_trigger_frame_sync(master_num, 3)
 
-        print(f"Disabled auto slave frame pulse sync, waiting")
-        time.sleep(5)
 
-        # disable master dpll3 auto frame resync
-        self.boards[master_num].dpll.modules["DPLL_Config"].write_reg(
-            3, "DPLL_CTRL_2", 0x14)
 
-        # trigger register
-        val = self.boards[master_num].dpll.modules["DPLL_Config"].read_reg(
-            2, "DPLL_MODE")
-        self.boards[master_num].dpll.modules["DPLL_Config"].write_reg(
-            3, "DPLL_MODE", val)
-        print(f"Disabled auto master frame pulse sync, waiting")
-        time.sleep(5)
 
-        # enable slave frame mode
-        val = self.boards[slave_num].dpll.modules["DPLL_Config"].read_reg(
-            2, "DPLL_CTRL_2")
-        val = val & ~(3 << 5)
-        val = val | (1 << 5)  # frame sync mode
-        self.boards[slave_num].dpll.modules["DPLL_Config"].write_reg(
-            2, "DPLL_CTRL_2", val)
+    def debug_frame_sync_working(self, master_num=0, slave_num=1):
 
-        # trigger register
-        val = self.boards[slave_num].dpll.modules["DPLL_Config"].read_reg(
-            2, "DPLL_MODE")
-        self.boards[slave_num].dpll.modules["DPLL_Config"].write_reg(
-            2, "DPLL_MODE", val)
+        self.debug_frame_sync_initial_frame_alignment(master_num, slave_num)
 
-        # force slave frame resync once
-        print(f"Forcing slave frame pulse sync")
-        self.boards[slave_num].dpll.modules["DPLL_Ctrl"].write_reg(
-            2, "DPLL_FRAME_PULSE_SYNC", 1)
+        # measure two phase measurements
+        # round trip measurement on master
+        # golden versus what sending to the slave
+        # these are channel numbers for what DPLL channels are doing phase measurement
+        round_trip_num = 6
+        golden_vs_send_num = 0
+        master_source_num = 0 # what channel is source
+        kp = 1400
+        ki = 0
+        error_sum = 0
+
+        dpll = self.boards[master_num].dpll
+
+        for i in range(50):
+            round_trip = dpll.modules["Status"].read_reg_mul(0,
+                    f"DPLL{round_trip_num}_PHASE_STATUS_7_0",5)
+            sending_phase = dpll.modules["Status"].read_reg_mul(0,
+                    f"DPLL{golden_vs_send_num}_PHASE_STATUS_7_0",5)
+
+            hex_roundtrip = [hex(x) for x in round_trip]
+            hex_sendingphase = [hex(x) for x in sending_phase]
+            print(f"Round_trip={hex_roundtrip}, sending_phase={hex_sendingphase}")
+
+            round_trip_val = 0
+            sending_phase_val = 0
+            for index, val in enumerate(round_trip):
+                round_trip_val += (val << (8*index))
+            for index, val in enumerate(sending_phase):
+                sending_phase_val +=  (val << (8*index))
+
+            print(f"Round_trip_val={round_trip_val}, sending_phase_val={sending_phase_val}")
+
+            round_trip_val = int_to_signed_nbit(round_trip_val,36)
+            sending_phase_val = int_to_signed_nbit(sending_phase_val,36)
+
+            # this is in units of 50ps, convert to picoseconds
+            round_trip_val *= 50
+            sending_phase_val *= 50
+
+            print(f"Round_trip_val={round_trip_val} ps, sending_phase_val={sending_phase_val} ps")
+
+            # discipline master source channel frequency
+            # error signal is difference between round trip and sending phase
+            # sending phase should be half round trip
+            # round trip will be negative, sending phase should become positive
+            goal = abs(round_trip_val/2)
+
+            error_signal = sending_phase_val - goal 
+            zero_val = to_twos_complement_bytes(0,42)
+            print(f"Raw Error signal: {error_signal} ps")
+
+            error_sum += error_signal * ki
+            pi_val = error_signal * kp + error_sum 
+            val_bytes = to_twos_complement_bytes( int(pi_val) ,42)
+            print(f"PI val = {pi_val}")
+
+
+            print(f"Writing val bytes {val_bytes}")
+            dpll.modules["DPLL_Freq_Write"].write_reg_mul(master_source_num,
+                    "DPLL_WR_FREQ_7_0", val_bytes)
+
+            time.sleep(1)
+
+            print(f"Did frequency adjust , now let it stabilize")
+            dpll.modules["DPLL_Freq_Write"].write_reg_mul(master_source_num,
+                    "DPLL_WR_FREQ_7_0", zero_val)
+            time.sleep(16) 
+            print(f"Done stabilize\n")
 
         return
 
@@ -2461,41 +2542,44 @@ class MiniPTM:
 
         for i in range(100):
             master_rcvd_tod = self.boards[master_num].i2c.read_dpll_reg_multiple(
-            0xce80, 0x0, 30)
+            0xce80, 0x0, 11)
+            master_test = self.boards[master_num].i2c.read_dpll_reg_multiple(
+                    0xc014, 0x10, 3)
             slave_rcvd_tod = self.boards[slave_num].i2c.read_dpll_reg_multiple(
-            0xce80, 0x0, 30)
+            0xce80, 0x0, 11)
 
             # use read primary
-            self.boards[master_num].dpll.modules["TODReadPrimary"].write_reg(2,
+            self.boards[master_num].dpll.modules["TODReadPrimary"].write_reg(1,
                                                         "TOD_READ_PRIMARY_CMD", 0x0)
-            self.boards[master_num].dpll.modules["TODReadPrimary"].write_reg(2,
+            self.boards[master_num].dpll.modules["TODReadPrimary"].write_reg(1,
                                                         "TOD_READ_PRIMARY_CMD", 0x1)
 
-            cur_tod_master = self.boards[master_num].dpll.modules["TODReadPrimary"].read_reg_mul(2,
+            cur_tod_master = self.boards[master_num].dpll.modules["TODReadPrimary"].read_reg_mul(1,
                                                                      "TOD_READ_PRIMARY_SUBNS", 11)
 
-            self.boards[slave_num].dpll.modules["TODReadPrimary"].write_reg(2,
+            self.boards[slave_num].dpll.modules["TODReadPrimary"].write_reg(1,
                                                         "TOD_READ_PRIMARY_CMD", 0x0)
-            self.boards[slave_num].dpll.modules["TODReadPrimary"].write_reg(2,
+            self.boards[slave_num].dpll.modules["TODReadPrimary"].write_reg(1,
                                                         "TOD_READ_PRIMARY_CMD", 0x1)
 
-            cur_tod_slave = self.boards[slave_num].dpll.modules["TODReadPrimary"].read_reg_mul(2,
+            cur_tod_slave = self.boards[slave_num].dpll.modules["TODReadPrimary"].read_reg_mul(1,
                                                                      "TOD_READ_PRIMARY_SUBNS", 11)
 
             print(f"")
-            print(f"Master tod2={cur_tod_master}, slave tod2={cur_tod_slave}")
+            print(f"Master test = {master_test},  Master tod2={cur_tod_master}, slave tod2={cur_tod_slave}")
             print(f"Debug TOD loop {i}, mastertod={master_rcvd_tod}, slavetod={slave_rcvd_tod}")
             time.sleep(0.4)
 
 
     def debug_me(self):
 
-
-        self.debug_tod_both_boards()
-        return
+        #self.debug_tod_both_boards()
+        #return
 
         self.debug_frame_sync_working()
         return
+
+
 
         self.debug_me_coarse()
         self.debug_me_fine()
@@ -2520,7 +2604,7 @@ class MiniPTM:
         # self.boards[1].dpll.modules["DPLL_Config"].print_all_registers(2)
         # self.boards[1].dpll.modules["DPLL_Config"].print_all_registers(3)
         print(f"\n\n************** BOARD 0 ***********************\n\n")
-        # self.boards[0].dpll.modules["DPLL_GeneralStatus"].print_all_registers(0)
+        self.boards[0].dpll.modules["DPLL_GeneralStatus"].print_all_registers(0)
         self.boards[0].dpll.modules["Status"].print_all_registers(0)
         self.boards[0].dpll.modules["TOD"].print_all_registers(2)
         self.boards[0].dpll.modules["PWMEncoder"].print_all_registers(2)
@@ -2529,6 +2613,7 @@ class MiniPTM:
         # self.boards[0].dpll.modules["DPLL_Config"].print_all_registers(5)
 
         print(f"\n\n************** BOARD 1 ***********************\n\n")
+        self.boards[1].dpll.modules["DPLL_GeneralStatus"].print_all_registers(0)
         self.boards[1].dpll.modules["Status"].print_all_registers(0)
         self.boards[1].dpll.modules["TOD"].print_all_registers(2)
         self.boards[1].dpll.modules["PWMEncoder"].print_all_registers(2)
