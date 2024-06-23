@@ -277,6 +277,36 @@ extern WWVB_Pin WWVB_Pins[];
 #define ICE_SPARE5_G GPIOD
 
 
+
+/**************** RCB pins ***************/
+// USART1 TX
+#define RCB_UART_TX_N GPIO_PIN_6
+#define RCB_UART_TX_G GPIOB
+
+// USART1 RX
+#define RCB_UART_RX_N GPIO_PIN_15
+#define RCB_UART_RX_G GPIOB
+
+// I2C1_SCL or I2C4_SCL
+#define RCB_I2C_SCL_N GPIO_PIN_8
+#define RCB_I2C_SCL_G GPIOB
+
+// I2C1_SDA or I2C4_SDA
+#define RCB_I2C_SDA_N GPIO_PIN_7
+#define RCB_I2C_SDA_G GPIOB
+
+// PPS out, HRTIM_CHC1
+#define RCB_PPS_OUT_N GPIO_PIN_9
+#define RCB_PPS_OUT_G GPIOA
+
+// PPS in, HRTIM_EEV1
+#define RCB_PPS_IN_N GPIO_PIN_10
+#define RCB_PPS_IN_G GPIOC
+
+
+
+
+
 #define PIN_STRUCT(pin) \
   { pin##_N, pin##_G }
 
