@@ -94,6 +94,13 @@ enum WWVB_Pin_Name {
   ICE_SPARE4,
   ICE_SPARE5,
 
+  RCB_UART_TX,
+  RCB_UART_RX,
+  RCB_I2C_SCL,
+  RCB_I2C_SDA,
+  RCB_PPS_OUT,
+  RCB_PPS_IN,
+
   NUM_PINS
 };
 
