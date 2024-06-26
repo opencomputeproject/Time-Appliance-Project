@@ -183,11 +183,36 @@ void clear_lora_done()
 }
 
 
-void get_lora_iq_pointers(int * last_I, int * last_Q)
+inline void get_lora_iq_pointers(int * last_I, int * last_Q)
 {
-  *last_I = __HAL_DMA_GET_COUNTER(&SX1257_SDR.hdma_spi1_rx);
-  *last_Q = __HAL_DMA_GET_COUNTER(&SX1257_SDR.hdma_spi2_rx);
+  // Note about these counters
+  // It is the number of remaining data items to be transmitted
+  // so if buffer is 10000 and this counter is 9000, it means 1000 items have been transferred
+  // it won't be zero in my case where I never disable DMA and it runs in circular mode
+  // so keep this in mind about going from earliest to latest
+  // if counter is 9999, then last index is 0
+
+  // to make this make sense, meaning the index of the last item written
+  // its BUFFER_SIZE - counter - 1
+  // example: BUFFER_SIZE = 10000
+  // counter = 9995
+  // means 9995 items left to transfer, so 5 have been transferred
+  // last_I = 4, BUFFER_SIZE - counter - 1
+  // handle the case where counter == BUFFER_SIZE
+
+  if ( __HAL_DMA_GET_COUNTER(&SX1257_SDR.hdma_spi1_rx) == BUFFER_SIZE ) {
+    *last_I = 0; // max number of items left to transfer, either non transferred or right at the edge of buffer
+  } else {
+    *last_I = BUFFER_SIZE - __HAL_DMA_GET_COUNTER(&SX1257_SDR.hdma_spi1_rx) - 1;
+  }
+
+  if ( __HAL_DMA_GET_COUNTER(&SX1257_SDR.hdma_spi2_rx) == BUFFER_SIZE ) {
+    *last_Q = 0; // max number of items left to transfer, either non transferred or right at the edge of buffer
+  } else {
+    *last_Q = BUFFER_SIZE - __HAL_DMA_GET_COUNTER(&SX1257_SDR.hdma_spi2_rx) - 1;
+  }
 }
+
 
 void check_start_lora_rx()
 {

@@ -350,6 +350,7 @@ void processSingleCharCommand(char command) {
         }        
       }
 
+
       break;
     
     default:
