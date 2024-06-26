@@ -267,7 +267,7 @@ void dump_lora_iq_from_oldest()
 void compute_phase_from_lora_iq(phaseUnion * phi)
 {
   Serial.println("Compute phase from LoRA IQ place holder!");
-  dump_lora_iq_from_oldest();
+  //dump_lora_iq_from_oldest();
   if ( phi != 0 ) {
     phi->value = 0; // 0 for now
   }

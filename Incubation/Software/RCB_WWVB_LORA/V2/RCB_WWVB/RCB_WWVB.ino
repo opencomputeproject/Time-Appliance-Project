@@ -171,6 +171,11 @@ void processSingleCharCommand(char command) {
   // Implement your logic for handling single character commands here
   // Example:
   wiwi_pkt_announce fake_packet;
+  int count = 0;
+  int rssi = 0;
+  float snr = 0;
+  int packetSize;
+  uint8_t pktbuf[40];
   switch (command) {
     case '0':
       Serial.println("Setting start_wiwi flag due to user input!\r\n");
@@ -243,6 +248,7 @@ void processSingleCharCommand(char command) {
       Serial.println("Done packet spam!");
       break;
     case '6':
+    case 'w':
       // IQ testing 
       fake_packet.hdr.wiwi_id = htonl(0x77697769); // uin32_t / uint16_t needs reverse order
       fake_packet.hdr.mac_src = 0xfe;
@@ -279,6 +285,7 @@ void processSingleCharCommand(char command) {
       }
 
       compute_phase_from_lora_iq(0);
+      dump_lora_iq_from_oldest();
       clear_lora_done(); // make sure this flag is done  
       force_restart_lora_rx(); // make sure SDR path and DMA is running again
       
@@ -302,6 +309,49 @@ void processSingleCharCommand(char command) {
       HAL_NVIC_SystemReset();
       break;
     // Add more cases as needed
+    case 'r': // test case, wait for and receive one LoRA WiWi packet
+      // setup LoRA RX
+      clear_lora_done(); // make sure this flag is done  
+      force_restart_lora_rx(); // make sure SDR path and DMA is running again
+
+      
+      while ( 1 ) {
+        if ( check_lora_done() )
+        {
+          Serial.println("Received one packet!");
+          packetSize = SX1276_Lora.parsePacket(40);
+          if ( packetSize) {
+            // should always happen
+            rssi = SX1276_Lora.packetRssi();
+            snr = SX1276_Lora.packetSnr();
+            sprintf(print_buffer, "Lora packet rssi=%d , snr=%f\r\n");
+            Serial.print(print_buffer);
+            Serial.print("Received packet data: ");
+            for (int j = 0; j < 40; j++) {
+              if ( SX1276_Lora.available() ) {
+                
+                pktbuf[j] = (uint8_t)SX1276_Lora.read();
+                sprintf(print_buffer, " 0x%x", pktbuf[j]);
+                Serial.print(print_buffer);
+              }
+            }
+            Serial.println("");
+            Serial.println("IQ Data:");
+            dump_lora_iq_from_oldest();
+
+          }
+          break;
+        } else {
+          count++;
+          delay(10);
+          if ( (count % 100) == 0 ) {
+            Serial.println("Waiting for LoRA packet test r");
+          }
+        }        
+      }
+
+      break;
+    
     default:
       Serial.println("Unknown command");
       break;
