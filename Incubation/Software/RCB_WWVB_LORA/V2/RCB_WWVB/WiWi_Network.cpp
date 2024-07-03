@@ -38,9 +38,8 @@ float twophi_D_history=0;
 float twophi_D_history_raw = 0;
 int uwcount_d_prev = 0;
 void wiwi_use_phi_c(phaseUnion phi_aa, phaseUnion phi_ab, phaseUnion phi_ba, phaseUnion phi_bb) {
-  // Not included in this release
-
-  
+  // not included in this release
+  return;  
 }
 
 
@@ -156,7 +155,7 @@ void wiwi_client_send_master_request(bool retransmit) {
 	wiwi_pkt->previous_rx_iq = clientmanager.master.last_rx_delay_pkts[0].phase; 
 
   wiwi_pkt->checksum = 0;
-  for ( int i = 0; i < WIWI_PKT_DELAY_LEN -1; i++ ) {
+  for ( int i = 0; i < sizeof(wiwi_pkt_hdr) -1; i++ ) {
     wiwi_pkt->checksum ^= ((uint8_t*)wiwi_pkt)[i];
   }
 
@@ -304,7 +303,7 @@ void wiwi_send_delay_resp(ClientConnection * client, packet * pkt_delay_req, wiw
   single_packet->timestamp = 0;
 
   wiwi_pkt->checksum = 0;
-  for ( int i = 0; i < WIWI_PKT_DELAY_LEN -1; i++ ) {
+  for ( int i = 0; i < sizeof(wiwi_pkt_hdr) -1; i++ ) {
     wiwi_pkt->checksum ^= ((uint8_t*)wiwi_pkt)[i];
   }
 	
@@ -392,10 +391,21 @@ void wiwi_receive_one_packet() {
 	// parse the packet , not most optimal but whatever
   
   single_packet_index = rx_packet_list.shift();
-  //Serial.printf("Wiwi receive one packet start index %d\r\n", single_packet_index);
+
+  sprintf(print_buffer, "Wiwi receive one packet start index %d\r\n", single_packet_index);
+  Serial.print(print_buffer);
+
+  
+
   single_packet = &packet_buffer[single_packet_index];
 	
 	single_hdr = (wiwi_pkt_hdr *)single_packet->data;
+  for ( int i = 0; i < single_packet->pkt_len; i++ ) {
+    sprintf(print_buffer, "0x%x ", single_packet->data[i]);
+    Serial.print(print_buffer);
+  }
+  Serial.println("");
+
 	
 	// WiWi packet check, packet contents are raw, need htonlz if sent as uint32_t 
 	if ( single_hdr->wiwi_id != htonl(0x77697769) ) {
@@ -403,6 +413,7 @@ void wiwi_receive_one_packet() {
     free_packet_list.add(single_packet_index); // make sure this is freed back
 		return;
 	}	
+
 	// broadcast or unicast packet to me check
 	if ( single_hdr->mac_dest != 0xff &&
 		single_hdr->mac_dest != wiwi_mac_addr && 
@@ -421,12 +432,31 @@ void wiwi_receive_one_packet() {
   Serial.print(print_buffer);
 
   // checksum check
+  uint8_t rcvd_checksum = 0;
   uint8_t calc_checksum = 0;
-  for ( int i =0; i < WIWI_PKT_DELAY_LEN-1; i++ ) {
-    calc_checksum ^= single_packet->data[i];
+  if ( single_hdr->pkt_type == WIWI_PKT_DELAY_REQ ||
+        single_hdr->pkt_type == WIWI_PKT_DELAY_RESP ) 
+  {
+    delay_pkt = (wiwi_pkt_delay *) (single_hdr);
+    rcvd_checksum = delay_pkt->checksum;
+    for ( int i =0; i < sizeof(wiwi_pkt_hdr)-1; i++ ) {
+      calc_checksum ^= single_packet->data[i];
+    }
   }
-  if ( calc_checksum != single_packet->data[WIWI_PKT_DELAY_LEN-1] ) {
-    Serial.print("Network stack received one packet with invalid checksum!\r\n");
+  else if ( single_hdr->pkt_type == WIWI_PKT_ANNOUNCE ) {
+    announce_pkt = (wiwi_pkt_announce *) (single_hdr);
+    rcvd_checksum = announce_pkt->checksum;
+    for ( int i =0; i < sizeof(wiwi_pkt_hdr)-1; i++ ) {
+      calc_checksum ^= single_packet->data[i];
+    }
+  }
+
+
+
+  if ( calc_checksum != rcvd_checksum ) {
+    sprintf(print_buffer, "Network stack received one packet with invalid checksum, got 0x%x, expected 0x%x\r\n",
+      rcvd_checksum, calc_checksum);
+    Serial.print(print_buffer);
     free_packet_list.add(single_packet_index); // make sure this is freed back
 		return; 
 
@@ -440,6 +470,7 @@ void wiwi_receive_one_packet() {
     if ( single_hdr->pkt_type == WIWI_PKT_ANNOUNCE ) { // my last announce
       clientmanager.last_announce_timestamp = single_packet->timestamp;
       clientmanager.last_announce_phase = single_packet->phase;
+      Serial.println("Network stack saw my own announce packet");
     } else if ( single_hdr->pkt_type == WIWI_PKT_DELAY_REQ ) { // I sent out delay request
       Serial.print("See my delay request go out on RX chipset\r\n");
       clientmanager.master.last_transmit_time = millis();
@@ -512,6 +543,7 @@ void wiwi_receive_one_packet() {
 }
 
 void wiwi_receive_packets() {
+  Serial.println("wiwi receive packets start");
 	while ( rx_packet_list.size() > 0 ) {
 		// loop through each packet
 		wiwi_receive_one_packet();
@@ -546,8 +578,6 @@ void wiwi_clean_client_list() {
 
 
 void send_announce_message() {	
-  // HACK THIS OUT
-  return;
 	if ( tx_packet_list.size() >= PACKET_BUFFER_SIZE ) {
     Serial.println("Send announce message, tx packet list full");
 		return; // packet buffer full
@@ -577,7 +607,7 @@ void send_announce_message() {
 	wiwi_pkt->previous_iq = clientmanager.last_announce_phase;
 
   wiwi_pkt->checksum = 0;
-  for ( int i = 0; i < WIWI_PKT_ANNOUNCE_LEN -1; i++ ) {
+  for ( int i = 0; i < sizeof(wiwi_pkt_hdr) -1; i++ ) {
     wiwi_pkt->checksum ^= ((uint8_t*)wiwi_pkt)[i];
   }
 

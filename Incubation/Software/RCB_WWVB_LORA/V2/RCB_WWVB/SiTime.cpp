@@ -85,7 +85,8 @@ void apply_freq_change(float del_freq_hz){
     toRet = (int32_t) round( (del_freq / 200) * (1 << 25)); // 200ppm 
   }
 
-  //Serial.printf("Writing : %f , 0x%x, %d, %f Hz\r\n", sitime_center_freq, toRet, toRet, del_freq_hz+frequency_offset);
+  sprintf(print_buffer, "Writing : %f , 0x%x, %d, %f Hz\r\n", sitime_center_freq, toRet, toRet, del_freq_hz+frequency_offset);
+  Serial.print(print_buffer);
 
 
   SIT5501_I2C.beginTransmission(DCTCXO_ADDR);
@@ -99,8 +100,11 @@ void apply_freq_change(float del_freq_hz){
   int i2c_status = SIT5501_I2C.endTransmission();
 
 
-  //Serial.printf("Freq setting Status : 0x%x\r\n", i2c_status);
-  //Serial.printf("Current Frequency: %f\r\n", (del_freq_hz + frequency_offset));
+  sprintf(print_buffer, "Freq setting Status : 0x%x\r\n", i2c_status);
+  Serial.print(print_buffer);
+
+  sprintf(print_buffer, "Current Frequency: %f\r\n", (del_freq_hz + frequency_offset));
+  Serial.print(print_buffer);
 
 }
 

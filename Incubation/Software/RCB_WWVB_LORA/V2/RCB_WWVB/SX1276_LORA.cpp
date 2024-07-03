@@ -18,6 +18,7 @@
 #define REG_FIFO_TX_BASE_ADDR    0x0e
 #define REG_FIFO_RX_BASE_ADDR    0x0f
 #define REG_FIFO_RX_CURRENT_ADDR 0x10
+#define REG_IRQ_MASK             0x11
 #define REG_IRQ_FLAGS            0x12
 #define REG_RX_NB_BYTES          0x13
 #define REG_PKT_SNR_VALUE        0x19
@@ -117,7 +118,7 @@ int LoRaClass::init() {
   _spi.Init.CLKPolarity = SPI_POLARITY_LOW;  // Clock polarity
   _spi.Init.CLKPhase = SPI_PHASE_1EDGE;  // Clock phase
   _spi.Init.NSS = SPI_NSS_SOFT;  // NSS signal is managed by software
-  _spi.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16;  // Baud rate prescaler
+  _spi.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_32;  // Baud rate prescaler
   _spi.Init.FirstBit = SPI_FIRSTBIT_MSB;  // Data is transmitted MSB first
   _spi.Init.TIMode = SPI_TIMODE_DISABLE;  // Disable TI mode
   _spi.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;  // Disable CRC calculation
@@ -204,7 +205,19 @@ int LoRaClass::begin(long frequency)
   writeRegister(REG_MODEM_CONFIG_3, 0x04);
 
   // set output power to 17 dBm
-  setTxPower(17);
+  //setTxPower(17);
+
+  writeRegister(REG_IRQ_MASK, 0xA7); // mask everything except RxDone and ValidHeader and TxDone
+  setTxPower(17,PA_OUTPUT_PA_BOOST_PIN); // V2 board , HF output uses boost pin!
+  setCodingRate4(1);
+  setSignalBandwidth(125E3);
+  setSpreadingFactor(7);
+  setPreambleLength(8);
+  enableLowDataRateOptimize();
+  //disableLowDataRateOptimize();
+  //setGain(0); // AGC mode
+  disableCrc();
+
 
 
   // put in standby mode
@@ -232,7 +245,7 @@ int LoRaClass::beginPacket(int implicitHeader)
   }
 
   // put in standby mode
-  idle();
+  //idle();
 
   if (implicitHeader) {
     implicitHeaderMode();
@@ -248,30 +261,59 @@ int LoRaClass::beginPacket(int implicitHeader)
   return 1;
 }
 
+void LoRaClass::setDio0_TxDone()
+{
+  writeRegister(REG_DIO_MAPPING_1, 0x40); // DIO0 => TXDONE
+}
+
+void LoRaClass::setDio0_RxDone()
+{
+  writeRegister(REG_DIO_MAPPING_1, 0x0); // DIO0 => RXDONE
+}
+
+void LoRaClass::clearIRQs()
+{
+  // clear IRQ's
+  writeRegister(REG_IRQ_FLAGS, 0xFF);
+}
+
+bool LoRaClass::getDio0Val() 
+{
+  return wwvb_digital_read(SX1276_DIO0);
+}
+
 int LoRaClass::endPacket(bool async)
 {
   uint8_t val = 0;
   //Serial.println("SX1276 end packet start");
   //Serial.println("SX1276 end packet async start");
-  writeRegister(REG_DIO_MAPPING_1, 0x40); // DIO0 => TXDONE
+  
   //Serial.println("SX1276 end packet async end");
   //Serial.println("SX1276 end packet point 1");
   // put in TX mode
   writeRegister(REG_OP_MODE, MODE_LONG_RANGE_MODE | MODE_TX);
   //Serial.println("SX1276 end packet point 2");
+  int wait_count = 0;
   if (!async) {
     // wait for TX done
     //Serial.println("SX1276 end packet point 3");
-    val = readRegister(REG_IRQ_FLAGS);
-    //Serial.println("SX1276 end packet point 4");
-    while ( (val & IRQ_TX_DONE_MASK) == 0) {
-      val = readRegister(REG_IRQ_FLAGS);
+    while ( !getDio0Val() )
+    {
+      delayMicroseconds(1);
+      wait_count++;
+    }
+
+    //val = readRegister(REG_IRQ_FLAGS);
+    //sprintf(print_buffer, "SX1276 end packet point4, count=%d\r\n",wait_count);
+    //Serial.print(print_buffer);
+    //while ( (val & IRQ_TX_DONE_MASK) == 0) {
+    //  val = readRegister(REG_IRQ_FLAGS);
       //Serial.print("Wait TX done 0x");
       //Serial.println(val, HEX);
-    }
+    //}
     //Serial.println("SX1276 end packet point 5");
     // clear IRQ's
-    writeRegister(REG_IRQ_FLAGS, IRQ_TX_DONE_MASK);
+    //writeRegister(REG_IRQ_FLAGS, IRQ_TX_DONE_MASK);
   }
   //Serial.println("SX1276 end packet end");
   return 1;
@@ -292,10 +334,20 @@ bool LoRaClass::isTransmitting()
   return false;
 }
 
+int LoRaClass::checkRxDone()
+{
+  return (readRegister(REG_IRQ_FLAGS) & IRQ_RX_DONE_MASK);
+}
+
+
+// clear IRQs AFTER this, not before
 int LoRaClass::parsePacket(int size)
 {
   int packetLength = 0;
   int irqFlags = readRegister(REG_IRQ_FLAGS);
+  //Serial.println("*******SX1276 LoRA parsePacket*******");
+  sprintf(print_buffer,"ParsePacket size=%d, irqFlags = 0x%x\r\n", size, irqFlags);
+  Serial.print(print_buffer);
 
   if (size > 0) {
     implicitHeaderMode();
@@ -306,9 +358,10 @@ int LoRaClass::parsePacket(int size)
   }
 
   // clear IRQ's
-  writeRegister(REG_IRQ_FLAGS, irqFlags);
+  //writeRegister(REG_IRQ_FLAGS, irqFlags);
 
   if ((irqFlags & IRQ_RX_DONE_MASK) && (irqFlags & IRQ_PAYLOAD_CRC_ERROR_MASK) == 0) {
+    //Serial.println("Parse packet, first if case");
     // received a packet
     _packetIndex = 0;
 
@@ -322,9 +375,16 @@ int LoRaClass::parsePacket(int size)
     // set FIFO address to current RX address
     writeRegister(REG_FIFO_ADDR_PTR, readRegister(REG_FIFO_RX_CURRENT_ADDR));
 
+    // if mode is in continous mode, don't change it
+    // otherwise put into idle
     // put in standby mode
-    idle();
+    if ( readRegister(REG_OP_MODE) == (MODE_LONG_RANGE_MODE | MODE_RX_CONTINUOUS) ) {
+      //Serial.println("Parse packet, in continous mode, leave alone");
+    } else {
+      idle();
+    }
   } else if (readRegister(REG_OP_MODE) != (MODE_LONG_RANGE_MODE | MODE_RX_SINGLE)) {
+    Serial.println("Parse packet, not currently in rx mode");
     // not currently in RX mode
 
     // reset FIFO address
@@ -505,8 +565,12 @@ void LoRaClass::onTxDone(void(*callback)())
 
 void LoRaClass::receive(int size)
 {
+  // page 41 of datasheet, put into sleep or standby mode first before putting in rxcont mode
 
-  writeRegister(REG_DIO_MAPPING_1, 0x00); // DIO0 => RXDONE
+  // put in standby mode
+  //Serial.println("************SX1276_LoRA receive**************");
+  //idle();  
+  //writeRegister(REG_DIO_MAPPING_1, 0x0); // DIO0 => RXDONE ([7:6] = 0x0) , DIO3 => ValidHeader ([1:0] = 0x1)
 
   if (size > 0) {
     implicitHeaderMode();

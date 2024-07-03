@@ -34,6 +34,12 @@ public:
   int begin(long frequency);
   void end();
 
+  void setDio0_TxDone();
+  void setDio0_RxDone();
+
+  bool getDio0Val();
+  void clearIRQs();
+
   int beginPacket(int implicitHeader = false);
   int endPacket(bool async = false);
 
@@ -41,6 +47,7 @@ public:
   int packetRssi();
   float packetSnr();
   long packetFrequencyError();
+  int checkRxDone();
 
   int rssi();
 

@@ -352,6 +352,8 @@ void HAL_SPI_IRQHandler_CircFix(SPI_HandleTypeDef *hspi) {
 HAL_StatusTypeDef HAL_SPI_DMAPause_Fix(SPI_HandleTypeDef *hspi) 
 {
   HAL_SPI_StateTypeDef State = hspi->State;
+
+  /**** Proper API 
   if ( HAL_IS_BIT_SET(hspi->Instance->CFG1, SPI_CFG1_TXDMAEN) && 
       ( State == HAL_SPI_STATE_BUSY_TX_RX || State == HAL_SPI_STATE_BUSY_TX ) )
   {
@@ -363,6 +365,12 @@ HAL_StatusTypeDef HAL_SPI_DMAPause_Fix(SPI_HandleTypeDef *hspi)
   {
     ATOMIC_CLEAR_BIT(hspi->Instance->CFG1, SPI_CFG1_RXDMAEN);
   }
+  ****/
+
+  /**** Hack API, should work??? ****/
+  // Disable SPI DMA TX request
+  ATOMIC_CLEAR_BIT(hspi->Instance->CFG1, SPI_CFG1_TXDMAEN); 
+  ATOMIC_CLEAR_BIT(hspi->Instance->CFG1, SPI_CFG1_RXDMAEN); 
   // disable SPI interrupts
   __HAL_SPI_DISABLE_IT(hspi, (SPI_IT_OVR | SPI_IT_FRE | SPI_IT_MODF));
 
@@ -373,7 +381,7 @@ HAL_StatusTypeDef HAL_SPI_DMAPause_Fix(SPI_HandleTypeDef *hspi)
 HAL_StatusTypeDef HAL_SPI_DMAResume_Fix(SPI_HandleTypeDef *hspi)
 { // Not sure about this
   HAL_SPI_StateTypeDef State = hspi->State;
-
+  /*
   if ( State == HAL_SPI_STATE_BUSY_TX_RX || State == HAL_SPI_STATE_BUSY_TX) {
     // Enable SPI DMA TX request
     ATOMIC_SET_BIT(hspi->Instance->CFG1, SPI_CFG1_TXDMAEN);    
@@ -382,8 +390,11 @@ HAL_StatusTypeDef HAL_SPI_DMAResume_Fix(SPI_HandleTypeDef *hspi)
     // Enable SPI DMA RX request
     ATOMIC_SET_BIT(hspi->Instance->CFG1, SPI_CFG1_RXDMAEN);    
   }
+  */
+  ATOMIC_SET_BIT(hspi->Instance->CFG1, SPI_CFG1_TXDMAEN); 
+  ATOMIC_SET_BIT(hspi->Instance->CFG1, SPI_CFG1_RXDMAEN);
   // enable SPI interrupts
-  __HAL_SPI_ENABLE_IT(hspi, (SPI_IT_OVR | SPI_IT_FRE | SPI_IT_MODF));
+  //__HAL_SPI_ENABLE_IT(hspi, (SPI_IT_OVR | SPI_IT_FRE | SPI_IT_MODF));
   // should I clear any interrupts? letting higher level handle 
 
   return HAL_OK;

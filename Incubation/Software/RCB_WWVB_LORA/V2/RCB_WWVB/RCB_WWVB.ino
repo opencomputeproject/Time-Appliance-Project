@@ -10,7 +10,7 @@
 #include "stm32_sdr.h"
 #include "ICE40.h"
 
-//#include <arm_math.h> // Arduino CMSIS DSP library for signal processing 
+
 //#include "mbed.h"
 
 
@@ -98,57 +98,6 @@ void print_SDR_DMA_Stats() {
 
 
 
-void LoRA_WiWi_basic_test() {
-
-
-  print_spi_registers("SPI1 I before SPI test", &SX1257_SDR._spi_I_Data);
-  print_spi_registers("SPI2 Q before SPI test", &SX1257_SDR._spi_Q_Data);
-
-  print_dma_registers("SPI1 I DMA before SPI test",(DMA_Stream_TypeDef *)(SX1257_SDR.hdma_spi1_rx.Instance) );
-  print_dma_registers("SPI2 Q DMA before SPI test",(DMA_Stream_TypeDef *)(SX1257_SDR.hdma_spi2_rx.Instance) );
-
-  SX1257_SDR.dumpRegisters(Serial);
-  uint8_t last_I_data_num = 0;
-  uint8_t last_Q_data_num = 0;
-  char printbuf[256];
-
-  // slow but fine, init all the buffers
-  for ( int i =0; i < BUFFER_SIZE; i++ ){
-    sram1_data->I_data[i] = 0x0;
-    sram2_data->Q_data[i] = 0x0;
-  }
-
-  Serial.println("ENABLING STM32 SDR SPI WITH ICE40 RESET HELD");
-  hold_ice40_reset();
-  __HAL_SPI_ENABLE(&SX1257_SDR._spi_I_Data); 
-  __HAL_SPI_ENABLE(&SX1257_SDR._spi_Q_Data); 
-  delay(5);
-  release_ice40_reset();
-  delay(100);
-
-  Serial.println("DISABLING STM32 SDR SPI");
-  __HAL_SPI_DISABLE(&SX1257_SDR._spi_I_Data); 
-  __HAL_SPI_DISABLE(&SX1257_SDR._spi_Q_Data); 
-
-  last_I_data_num = __HAL_DMA_GET_COUNTER(&SX1257_SDR.hdma_spi1_rx);
-  last_Q_data_num = __HAL_DMA_GET_COUNTER(&SX1257_SDR.hdma_spi2_rx);
-  sprintf(printbuf, "Last I num=%d, Last Q num=%d\r\n", last_I_data_num, last_Q_data_num);
-  Serial.print(printbuf);
-
-  for ( int i =0; i < BUFFER_SIZE; i++ ) {
-    //last_I_data_num = SX1257_SDR._spi_I_Data.Instance->RXDR;
-    //last_Q_data_num = SX1257_SDR._spi_Q_Data.Instance->RXDR;
-
-    last_I_data_num = __HAL_DMA_GET_COUNTER(&SX1257_SDR.hdma_spi1_rx);
-    last_Q_data_num = __HAL_DMA_GET_COUNTER(&SX1257_SDR.hdma_spi2_rx);
-
-    sprintf(printbuf,"I=%08d, I=0x%x, Q=0x%x\r\n", i, sram1_data->I_data[i] & 0xffff, sram2_data->Q_data[i] & 0xffff );
-    Serial.print(printbuf);
-  }
-
-
-  return;
-}
 
 void debug_spi1_print() {
   uint32_t vals[512];
@@ -171,18 +120,61 @@ void processSingleCharCommand(char command) {
   // Implement your logic for handling single character commands here
   // Example:
   wiwi_pkt_announce fake_packet;
+  wiwi_pkt_delay fake_delay_packet;
   int count = 0;
   int rssi = 0;
   float snr = 0;
   int packetSize;
   uint8_t pktbuf[40];
+  phaseUnion dummyVal;
   switch (command) {
     case '0':
       Serial.println("Setting start_wiwi flag due to user input!\r\n");
+      sprintf(print_buffer,"WiWi disc parameters: Kp=%0.15f Ki=%0.15f Kd=%0.15f\r\n", KP, KI, KD);
+      Serial.print(print_buffer); 
       start_wiwi = true;
-      clear_lora_done(); // make sure this flag is done  
-      force_restart_lora_rx(); // make sure SDR path and DMA is running again    
+      switch_lora_to_rx();
+      sprintf(print_buffer,"My MAC = 0x%x\r\n", wiwi_mac_addr);
+      Serial.print(print_buffer);  
       break;
+
+    /********** Manual frequency up ************/
+    case 'u': // ultra small frequency up
+      // hack for current boards, frequency resolution is 5e-12
+      frequency_offset += 0.01; // 10 mHz
+      apply_freq_change(0);
+      break;
+    case 'i': // incremental frequency up
+      frequency_offset += 1; // 1Hz
+      apply_freq_change(0);
+      break;
+    case 'U': // next frequency up
+      frequency_offset += 100; // 100Hz
+      apply_freq_change(0);
+      break;
+    case 'I': // next frequency up
+      frequency_offset += 1000; // 1KHz
+      apply_freq_change(0);
+      break;
+    /********** Manual frequency down ********/
+    case 'c': // ultra small frequency down
+      // hack for current boards, frequency resolution is 5e-12
+      frequency_offset -= 0.01; // 10 mHz
+      apply_freq_change(0);
+      break;
+    case 'd':// incremental frequency down
+      frequency_offset -= 1; // 1Hz
+      apply_freq_change(0);
+      break;
+    case 'C': // next frequency down
+      frequency_offset -= 100; // 100Hz
+      apply_freq_change(0);
+      break;
+    case 'D': // next frequency down
+      frequency_offset -= 1000; // 1KHz
+      apply_freq_change(0);
+      break;
+
     case '1':      
       //Serial.println("Stopping RX IQ");
       //SX1257_SDR.disable_dma();
@@ -249,7 +241,7 @@ void processSingleCharCommand(char command) {
       break;
     case '6':
     case 'w':
-      // IQ testing 
+      // IQ testing announce packet
       fake_packet.hdr.wiwi_id = htonl(0x77697769); // uin32_t / uint16_t needs reverse order
       fake_packet.hdr.mac_src = 0xfe;
       fake_packet.hdr.mac_dest = 0xff;
@@ -257,8 +249,9 @@ void processSingleCharCommand(char command) {
       fake_packet.hdr.seq_num = 0;
       fake_packet.hdr.ack_num = 0;
       fake_packet.flags = 0;
-      fake_packet.previous_tx_time = 0;
-      fake_packet.previous_iq.value = 0;
+      fake_packet.previous_tx_time = 0xa5a5a5a5;
+      fake_packet.previous_iq.intval = 0xa5a5a5a5;
+      fake_packet.checksum = 0xa5;
       fake_packet.unused[0] = 0;
       fake_packet.unused[1] = 0;
       fake_packet.reserved[0] = 0;
@@ -268,28 +261,42 @@ void processSingleCharCommand(char command) {
       fake_packet.unusedtwo[0] = 0;
       fake_packet.unusedtwo[1] = 0;
       fake_packet.unusedtwo[2] = 0;
-      SX1276_Lora.setantenna(1, 1, 1);
 
-      sprintf(print_buffer, "Sending forced tx command, pktlen %d\r\n", sizeof(wiwi_pkt_announce));
-      Serial.print(print_buffer);       
-
-      clear_lora_done(); // make sure this flag is done  
-      force_restart_lora_rx(); // make sure SDR path and DMA is running again        
-      SX1276_Lora.beginPacket(1);
-      SX1276_Lora.write( (uint8_t*) &fake_packet, sizeof(wiwi_pkt_announce));
-      SX1276_Lora.endPacket(); // finish packet and send it
-
-      
-      if ( check_lora_done() ) {
-        Serial.println("Got DIO0 proper after TX!");
-      }
-
-      compute_phase_from_lora_iq(0);
-      dump_lora_iq_from_oldest();
-      clear_lora_done(); // make sure this flag is done  
-      force_restart_lora_rx(); // make sure SDR path and DMA is running again
+      send_packet( (uint8_t*) &fake_packet, sizeof(wiwi_pkt_announce), 0, 0 );
       
     
+      break;
+    case 'e':
+      // IQ testing delay packet
+      fake_delay_packet.hdr.wiwi_id = htonl(0x77697769); // uin32_t / uint16_t needs reverse order
+      fake_delay_packet.hdr.mac_src = 0xfe;
+      fake_delay_packet.hdr.mac_dest = 0xff;
+      fake_delay_packet.hdr.pkt_type = WIWI_PKT_DELAY_REQ;
+      fake_delay_packet.hdr.seq_num = 0;
+      fake_delay_packet.hdr.ack_num = 0;
+      fake_delay_packet.flags = 0;
+      fake_delay_packet.previous_tx_ts = 0xa5a5a5a5;
+      fake_delay_packet.previous_tx_iq.intval = 0xa5a5a5a5;
+      fake_delay_packet.previous_rx_ts = 0xa5a5a5a5;
+      fake_delay_packet.previous_rx_iq.intval = 0xa5a5a5a5;
+      fake_delay_packet.checksum = 0xa5;
+      fake_delay_packet.reserved[0] = 0;
+      fake_delay_packet.reserved[1] = 0;
+      fake_delay_packet.reserved[2] = 0;
+      fake_delay_packet.reserved[3] = 0;
+      fake_delay_packet.reserved[4] = 0;
+      fake_delay_packet.reserved[5] = 0;
+      fake_delay_packet.reserved[6] = 0;
+      fake_delay_packet.reserved[7] = 0;
+      fake_delay_packet.reserved[8] = 0;
+      fake_delay_packet.reserved[9] = 0;
+      fake_delay_packet.reserved[10] = 0;
+      fake_delay_packet.reserved[11] = 0;
+      fake_delay_packet.reserved[12] = 0;
+
+      send_packet( (uint8_t*) &fake_delay_packet, WIWI_PKT_DELAY_LEN, 0, 0 );
+
+
       break;
     case '7':
       // useful for manufacturing testing, measure RF output
@@ -301,58 +308,50 @@ void processSingleCharCommand(char command) {
     case '8':
       Serial.println("Disabling SDR TX!");      
       SX1257_SDR.set_tx_mode(0,0);
-      SX1257_SDR.set_antenna(0); // setup SDR for TX
+      SX1257_SDR.set_antenna(0); // setup SDR for RX
       break;
     case '&':
       Serial.print("User command, restarting STM32!\r\n");
       delay(200);
       HAL_NVIC_SystemReset();
       break;
-    // Add more cases as needed
+    
     case 'r': // test case, wait for and receive one LoRA WiWi packet
       // setup LoRA RX
-      clear_lora_done(); // make sure this flag is done  
-      force_restart_lora_rx(); // make sure SDR path and DMA is running again
-
-      
+      Serial.println("Manual command, wait for one packet");
       while ( 1 ) {
-        if ( check_lora_done() )
+        if ( receive_lora_packet(pktbuf, &packetSize, 0) )
         {
           Serial.println("Received one packet!");
-          packetSize = SX1276_Lora.parsePacket(40);
-          if ( packetSize) {
-            // should always happen
-            rssi = SX1276_Lora.packetRssi();
-            snr = SX1276_Lora.packetSnr();
-            sprintf(print_buffer, "Lora packet rssi=%d , snr=%f\r\n");
-            Serial.print(print_buffer);
-            Serial.print("Received packet data: ");
-            for (int j = 0; j < 40; j++) {
-              if ( SX1276_Lora.available() ) {
-                
-                pktbuf[j] = (uint8_t)SX1276_Lora.read();
-                sprintf(print_buffer, " 0x%x", pktbuf[j]);
-                Serial.print(print_buffer);
-              }
-            }
-            Serial.println("");
-            Serial.println("IQ Data:");
-            dump_lora_iq_from_oldest();
-
-          }
           break;
-        } else {
+        }
+        else
+        {
           count++;
           delay(10);
           if ( (count % 100) == 0 ) {
-            Serial.println("Waiting for LoRA packet test r");
+            Serial.println("Waiting for LoRA packet test");
           }
-        }        
+        } 
       }
 
-
       break;
-    
+    case 'T': // formal test cases;
+      Serial.println("Running formal test cases!!!!!!");
+      test_dio0_interrupt();
+      Serial.println("");
+      delay(2000);
+      test_ice40_stream_enable_disable();
+      Serial.println("");
+      delay(2000);
+      test_ice40_reset();
+      Serial.println("");
+      delay(2000);
+      test_ice40_fixed_pattern();
+      Serial.println("");
+      delay(2000);
+      break;
+    // Add more cases as needed
     default:
       Serial.println("Unknown command");
       break;
@@ -506,6 +505,8 @@ void setup() {
     }
   }
 
+  zero_iq_buffers();
+
 
 
   /****** INTERRUPT IS DEFINITELY NOT RIGHT FOR PROPER LORA OPERATION IN SX1276_LORA ***/
@@ -519,10 +520,7 @@ void setup() {
     Serial.println("LoRA SX1276 init successful!");
     SX1276_Lora.dumpRegisters(Serial);
   }
-  SX1276_Lora.setTxPower(17,PA_OUTPUT_PA_BOOST_PIN); // V2 board , HF output uses boost pin!
-  SX1276_Lora.setCodingRate4(1);
-  SX1276_Lora.setSignalBandwidth(125E3);
-  SX1276_Lora.setSpreadingFactor(7);
+
   
 
   /* ICE40 setup */
@@ -547,6 +545,12 @@ void setup() {
   Serial.println("ICE40 DOWNLOAD DONE!");
   delay(50); // give ice40 some time to chill
 
+  wwvb_gpio_pinmode(ICE_SPARE5, OUTPUT);
+  wwvb_digital_write(ICE_SPARE5, 0); // disable FPGA stream by default
+
+  wwvb_gpio_pinmode(ICE_SPARE3, OUTPUT);
+  wwvb_digital_write(ICE_SPARE3, 0); // FPGA state reset
+
   release_ice40_reset(); // release ice40 reset so I can access SX1257
 
   SX1257_SDR.init(1);
@@ -555,37 +559,26 @@ void setup() {
   SX1257_SDR.set_tx_freq(900e6);
   SX1257_SDR.set_rx_freq(900e6); 
 
-  // enable SDR
+
   SX1257_SDR.set_antenna(0); // setup SDR for RX
   SX1276_Lora.setantenna(1, 1, 0); // high frequency SMA SX1276->TX on standard transceiver
 
   // setup SDR RX
-  SX1257_SDR.set_rx_parameters(0x6, 0xf, 0x7, 0x1, 0x1);
+  SX1257_SDR.set_rx_parameters(0x6, 0xf, 0x7, 0x0, 0x1);
   SX1257_SDR.set_rx_mode(1, 1); // enable SDR RX path
   Serial.println("****SX1257 registers during init****");
   SX1257_SDR.dumpRegisters(Serial);
 
-
-  hold_ice40_reset(); // enabling pipelines , hold ice40 reset again
-
-  // now SDR is setup in receive mode, good, enable DMA paths in STM32 for SPI and DFSDM
-  // enable DFSDM first then SPI, basically reverse order of data flow
-  // V2 , moving away from DFSDM, push it into FPGA 
-  //Serial.println("Enabling DFSDM DMA pipelines!");
-  //stm32_sdr_dfsdm_init();
-
-  Serial.println("Enabling SPI DMA pipeline!");
-  stm32_sdr_spi_init();
-
-
-
-  // now DMA pipeline is setup, release ice40 reset so it starts converting SDR IQ RX data
-  delay(10);
-  release_ice40_reset();
-
   wiwi_network_setup();
 
-  stm32_sdr_init();
+  sdr_iq_init();
+
+
+  // Put it back in continous RX mode
+  switch_lora_to_rx();
+
+
+  
   Serial.println("Init fully done!");
   return;
 
@@ -601,7 +594,8 @@ int led_count = 0;
 void led_loop() {
   if ( millis() - last_led_toggle_millis >= 1000 ) {
 	  //Serial.println("LED Loop start");
-    if ( leds_on ) {      
+    if ( leds_on ) {    
+
       wwvb_digital_write(WLED_RED, HIGH);
       wwvb_digital_write(WLED_BLUE, HIGH);
       wwvb_digital_write(WLED_GREEN, HIGH);
@@ -637,55 +631,35 @@ void led_loop() {
 
 }
 
+
 void run_wiwi_rx() {
   // handle an incoming packet if there is one
   // for this board, basically handle if dio0 interrupt fired
-
-  if ( check_lora_done() )
+  if ( is_receive_packet_available() )
   {
-    int last_I_loc = 0;
-    int last_Q_loc = 0;
-    Serial.println("Run wiwi RX, LoRA done true!");
-    get_lora_iq_pointers(&last_I_loc, &last_Q_loc);
+
+    Serial.println("Run wiwi RX, packet available!");
     // could either be reception or TX done
     // get IQ data from DMA for both TX and RX 
 
     // RX packet
     // Read packet digital data from SX1276
     int rssi = 0;
-    int packetSize = SX1276_Lora.parsePacket();
-    if ( packetSize ) { // shouldn't happen but keep the check like example code
+    int snr = 0;
+    phaseUnion tempPhase;
+    int rx_packet_index = free_packet_list.shift(); 
+    uint8_t * rx_packet_ptr = packet_buffer[rx_packet_index].data;
 
-      // get a buffer number
-      int rx_packet_index = free_packet_list.shift(); 
-      uint8_t * rx_packet_ptr = packet_buffer[rx_packet_index].data;
+    receive_lora_packet(rx_packet_ptr, &rssi, &tempPhase);
+    packet_buffer[rx_packet_index].phase.value = tempPhase.value;
+    packet_buffer[rx_packet_index].pkt_len = (uint8_t) rssi;
+    packet_buffer[rx_packet_index].timestamp = micros();
+    sprintf(print_buffer, "RX timestamp: %ld\r\n", packet_buffer[rx_packet_index].timestamp);
+    Serial.print(print_buffer);
 
-      // read the packet bytes into buffer
-      while ( SX1276_Lora.available() ) {
-        *rx_packet_ptr = (uint8_t)SX1276_Lora.read();
-        rx_packet_ptr++; // move to next byte 
-      }
-      /***** DEBUG CODE, can comment out if you don't want full log ******/
-      rx_packet_ptr = packet_buffer[rx_packet_index].data; // reset pointer to start of packet
-      sprintf(print_buffer, "RX PKT DATA index %d length=%d data=", rx_packet_index, packetSize);
-      Serial.print(print_buffer);
-      for ( int i = 0; i < packetSize; i++ ) {
-        sprintf(print_buffer, " 0x%x", *rx_packet_ptr );
-        Serial.print(print_buffer);
-        rx_packet_ptr++;
-      }
-      Serial.print("\r\n");
-      packet_buffer[rx_packet_index].pkt_len = packetSize;
-      compute_phase_from_lora_iq(&packet_buffer[rx_packet_index].phase);
-      packet_buffer[rx_packet_index].timestamp = micros();
-      rx_packet_list.add(rx_packet_index); // put into RX list for network stack
+    rx_packet_list.add(rx_packet_index); // put into RX list for network stack
+    Serial.println("Done with run_wiwi_rx");
 
-      // DEBUG JULIAN 6-21-2024
-      dump_lora_iq_from_oldest();
-      
-    }
-    clear_lora_done(); // make sure this flag is done  
-    force_restart_lora_rx(); // make sure SDR path and DMA is running again
   }
 }
 
@@ -702,28 +676,19 @@ void run_wiwi_tx() {
     single_pkt = tx_packet_list.get(0); // pop the tx packet 
     packet * tx_pkt = &packet_buffer[single_pkt];
 
-    sprintf(print_buffer, "WiWi LoRA TX handle index %d pktlen %d", single_pkt, tx_pkt->pkt_len);
+    sprintf(print_buffer, "WiWi LoRA TX handle index %d pktlen %d\r\n", single_pkt, tx_pkt->pkt_len);
     Serial.print(print_buffer);
 
-    for ( int i = 0; i < tx_pkt->pkt_len; i++ ) {
-      sprintf(print_buffer, " 0x%x", tx_pkt->data[i]);
-      Serial.print(print_buffer);
-    }
-    Serial.print("\r\n");
-    SX1276_Lora.setantenna(1, 1, 1); // setup antenna on board for TX of SX1276 
-    SX1276_Lora.beginPacket(1);
-    SX1276_Lora.write(tx_pkt->data, tx_pkt->pkt_len);
-    SX1276_Lora.endPacket(); // finish packet and send it
+    phaseUnion temp;
+    send_packet(tx_pkt->data, tx_pkt->pkt_len, &temp, &tx_pkt->timestamp);
+    tx_pkt->phase.value = temp.value;
 
-    // TX code currently is blocking, so don't need to worry about async much
-    // not efficient but fine for proof of concept
 
     // I wrote the network stack assuming the "RX" chip will receive the packet you transmit
     // fake that in the code here
-    tx_pkt->timestamp = micros();
-    compute_phase_from_lora_iq(&tx_pkt->phase);
-    clear_lora_done(); // make sure this flag is done  
-    force_restart_lora_rx(); // make sure SDR path and DMA is running again
+    Serial.println("Done with run_wiwi_tx");
+    Serial.println("");
+    Serial.println("");
 
     // push the buffer back into free list
     single_pkt = tx_packet_list.shift(); // free packet from top of tx list
@@ -741,6 +706,7 @@ void wiwi_run() {
   run_wiwi_network();
 
   run_wiwi_tx();
+
 
 }
 
