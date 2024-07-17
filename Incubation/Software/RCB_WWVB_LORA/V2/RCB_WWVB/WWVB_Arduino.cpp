@@ -4,13 +4,14 @@
 
 sram1_data_struct * sram1_data = (sram1_data_struct *)0x30000000;
 sram2_data_struct * sram2_data = (sram2_data_struct *)0x30020000;
+sram3_data_struct * sram3_data = (sram3_data_struct *)0x30040000;
 
 volatile uint8_t spi1_rx_data = 0;
 volatile uint8_t spi2_rx_data = 0;
 uint8_t SDR_lookup_table[256];
 
 
-char print_buffer[512];
+char print_buffer[10000];
 
 
 WWVB_Pin WWVB_Pins[] = {

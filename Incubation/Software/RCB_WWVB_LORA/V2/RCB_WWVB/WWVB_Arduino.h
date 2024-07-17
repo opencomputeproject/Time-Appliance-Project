@@ -24,7 +24,7 @@
 //using namespace rtos;
 //using namespace std::chrono_literals;
 
-extern char print_buffer[512];
+extern char print_buffer[10000];
 
 
 
@@ -357,9 +357,9 @@ void wwvb_m4_print_bool(char * name, bool val);
 #define SX1257_Q_TX_DMA_STREAM_IRQ DMA2_Stream4_IRQn
 #define SX1257_Q_TX_DMA_STREAM_HANDLER DMA2_Stream4_IRQHandler
 
-
-#define STM32_SDR_DFSDM_I_STREAM DMA2_Stream3
-#define STM32_SDR_DFSDM_Q_STREAM DMA2_Stream2
+#define HRTIMER_DMA_STREAM DMA2_Stream3
+#define HRTIMER_DMA_STREAM_IRQ DMA2_Stream3_IRQn
+#define HRTIMER_DMA_STREAM_HANDLER DMA2_Stream3_IRQHandler
 
 
 /* Use of CMSIS compiler intrinsics for register exclusive access */
@@ -404,8 +404,13 @@ typedef volatile struct sram2_data_struct_name {
   int16_t Q_data[BUFFER_SIZE];
 } sram2_data_struct;
 
+typedef volatile struct sram3_data_struct_name {
+  uint32_t dummy_hrtimer_dma_val;
+} sram3_data_struct;
+
 extern sram1_data_struct * sram1_data;
 extern sram2_data_struct * sram2_data;
+extern sram3_data_struct * sram3_data;
 
 #define DMA_PAUSED 0
 #define DMA_RUNNING 1
