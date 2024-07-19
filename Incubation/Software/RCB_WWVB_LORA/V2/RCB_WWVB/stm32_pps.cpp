@@ -53,19 +53,102 @@ extern "C" {
 
 
 extern "C" {
-  uint32_t X = 3000; // Number of times HRTIMER overflows before triggering DMA
+  // top level PHC basically, seconds and nanoseconds
+  uint64_t phc_seconds = 0; // TOD basically
+  float phc_nanoseconds = 0; // nanoseconds
+  const float nano_per_tick = 1/480e6;
+
   uint64_t dma_complete_counter = 0;
   uint64_t timc_interrupt_counter = 0;
-  bool set_next_output = 0;
-  void Start_DMA_Transfer(void);
 
-  
-  // Utility function, Update HRTIM compare value
-  void Update_HRTIM_CompareValue(uint32_t newCompareValue)
+  bool set_next_output = 1; // has to start out as 1! output starts at reset
+  // if you don't do this , it will mess up
+
+  // X is DMA roll over counter, Y is the single fine roll over
+  // utility calculation function
+  void adjust_timing(float adjustment_ns, uint16_t *X, uint16_t *Y) {
+    // Constants
+    const float clock_frequency_hz = 480000000.0; // 480 MHz
+    const float clock_period_ns = 1e9 / clock_frequency_hz; // Clock period in nanoseconds
+
+    if ( adjustment_ns > 400e6 ) {
+      adjustment_ns = 400e6;
+    } else if ( adjustment_ns < -400e6 ) {
+      adjustment_ns -= 400e6;
+    }
+    // compute how many counter ticks to adjust by
+    int64_t tick_adjust = (int64_t) (adjustment_ns / clock_period_ns);
+
+    int64_t cur_ticks = (*X * DMA_PPS_COUNT) + *Y;
+
+    cur_ticks += tick_adjust;
+
+    uint32_t start_dma_hrtimer_count = 0;
+    start_dma_hrtimer_count = (uint32_t) (cur_ticks - 0xffdf) / DMA_PPS_COUNT ;
+    uint32_t remainder = 0;
+    remainder = cur_ticks - (start_dma_hrtimer_count * DMA_PPS_COUNT);
+    sprintf(print_buffer,"adjust_timing, start_dma_count=%u, remainder=%u\r\n", start_dma_hrtimer_count, remainder);
+    Serial.println(print_buffer);
+
+    if ( remainder > 0xffdf ) {
+      remainder -= DMA_PPS_COUNT;
+      start_dma_hrtimer_count++;
+    }
+    // remainder is new fine value, Y
+    // start_dma_hrtimer_count is new DMA value, X
+    *Y = remainder;
+    *X = start_dma_hrtimer_count;
+    return;
+  } 
+
+  // PPS is generated with a two step process
+  // 1. First step, uses DMA for the bulk of the time
+  //      DMA counts DMA_PPS_COUNT roll overs of HRTIMER
+  //      HRTIMER is roll over point is set by typical_count
+  // 2. Second step, on DMA completing DMA_PPS_COUNT roll overs
+  //      next hrtimer is set to toggle the output and DMA is disabled
+  //      this single rollover point is set by fine_count
+  //      when that toggle occurs, rollover point set back to typical_count and dma enabled again
+  // fine_count should be as large as possible to prevent race conditions
+  uint16_t typical_count = 34277;
+  uint16_t fine_count = 61000;
+  uint16_t next_typical_count = 34277;
+  uint16_t next_fine_count = 61000;
+
+  // In order to generate a step in the PPS output
+  // need to do a one time adjustment of typical_count and fine_count
+  // make sure to keep fine_count as large as possible
+  // keep the original, adjust it once, after next edge set them back
+  bool doing_typical_step = 0;
+  bool doing_fine_step = 0;
+  uint16_t orig_typical_count = 34277;
+  uint16_t orig_fine_count = 61000;
+
+  // utility function to keep PHC aligned with running operation
+  float nanoseconds_temp = 0;
+  uint64_t seconds_temp = 0;
+  void add_to_phc(uint64_t hrtimer_ticks) 
   {
-    HRTIM_CompareCfgTypeDef pCompareCfg = {0};
-    pCompareCfg.CompareValue = newCompareValue;
-    HAL_HRTIM_WaveformCompareConfig(&hhrtim, HRTIM_TIMERINDEX_TIMER_C, HRTIM_COMPAREUNIT_1, &pCompareCfg);
+    // compute this in nanoseconds
+    nanoseconds_temp = (float) (hrtimer_ticks * nano_per_tick);
+
+    // compute how many seconds
+    seconds_temp = (uint64_t) (nanoseconds_temp / 1e9);
+
+    // compute how many nanoseconds remain 
+    nanoseconds_temp = (nanoseconds_temp - ((float)seconds_temp * 1e9) );
+
+    // add seconds to PHC
+    phc_seconds += seconds_temp;
+
+    // add nanoseconds to phc
+    phc_nanoseconds += nanoseconds_temp;
+
+    // correct if overflowed nanosecond value
+    if ( phc_nanoseconds > 1e9 ) {
+      phc_nanoseconds -= 1e9;
+      phc_seconds += 1;
+    }
   }
 
   // top level DMA IRQ handler for HRTIMER 
@@ -90,17 +173,28 @@ extern "C" {
       }
 
       // enable TIMER C interrupt for this next time so I can disable rst / set outputs
-      // keep DMA running, may get off by one on this
+      // disable DMA request for this next time to prevent off by one cycle error
       if ( set_next_output ) {
-        HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].TIMxDIER = HRTIM_TIM_FLAG_SET2 | HRTIM_TIM_DMA_CMP2;
+        HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].TIMxDIER = HRTIM_TIM_FLAG_SET2;
       } else {
-        HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].TIMxDIER = HRTIM_TIM_FLAG_RST2 | HRTIM_TIM_DMA_CMP2;
+        HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].TIMxDIER = HRTIM_TIM_FLAG_RST2;
       }     
 
       set_next_output = !set_next_output; // toggle this
 
+      if ( doing_fine_step ) {
+        fine_count = next_fine_count;
+        doing_fine_step = 0;
+      } else {
+        fine_count = orig_fine_count; // doing single step, next edge go back to normal
+      }
+
+
       // change the compare2 value to get the 2ns resolution, hard coding for now
-      HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].CMP2xR = 62511;
+      HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].CMP2xR = fine_count;
+      add_to_phc(typical_count * DMA_PPS_COUNT); // dma saw this many ticks of hrtimer
+
+
     }
   }
   void __attribute__((weak)) hrtimer_DMAError(DMA_HandleTypeDef *hdma) {    
@@ -115,15 +209,22 @@ extern "C" {
     {
       timc_interrupt_counter++;
 
-      // clear set / reset on output
-      //HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].RSTx2R = HRTIM_OUTPUTRESET_NONE;
-      //HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].SETx2R = HRTIM_OUTPUTSET_NONE;
-
       // disable timc interrupt
       HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].TIMxDIER = HRTIM_TIM_DMA_CMP2;
 
-      // make sure compare value is back to max
-      HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].CMP2xR = 0xffdf;
+
+      if ( doing_typical_step ) {
+        typical_count = next_typical_count;
+        doing_typical_step = 0;
+      } else {
+        typical_count = orig_typical_count; // doing single step, next edge go back to normal
+      }
+
+
+      // set next compare value   
+      HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].CMP2xR = typical_count;
+      add_to_phc(fine_count); // just one cycle of hrtimer, PHC saw this many ticks
+
     }
     HAL_HRTIM_IRQHandler(&hhrtim, HRTIM_TIMERINDEX_TIMER_C);
   }  
@@ -161,7 +262,6 @@ void HRTIM_Init(void)
 
 // Configure HRTIMER CH C for toggling output on rollover
 
-uint16_t cur_period = 1000;
 void HRTIM_ChannelC_Config(void)
 {
   HRTIM_TimeBaseCfgTypeDef pTimeBaseCfg = {0};
@@ -237,12 +337,14 @@ void Start_PPS_DMA(void)
   HAL_NVIC_SetPriority(HRTIM1_TIMC_IRQn, 9, 0);
   HAL_NVIC_EnableIRQ(HRTIM1_TIMC_IRQn);
 
-  // start the DMA
-  HAL_DMA_Start_IT(&hdma_hrtim,(uint32_t)&hhrtim.Instance->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].SETx2R,
-    (uint32_t)&sram3_data->dummy_hrtimer_dma_val,3663); 
-
   // enable DMA request from hrtimer for compare unit 2
   hhrtim.Instance->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].TIMxDIER = HRTIM_TIM_DMA_CMP2;
+
+  // start the DMA
+  HAL_DMA_Start_IT(&hdma_hrtim,(uint32_t)&hhrtim.Instance->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].SETx2R,
+    (uint32_t)&sram3_data->dummy_hrtimer_dma_val,DMA_PPS_COUNT); 
+
+
 
   Serial.println("Start PPS DMA done!");
 
@@ -297,40 +399,93 @@ void init_stm_pps()
   HRTIM_ChannelC_Config(); // Configure HRTIMER C for output compare mode
   DMA_Init(); // Initialize DMA
   Start_PPS_DMA();
-  //NVIC_Init(); // Initialize NVIC for interrupts
 
-  //Start_DMA_Transfer(); // Start the DMA transfer
+  sprintf(print_buffer, "PPS parameters, typical_count = %u, fine_count = %u\r\n",
+    typical_count, fine_count);
+  Serial.print(print_buffer);
 
   last_millis = millis();
 
 }
 
+
+
+// can only do +/- 400 millisecond adjustment!
+// keeps the logic simpler
+void pps_step(int64_t step_val_ns) {
+  orig_typical_count = typical_count;
+  orig_fine_count = fine_count;
+  uint16_t temp_typical, temp_fine;
+  temp_typical = typical_count;
+  temp_fine = fine_count;
+
+  adjust_timing( (float) step_val_ns, &temp_typical, &temp_fine);
+
+  next_typical_count = temp_typical;
+  next_fine_count = temp_fine;
+  doing_typical_step = 1;
+  doing_fine_step = 1;
+}
+
+// in order to generate a frequency adjustment in pps output
+// need to do an adjustment of typical_count and fine_count
+// and not adjust them back
+void pps_freq_adjust(int64_t ns_freq_adj) 
+{
+  uint16_t temp_typical, temp_fine;
+  temp_typical = typical_count;
+  temp_fine = fine_count;
+  adjust_timing( (float) ns_freq_adj, &temp_typical, &temp_fine);
+
+  orig_typical_count = temp_typical;
+  orig_fine_count = temp_fine;
+}
+
+
+
+
 uint64_t last_dma_counter = 0;
 uint64_t last_timc_counter = 0;
 
+
+bool test_jump_forward = 1;
+bool test_speed_up = 1;
 
 void loop_stm_pps()
 {
   if ( last_millis == 0 ) {
     return;
   }
-  if ( millis() - last_millis > 2000 ) {
+  if ( millis() - last_millis > 5000 ) {
     last_millis = millis();
-    // toggle the frequency back and forth
-    if ( cur_period == 1000 ) {
-      cur_period = 2000;
-      
+    /*
+    // test jumping
+    if ( test_jump_forward ) {
+      pps_step(200*1000*1000);
+      Serial.println("PPS Test jump forward!");
     } else {
-      cur_period = 1000;
+      pps_step(-200*1000*1000);
+      Serial.println("PPS Test jump backward!");
     }
-    //sprintf(print_buffer, "Changing HRTIMER C index to %d\r\n", cur_period);
-    //Serial.print(print_buffer);
-    //hhrtim.Instance->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].PERxR = cur_period;
+    test_jump_forward = !test_jump_forward;
+    */
+    // test frequency adjustment
+    /*
+    if ( test_speed_up ) {
+      pps_freq_adjust(100*1000*1000); 
+      Serial.println("PPS Test speed up!");
+    } else {
+      pps_freq_adjust(-100*1000*1000);
+      Serial.println("PPS Test slow down!");
+    }
+    test_speed_up = !test_speed_up;
+    */
 
   }
   if ( last_dma_counter != dma_complete_counter) {
     last_dma_counter = dma_complete_counter;
-    sprintf(print_buffer, "Loop stm pps dma counter increment to %d\r\n", dma_complete_counter);
+    sprintf(print_buffer, "Loop stm pps dma counter increment to %d\r\n", 
+      dma_complete_counter);
     Serial.print(print_buffer);
   }
   if ( last_timc_counter != timc_interrupt_counter  )

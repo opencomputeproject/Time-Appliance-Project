@@ -27,6 +27,8 @@ PPS input
 
 ************************/
 
+#define DMA_PPS_COUNT 7000
+
 void init_stm_pps();
 
 
@@ -35,5 +37,8 @@ void loop_stm_pps(); // run periodically
 /******* PPS Input functions ******/
 
 /******* PPS output functions ******/
+
+void pps_freq_adjust(int64_t ns_freq_adj) ;
+void pps_step(int64_t step_val_ns);
 
 #endif
