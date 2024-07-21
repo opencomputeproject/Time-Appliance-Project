@@ -3,7 +3,14 @@
 
 
 
-
+void debug_print_hrtimer_common_registers() 
+{
+  sprintf(print_buffer,"HRTimer Common registers:\r\n");
+  sprintf(print_buffer,"%s EECR1=0x%x\r\n", print_buffer, HRTIM1->sCommonRegs.EECR1);
+  sprintf(print_buffer,"%s EECR2=0x%x\r\n", print_buffer, HRTIM1->sCommonRegs.EECR2);
+  sprintf(print_buffer,"%s EECR3=0x%x\r\n", print_buffer, HRTIM1->sCommonRegs.EECR3);
+  Serial.print(print_buffer);  
+}
 
 void debug_print_hrtimer_registers(int TimerIdx)
 {
@@ -45,24 +52,42 @@ void debug_print_hrtimer_registers(int TimerIdx)
 
 
 
-
+// STM HAL API variables
 extern "C" {
   DMA_HandleTypeDef hdma_hrtim;
   HRTIM_HandleTypeDef hhrtim;
 }
 
+// PPS Input variables
+// just defining a set of global variables
+// assume PPS input is slow enough, don't need any fifo stuff
+extern "C" {
+  uint64_t phc_sec_ts = 0;
+  float phc_ns_ts = 0;
+  uint16_t capture_ts = 0;
+  uint16_t dma_remaining_ts = 0;
+  uint16_t typical_count_ts = 0;
+  uint64_t millis_ts = 0;
+  bool valid_ts = 0;
+}
 
+
+// PPS output variables
 extern "C" {
   // top level PHC basically, seconds and nanoseconds
   uint64_t phc_seconds = 0; // TOD basically
   float phc_nanoseconds = 0; // nanoseconds
-  const float nano_per_tick = 1/480e6;
+  const float nano_per_tick = ((1.0/480.0e6)*1e9);
 
   uint64_t dma_complete_counter = 0;
   uint64_t timc_interrupt_counter = 0;
 
   bool set_next_output = 1; // has to start out as 1! output starts at reset
   // if you don't do this , it will mess up
+}
+
+extern "C" {
+
 
   // X is DMA roll over counter, Y is the single fine roll over
   // utility calculation function
@@ -130,23 +155,18 @@ extern "C" {
   void add_to_phc(uint64_t hrtimer_ticks) 
   {
     // compute this in nanoseconds
-    nanoseconds_temp = (float) (hrtimer_ticks * nano_per_tick);
-
-    // compute how many seconds
-    seconds_temp = (uint64_t) (nanoseconds_temp / 1e9);
-
-    // compute how many nanoseconds remain 
-    nanoseconds_temp = (nanoseconds_temp - ((float)seconds_temp * 1e9) );
-
-    // add seconds to PHC
-    phc_seconds += seconds_temp;
-
-    // add nanoseconds to phc
-    phc_nanoseconds += nanoseconds_temp;
+    nanoseconds_temp = (float) ( ((float)hrtimer_ticks) * nano_per_tick);
 
     // correct if overflowed nanosecond value
-    if ( phc_nanoseconds > 1e9 ) {
-      phc_nanoseconds -= 1e9;
+    while ( nanoseconds_temp > 1e9 ) {
+      nanoseconds_temp -= 1e9;
+      phc_seconds += 1;
+    }
+
+    phc_nanoseconds += nanoseconds_temp;
+
+    if ( phc_nanoseconds > 1.0e9 ) {
+      phc_nanoseconds -= 1.0e9;
       phc_seconds += 1;
     }
   }
@@ -174,11 +194,7 @@ extern "C" {
 
       // enable TIMER C interrupt for this next time so I can disable rst / set outputs
       // disable DMA request for this next time to prevent off by one cycle error
-      if ( set_next_output ) {
-        HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].TIMxDIER = HRTIM_TIM_FLAG_SET2;
-      } else {
-        HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].TIMxDIER = HRTIM_TIM_FLAG_RST2;
-      }     
+      HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].TIMxDIER = HRTIM_TIM_FLAG_CMP2 | HRTIM_TIM_FLAG_CPT1;   
 
       set_next_output = !set_next_output; // toggle this
 
@@ -189,44 +205,56 @@ extern "C" {
         fine_count = orig_fine_count; // doing single step, next edge go back to normal
       }
 
-
       // change the compare2 value to get the 2ns resolution, hard coding for now
       HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].CMP2xR = fine_count;
       add_to_phc(typical_count * DMA_PPS_COUNT); // dma saw this many ticks of hrtimer
-
-
     }
   }
   void __attribute__((weak)) hrtimer_DMAError(DMA_HandleTypeDef *hdma) {    
   }
 
+  
+  // compare 2 used for pps output
+  // this is only used for fine step 
+  void HAL_HRTIM_Compare2EventCallback(HRTIM_HandleTypeDef * hhrtim, uint32_t TimerIdx)
+  {
+    // Check if the compare value matched and the output toggle occurred
+    timc_interrupt_counter++;
+
+    // disable timc interrupt
+    HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].TIMxDIER = HRTIM_TIM_DMA_CMP2 | HRTIM_TIM_FLAG_CPT1;
+
+    if ( doing_typical_step ) {
+      typical_count = next_typical_count;
+      doing_typical_step = 0;
+    } else {
+      typical_count = orig_typical_count; // doing single step, next edge go back to normal
+    }
+
+    // set next compare value   
+    HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].CMP2xR = typical_count;
+    add_to_phc(fine_count); // just one cycle of hrtimer, PHC saw this many ticks
+  }
+  
+  // capture 1 used for PPS input
+  void HAL_HRTIM_Capture1EventCallback(HRTIM_HandleTypeDef * hhrtim, uint32_t TimerIdx)
+  {
+    // PPS input capture
+    // grab things most likely to change faster
+    dma_remaining_ts = __HAL_DMA_GET_COUNTER(&hdma_hrtim);
+    capture_ts = HAL_HRTIM_GetCapturedValue(hhrtim, HRTIM_TIMERINDEX_TIMER_C, HRTIM_CAPTUREUNIT_1);
+    phc_ns_ts = phc_nanoseconds;
+    phc_sec_ts = phc_seconds;
+    typical_count_ts = typical_count;
+    millis_ts = millis();
+    valid_ts = 1;
+  }
 
   // Interrupt handler for HRTIMER TIMC
   void HRTIM1_TIMC_IRQHandler(void)
   {
-    // Check if the compare value matched and the output toggle occurred
-    if (__HAL_HRTIM_TIMER_GET_FLAG(&hhrtim, HRTIM_TIMERINDEX_TIMER_C, HRTIM_TIM_FLAG_CMP2))
-    {
-      timc_interrupt_counter++;
-
-      // disable timc interrupt
-      HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].TIMxDIER = HRTIM_TIM_DMA_CMP2;
-
-
-      if ( doing_typical_step ) {
-        typical_count = next_typical_count;
-        doing_typical_step = 0;
-      } else {
-        typical_count = orig_typical_count; // doing single step, next edge go back to normal
-      }
-
-
-      // set next compare value   
-      HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].CMP2xR = typical_count;
-      add_to_phc(fine_count); // just one cycle of hrtimer, PHC saw this many ticks
-
-    }
-    HAL_HRTIM_IRQHandler(&hhrtim, HRTIM_TIMERINDEX_TIMER_C);
+    //timc_interrupt_counter++;
+    HAL_HRTIM_IRQHandler(&hhrtim, HRTIM_TIMERINDEX_TIMER_C);    
   }  
 }
 
@@ -235,14 +263,53 @@ extern "C" {
 // GPIO initialization for PA10 as HRTIM_CHC2
 void GPIO_Init(void)
 {
-    GPIO_InitTypeDef GPIO_InitStruct = {0};
-    GPIO_InitStruct.Pin = GPIO_PIN_10;
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-    GPIO_InitStruct.Alternate = GPIO_AF2_HRTIM1; // Alternate function for HRTIM_CHC2
-    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-    Serial.println("Enabling PA10 for HRTIM1 CHC2 output");
+  // enable HRTIMER CH C outputs and EEV inputs
+  // WWVB LoRA V2 board, uses 
+  // CHC2 (PA10) -> UFL P4
+  // CHC1 (PA9) -> RCB header output
+  // EEV7 (PB5) -> Ice40 connection
+  // CHB1 (PC8) -> Ice40 connection
+  // EEV1 (PC10) -> RCB header input
+  // EEV2 (PC12) -> From PLL, 10MHz
+  // EEV3 (PD5) -> From PLL, not determined frequency
+  // CHE2 (PG7) -> Ice40 connection
+  // for now, only implemented CHC2 because its easy to measure
+
+  // CHC2 , PA10 , UFL P4
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+  GPIO_InitStruct.Pin = GPIO_PIN_10;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF2_HRTIM1; // Alternate function for HRTIM_CHC2
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  Serial.println("Enabling PA10 for HRTIM1 CHC2 output");
+
+  // EEV1, RCB Header input, PC10, put pulldown for now
+  // pin is pin 12 on WWVB RCB Board
+  // hack code for input only
+  GPIO_InitStruct.Pin = GPIO_PIN_10;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  // GPIO test mode
+  //GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  //GPIO_InitStruct.Pull = GPIO_NOPULL;
+  
+  // HRTIMER EEV1 pin mode
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Alternate = GPIO_AF2_HRTIM1; // Alternate function for HRTIM_EEV1
+  
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+
+  // CHC1 , PA9, using as a debug random toggle
+  GPIO_InitStruct.Pin = GPIO_PIN_9;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_9);
+
 }
 
 // Initialize HRTIMER
@@ -260,8 +327,48 @@ void HRTIM_Init(void)
     Serial.println("Enabling HRTIM subsystem");
 }
 
-// Configure HRTIMER CH C for toggling output on rollover
+void HRTIM_EEV1_PPSInput_Config(void)
+{
 
+  // input capture settings for PPS input, for now just EEV1 on PC10
+  //HAL_HRTIM_SimpleCaptureChannelConfig
+  //    -> HRTIM_EventConfig
+  //    -> HRTIM_CaptureUnitConfig
+
+  // HRTIM_EventConfig code
+  HRTIM_EventCfgTypeDef EventCfg;
+  EventCfg.FastMode = HRTIM_EVENTFASTMODE_DISABLE;
+  EventCfg.Filter = (HRTIM_EVENTFILTER_NONE);
+  EventCfg.Polarity = (HRTIM_EVENTPOLARITY_HIGH);
+  EventCfg.Sensitivity = ( HRTIM_EVENTSENSITIVITY_RISINGEDGE);
+  EventCfg.Source = HRTIM_EVENTSRC_1;
+
+  uint32_t hrtim_eecr1;
+  uint32_t hrtim_eecr2;
+  uint32_t hrtim_eecr3;
+
+  /* Configure external event channel */
+  hrtim_eecr1 = hhrtim.Instance->sCommonRegs.EECR1;
+  hrtim_eecr2 = hhrtim.Instance->sCommonRegs.EECR2;
+  hrtim_eecr3 = hhrtim.Instance->sCommonRegs.EECR3;
+
+  hrtim_eecr1 &= ~(HRTIM_EECR1_EE1SRC | HRTIM_EECR1_EE1POL | HRTIM_EECR1_EE1SNS | HRTIM_EECR1_EE1FAST);
+  hrtim_eecr1 |= (EventCfg.Source & HRTIM_EECR1_EE1SRC);
+  hrtim_eecr1 |= (EventCfg.Polarity & HRTIM_EECR1_EE1POL);
+  hrtim_eecr1 |= (EventCfg.Sensitivity & HRTIM_EECR1_EE1SNS);
+  /* Update the HRTIM registers (all bitfields but EE1FAST bit) */
+  hhrtim.Instance->sCommonRegs.EECR1 = hrtim_eecr1;
+  /* Update the HRTIM registers (EE1FAST bit) */
+  hrtim_eecr1 |= (EventCfg.FastMode  & HRTIM_EECR1_EE1FAST);
+  hhrtim.Instance->sCommonRegs.EECR1 = hrtim_eecr1;
+
+  // HRTIM_CaptureUnitConfig code for capture unit 1
+  uint32_t CaptureTrigger = 0xFFFFFFFFU;
+  CaptureTrigger = HRTIM_CAPTURETRIGGER_EEV_1 ;
+  hhrtim.TimerParam[HRTIM_TIMERINDEX_TIMER_C].CaptureTrigger1 = CaptureTrigger;
+}
+
+// Configure HRTIMER CH C for toggling output on rollover
 void HRTIM_ChannelC_Config(void)
 {
   HRTIM_TimeBaseCfgTypeDef pTimeBaseCfg = {0};
@@ -286,6 +393,14 @@ void HRTIM_ChannelC_Config(void)
   HAL_HRTIM_SimpleOCChannelConfig(&hhrtim, HRTIM_TIMERINDEX_TIMER_C,
     HRTIM_OUTPUT_TC2, &ocCfg);
 
+
+  HRTIM_EEV1_PPSInput_Config();
+
+  // enable capture unit 1 for 1PPS in , API is HAL_HRTIM_SimpleCaptureStart
+  hhrtim.Instance->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].CPT1xCR = hhrtim.TimerParam[HRTIM_TIMERINDEX_TIMER_C].CaptureTrigger1;
+
+
+  // output start, this starts the timer!
   HAL_HRTIM_SimpleOCStart(&hhrtim, HRTIM_TIMERINDEX_TIMER_C, HRTIM_OUTPUT_TC2);
 
   hhrtim.Instance->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].RSTxR |= (1<<2); // make counter reset based on compare unit 2 
@@ -301,7 +416,11 @@ void HRTIM_ChannelC_Config(void)
   // Interrupt / DMA enable flags -> Set to nothing for now
   hhrtim.Instance->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].TIMxDIER = 0x0;
 
+
+
+
   debug_print_hrtimer_registers(HRTIM_TIMERINDEX_TIMER_C);
+  debug_print_hrtimer_common_registers();
 }
 
 void DMA_Init(void)
@@ -338,7 +457,7 @@ void Start_PPS_DMA(void)
   HAL_NVIC_EnableIRQ(HRTIM1_TIMC_IRQn);
 
   // enable DMA request from hrtimer for compare unit 2
-  hhrtim.Instance->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].TIMxDIER = HRTIM_TIM_DMA_CMP2;
+  hhrtim.Instance->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].TIMxDIER = HRTIM_TIM_DMA_CMP2 | HRTIM_TIM_FLAG_CPT1;
 
   // start the DMA
   HAL_DMA_Start_IT(&hdma_hrtim,(uint32_t)&hhrtim.Instance->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].SETx2R,
@@ -361,17 +480,7 @@ uint64_t last_millis = 0;
 
 void init_stm_pps()
 {
-  // enable HRTIMER CH C outputs and EEV inputs
-  // WWVB LoRA V2 board, uses 
-  // CHC2 (PA10) -> UFL P4
-  // CHC1 (PA9) -> RCB header output
-  // EEV7 (PB5) -> Ice40 connection
-  // CHB1 (PC8) -> Ice40 connection
-  // EEV1 (PC10) -> RCB header input
-  // EEV2 (PC12) -> From PLL, 10MHz
-  // EEV3 (PD5) -> From PLL, not determined frequency
-  // CHE2 (PG7) -> Ice40 connection
-  // for now, only implemented CHC2 because its easy to measure
+
 
   // arduino set hrtim1 source initially as RCC_HRTIM1CLK_TIMCLK, need to change it
 
@@ -447,17 +556,19 @@ void pps_freq_adjust(int64_t ns_freq_adj)
 uint64_t last_dma_counter = 0;
 uint64_t last_timc_counter = 0;
 
-
 bool test_jump_forward = 1;
 bool test_speed_up = 1;
 
-void loop_stm_pps()
+
+uint32_t last_capture_val = 0xa5a5;
+bool last_eev_pin_val = 0;
+
+
+void loop_stm_pps_out()
 {
-  if ( last_millis == 0 ) {
-    return;
-  }
-  if ( millis() - last_millis > 5000 ) {
-    last_millis = millis();
+  static uint64_t last_out_millis = 0;
+  if ( millis() - last_out_millis > 5000 ) {
+    last_out_millis = millis();
     /*
     // test jumping
     if ( test_jump_forward ) {
@@ -494,5 +605,81 @@ void loop_stm_pps()
     sprintf(print_buffer, "Loop stm pps timc interrupt counter increment to %d\r\n", timc_interrupt_counter);
     Serial.print(print_buffer);
   }
+  
+  
+
+}
+
+void loop_stm_pps_in()
+{
+  static uint64_t last_in_millis = 0;
+  if ( millis() - last_in_millis > 5000 ) {
+    last_in_millis = millis();
+    HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_9); // debug toggle this pin , pin 6 on RCB header
+    Serial.println("Toggling PA9!");
+    delay(10);
+    //debug_print_hrtimer_registers(HRTIM_TIMERINDEX_TIMER_C);
+    //debug_print_hrtimer_common_registers();
+  }
+  if ( valid_ts ) {
+    sprintf(print_buffer, "Got PPS Input! Timestamp info:\r\n");
+    sprintf(print_buffer, "%s   PHC_SEC_TS=%" PRIu64 "\r\n", print_buffer, phc_sec_ts);
+    sprintf(print_buffer, "%s   PHC_NS_TS=%f\r\n", print_buffer, phc_ns_ts);
+    sprintf(print_buffer, "%s   Capture_TS=%" PRIu16 "\r\n", print_buffer, capture_ts);
+    sprintf(print_buffer, "%s   DMA_Remaining_TS=%" PRIu16 "\r\n", print_buffer, dma_remaining_ts);
+    sprintf(print_buffer, "%s   Typical_Count_TS=%" PRIu16 "\r\n", print_buffer, typical_count_ts);
+    sprintf(print_buffer, "%s   Millis_TS=%" PRIu64 "\r\n", print_buffer, millis_ts);
+    Serial.println(print_buffer);
+    valid_ts = 0;
+
+    // need to post-process this data captured in the interrupt to get a "real" timestamp
+    // phc_sec_ts / phc_ns_ts are old, they're only updated by other interrupt handlers after events have happened
+    // so that's the starting point
+    // capture_ts is the fine value, how many hrtimer ticks since last reset
+
+    uint64_t timestamp_seconds = 0;
+    float temp_ns = 0;
+    uint64_t timestamp_nanoseconds = 0;
+    if ( dma_remaining_ts != DMA_PPS_COUNT )
+    {
+      // this is most common case, somewhere between toggles
+      // math is a bit simpler
+      // PHC value + (capture_ts * ns_per_tick) + (DMA_PPS_COUNT - dma_remaining_ts) * typical_count_ts * ns_per_tick
+      // PHC value is old looking, but its the time of the last event basically
+      // capture_ts is fine resolution, just add it
+      // then account for how many DMA transactions have already occurred in this cycle
+      timestamp_seconds = phc_sec_ts;
+      temp_ns = phc_ns_ts;
+      temp_ns += ((float) capture_ts) * nano_per_tick;
+      temp_ns += ((float) (DMA_PPS_COUNT - dma_remaining_ts) ) * ((float)typical_count_ts) * nano_per_tick;
+      while ( temp_ns >= 1.0e9 ) {
+        temp_ns -= 1.0e9;
+        timestamp_seconds += 1;
+      }
+      timestamp_nanoseconds = (uint64_t) temp_ns;
+
+      
+    } else 
+    {
+      Serial.println("*******SPECIAL TIMESTAMP CASE, NEED TO IMPLEMENT*******");
+      // this is a special case, this has two sub cases
+      // 1. This is right after a toggle , need to check what interrupt flags are set
+      // 2. This is right before a toggle, also need to check interrupt flags set
+    }
+    sprintf(print_buffer,
+      "High level timestamp: %" PRIu64 " seconds, %" PRIu64 " nanoseconds\r\n", timestamp_seconds, timestamp_nanoseconds);
+    Serial.print(print_buffer);
+  }
+  
+}
+
+void loop_stm_pps()
+{
+  if ( last_millis == 0 ) {
+    return;
+  }
+  loop_stm_pps_out();
+  loop_stm_pps_in();
+
 
 }
