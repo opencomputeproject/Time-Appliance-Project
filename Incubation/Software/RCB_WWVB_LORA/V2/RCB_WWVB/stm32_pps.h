@@ -3,6 +3,7 @@
 
 
 #include "WWVB_Arduino.h"
+#include "stm32_hrtimer.h"
 
 
 /**************************
@@ -27,7 +28,30 @@ PPS input
 
 ************************/
 
-#define DMA_PPS_COUNT 7000
+
+
+// Virtual clock structure
+typedef struct {
+    uint64_t seconds; // Full seconds of the virtual clock
+    double nanoseconds; // Nanoseconds part of the virtual clock
+    double frequency_offset; // in ppm
+    double phase_offset_ns; // in nanoseconds
+} VirtualClock;
+
+// PI Controller structure
+typedef struct {
+    double kp; // Proportional gain
+    double ki; // Integral gain
+    double integral; // Integral term
+} PIController;
+
+// Disciplining state structure
+typedef struct {
+    int phase_adjustments_remaining;
+    bool phase_adjustment_stage;
+} DiscipliningState;
+
+#define PHASE_ADJUSTMENT_THRESHOLD 3 // Number of initial phase adjustments
 
 void init_stm_pps();
 
@@ -36,9 +60,18 @@ void loop_stm_pps(); // run periodically
 
 /******* PPS Input functions ******/
 
+bool has_new_pps_input_timestamp();
+void get_pps_input_timestamp(uint64_t * sec_ts, uint32_t * ns_ts);
+
 /******* PPS output functions ******/
 
 void pps_freq_adjust(int64_t ns_freq_adj) ;
 void pps_step(int64_t step_val_ns);
+
+/******** PPS input discipline PPS output ********/
+
+void enable_pps_in_discipline();
+void disable_pps_in_discipline();
+
 
 #endif

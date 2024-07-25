@@ -314,6 +314,30 @@ void processSingleCharCommand(char command) {
       Serial.println("Enabling HRTIMER PPS output!");
       init_stm_pps();
       break;
+    case 'L':
+      Serial.println("Increasing PPS output frequency by 1000 ns per period");
+      //pps_freq_adjust(1000);
+      break;
+    case 'l':
+      Serial.println("Decreasing PPS output frequency by 1000 ns per period");
+      //pps_freq_adjust(-1000);
+      break;
+    case 'N':
+      Serial.println("Increasing PPS output frequency by 100 us per period");
+      //pps_freq_adjust(100*1000);
+      break;
+    case 'n':
+      Serial.println("Decreasing PPS output frequency by 100 us per period");
+      //pps_freq_adjust(-100*1000);
+      break;
+    case 'M':
+      Serial.println("Adding 1000 nanoseconds phase shift to PPS output phase");
+      //pps_step(1000);
+      break;
+    case 'm':
+      Serial.println("Subtracting 1000 nanoseconds phase shift from PPS output phase");
+      //pps_step(-1000);
+      break;
     case '&':
       Serial.print("User command, restarting STM32!\r\n");
       delay(200);
