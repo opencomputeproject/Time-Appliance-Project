@@ -3896,6 +3896,55 @@ static EXT_ATTR_RO(freq, frequency, 2);
 static EXT_ATTR_RO(freq, frequency, 3);
 
 static ssize_t
+ptp_ocp_tty_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct dev_ext_attribute *ea = to_ext_attr(attr);
+	struct ptp_ocp *bp = dev_get_drvdata(dev);
+	struct ptp_ocp_serial_port *port;
+
+	port = (void *)((uintptr_t)bp +(uintptr_t)ea->var);
+	return sysfs_emit(buf, "ttyS%d", port->line);
+}
+
+static umode_t
+ptp_ocp_timecard_tty_is_visible(struct kobject *kobj, struct attribute *attr, int n)
+{
+	struct ptp_ocp *bp = dev_get_drvdata(kobj_to_dev(kobj));
+	struct ptp_ocp_serial_port *port;
+	struct device_attribute *dattr;
+	struct dev_ext_attribute *ea;
+
+	if (strncmp(attr->name, "tty", 3))
+		return attr->mode;
+
+	dattr = container_of(attr, struct device_attribute, attr);
+	ea = container_of(dattr, struct dev_ext_attribute, attr);
+	port = (void *)((uintptr_t)bp +(uintptr_t)ea->var);
+	return port->line == -1 ? 0 : 0444;
+}
+#define EXT_TTY_ATTR_RO(_name, _val)			\
+	struct dev_ext_attribute dev_attr_tty##_name =	\
+		{ __ATTR(tty##_name, 0444, ptp_ocp_tty_show, NULL), (void *)_val }
+
+static EXT_TTY_ATTR_RO(GNSS, offsetof(struct ptp_ocp, gnss_port));
+static EXT_TTY_ATTR_RO(GNSS2, offsetof(struct ptp_ocp, gnss2_port));
+static EXT_TTY_ATTR_RO(MAC, offsetof(struct ptp_ocp, mac_port));
+static EXT_TTY_ATTR_RO(NMEA, offsetof(struct ptp_ocp, nmea_port));
+static struct attribute *ptp_ocp_timecard_tty_attrs[] = {
+	&dev_attr_ttyGNSS.attr.attr,
+	&dev_attr_ttyGNSS2.attr.attr,
+	&dev_attr_ttyMAC.attr.attr,
+	&dev_attr_ttyNMEA.attr.attr,
+	NULL,
+};
+
+static const struct attribute_group ptp_ocp_timecard_tty_group = {
+	.name = "tty",
+	.attrs = ptp_ocp_timecard_tty_attrs,
+	.is_visible = ptp_ocp_timecard_tty_is_visible,
+};
+
+static ssize_t
 serialnum_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct ptp_ocp *bp = dev_get_drvdata(dev);
@@ -4388,7 +4437,7 @@ tod_baud_rate_store(struct device *dev, struct device_attribute *attr,
 	// When overwriting the UART baud rate the TOD Slave must get restarted
 	ctrl_reg = ioread32(&bp->tod->ctrl);
 	ctrl_reg &= ~TOD_CTRL_ENABLE;
-	
+
 	spin_lock_irqsave(&bp->lock, flags);
 	iowrite32(ctrl_reg, &bp->tod->ctrl);
 	spin_unlock_irqrestore(&bp->lock, flags);
@@ -4765,6 +4814,7 @@ static const struct attribute_group fb_timecard_group = {
 
 static const struct ocp_attr_group fb_timecard_groups[] = {
 	{ .cap = OCP_CAP_BASIC,	    .group = &fb_timecard_group },
+	{ .cap = OCP_CAP_BASIC,	    .group = &ptp_ocp_timecard_tty_group },
 	{ .cap = OCP_CAP_SIGNAL,    .group = &fb_timecard_signal0_group },
 	{ .cap = OCP_CAP_SIGNAL,    .group = &fb_timecard_signal1_group },
 	{ .cap = OCP_CAP_SIGNAL,    .group = &fb_timecard_signal2_group },
@@ -4803,6 +4853,7 @@ static const struct attribute_group art_timecard_group = {
 
 static const struct ocp_attr_group art_timecard_groups[] = {
 	{ .cap = OCP_CAP_BASIC,	    .group = &art_timecard_group },
+	{ .cap = OCP_CAP_BASIC,	    .group = &ptp_ocp_timecard_tty_group },
 	{ },
 };
 
@@ -5362,6 +5413,7 @@ ptp_ocp_complete(struct ptp_ocp *bp)
 	char buf[32];
 	int i, err;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 8, 0)
 	if (bp->gnss_port.line != -1) {
 		sprintf(buf, "ttyS%d", bp->gnss_port.line);
 		ptp_ocp_link_child(bp, buf, "ttyGNSS");
@@ -5378,6 +5430,7 @@ ptp_ocp_complete(struct ptp_ocp *bp)
 		sprintf(buf, "ttyS%d", bp->nmea_port.line);
 		ptp_ocp_link_child(bp, buf, "ttyNMEA");
 	}
+#endif
 	sprintf(buf, "ptp%d", ptp_clock_index(bp->ptp));
 	ptp_ocp_link_child(bp, buf, "ptp");
 
