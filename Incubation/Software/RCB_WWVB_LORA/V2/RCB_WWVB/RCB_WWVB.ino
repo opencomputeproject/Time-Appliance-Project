@@ -126,6 +126,8 @@ void processSingleCharCommand(char command) {
   float snr = 0;
   int packetSize;
   uint8_t pktbuf[40];
+  static int64_t adjust_val = 1;
+  static int64_t adjust_val_accum = 0;
   phaseUnion dummyVal;
   switch (command) {
     case '0':
@@ -162,16 +164,8 @@ void processSingleCharCommand(char command) {
       frequency_offset -= 0.01; // 10 mHz
       apply_freq_change(0);
       break;
-    case 'd':// incremental frequency down
-      frequency_offset -= 1; // 1Hz
-      apply_freq_change(0);
-      break;
     case 'C': // next frequency down
       frequency_offset -= 100; // 100Hz
-      apply_freq_change(0);
-      break;
-    case 'D': // next frequency down
-      frequency_offset -= 1000; // 1KHz
       apply_freq_change(0);
       break;
 
@@ -314,29 +308,44 @@ void processSingleCharCommand(char command) {
       Serial.println("Enabling HRTIMER PPS output!");
       init_stm_pps();
       break;
+    case '+':
+    case '=':
+      adjust_val *= 2;
+      sprintf(print_buffer, "Doubling adjustment value to %"PRId64"\r\n", adjust_val);
+      Serial.print(print_buffer);
+      break;
+    case '-':
+    case '_':
+      adjust_val /= 2;
+      if ( adjust_val == 0 ) adjust_val = 1;
+      sprintf(print_buffer, "Halving adjustment value to %"PRId64"\r\n", adjust_val);
+      Serial.print(print_buffer);
+      break;
     case 'L':
-      Serial.println("Increasing PPS output frequency by 1000 ns per period");
-      //pps_freq_adjust(1000);
+    case 'd':
+    case 'D':
+      adjust_val_accum += adjust_val;
+      sprintf(print_buffer,"FREQUENCY DECREASE, Increasing PPS output frequency by %"PRId64" ticks to %"PRId64"\r\n", adjust_val, adjust_val_accum);
+      Serial.print(print_buffer);
+      pps_freq_adjust(adjust_val_accum);
       break;
     case 'l':
-      Serial.println("Decreasing PPS output frequency by 1000 ns per period");
-      //pps_freq_adjust(-1000);
-      break;
-    case 'N':
-      Serial.println("Increasing PPS output frequency by 100 us per period");
-      //pps_freq_adjust(100*1000);
-      break;
-    case 'n':
-      Serial.println("Decreasing PPS output frequency by 100 us per period");
-      //pps_freq_adjust(-100*1000);
+    case 'a':
+    case 'A':
+      adjust_val_accum -= adjust_val;
+      sprintf(print_buffer,"FREQUENCY INCREASE, Decreasing PPS output frequency by %"PRId64" ticks to %"PRId64"\r\n", adjust_val, adjust_val_accum);
+      Serial.print(print_buffer);
+      pps_freq_adjust(adjust_val_accum);
       break;
     case 'M':
-      Serial.println("Adding 1000 nanoseconds phase shift to PPS output phase");
-      //pps_step(1000);
+      sprintf(print_buffer,"PHASE SHIFT POSITIVE, INCREASING PPS output phase by %"PRId64" ticks\r\n", adjust_val);
+      Serial.print(print_buffer);
+      pps_step(adjust_val);
       break;
     case 'm':
-      Serial.println("Subtracting 1000 nanoseconds phase shift from PPS output phase");
-      //pps_step(-1000);
+      sprintf(print_buffer,"PHASE SHIFT NEGATIVE, Decreasing PPS output phase by %"PRId64" ticks\r\n", adjust_val);
+      Serial.print(print_buffer);
+      pps_step(adjust_val * -1);
       break;
     case '&':
       Serial.print("User command, restarting STM32!\r\n");

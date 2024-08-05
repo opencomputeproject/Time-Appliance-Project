@@ -51,7 +51,8 @@ typedef struct {
     bool phase_adjustment_stage;
 } DiscipliningState;
 
-#define PHASE_ADJUSTMENT_THRESHOLD 3 // Number of initial phase adjustments
+#define PHASE_ADJUSTMENT_THRESHOLD 5 // Number of initial phase adjustments
+#define PPS_HISTORY_COUNT 5
 
 void init_stm_pps();
 

@@ -50,24 +50,21 @@ void debug_print_hrtimer_registers(int TimerIdx)
 
 
 /******* PPS Input variables **********/
-// just defining a set of global variables
-// assume PPS input is slow enough, don't need any fifo stuff
-// all of these values are with respect to ART, not PHC
-uint64_t art_val_ts = 0;
-uint16_t capture_ts = 0;
-uint16_t dma_remaining_ts = 0;
-uint16_t typical_count_ts = 0;
-uint64_t millis_ts = 0;
-bool valid_ts = 0;
 
+art_timer_val last_pps_out_time;
+art_timer_val last_pps_in_time;
 
 // STM HAL API variables
 extern "C" {
-  DMA_HandleTypeDef hdma_hrtim;
+  DMA_HandleTypeDef hdma_hrtim_ppsout;
+  DMA_HandleTypeDef hdma_hrtim_ppsin;
   HRTIM_HandleTypeDef hhrtim;  
 
 
+
   /********* HRTimer management variables ***********/
+
+  uint64_t ppsin_dma_complete_counter = 0;
 
   uint64_t dma_complete_counter = 0;
   uint64_t timc_interrupt_counter = 0;
@@ -86,7 +83,6 @@ extern "C" {
 
   /********* ART counters ***********/
   uint64_t art_ticks = 0; // just total number of ticks of hrtimer
-  const double nano_per_tick = ((1.0/480.0e6)*1e9);
 
   /********* Timestamp value **********/
   // I don't need to actually timestamp PPS Output
@@ -138,24 +134,41 @@ void compute_timing_adjust_ns(double adjustment_ns, uint16_t *X, uint16_t *Y) {
 
 void compute_level_ticks(uint32_t art_ticks, uint16_t * dma_count, uint16_t * fine_count)
 {
-  uint32_t start_dma_hrtimer_count = 0;
-  start_dma_hrtimer_count = (uint32_t) (art_ticks - 0xffdf) / DMA_PPS_COUNT ;
-  uint32_t remainder = 0;
-  remainder = art_ticks - (start_dma_hrtimer_count * DMA_PPS_COUNT);
-  sprintf(print_buffer,"compute_level_ticks, art_ticks=%"PRIu32 ", start_dma_count=%"PRIu32", remainder=%"PRIu32"\r\n", 
-    art_ticks, start_dma_hrtimer_count, remainder);
-  Serial.println(print_buffer);
-  if ( remainder > 0xffdf ) {
-    remainder -= DMA_PPS_COUNT;
-    start_dma_hrtimer_count++;
+  uint32_t dma_typical_ticks = 0;
+  uint32_t fine_ticks = 0;
+  uint32_t total_ticks = 0;
+  uint32_t effective_dma_count = 0;
+  int shift_count = 0;
+
+  // naive calculations, remainder will be a mess
+  effective_dma_count = DMA_PPS_COUNT + 1;
+  dma_typical_ticks = ( (uint32_t) (art_ticks) / (effective_dma_count) )  ;
+  total_ticks = (dma_typical_ticks+1) * effective_dma_count;
+  fine_ticks = total_ticks - dma_typical_ticks; 
+
+
+  // figure out how ticks I can take from the typical to increase the fine
+  // experimented in excel to figure out this algorithm
+  for ( shift_count = 0; shift_count < 15; shift_count++ ) {
+    total_ticks = ((( dma_typical_ticks - shift_count )) + 1) * effective_dma_count;
+    if ( total_ticks > art_ticks ) {
+      continue;
+    }
+    fine_ticks = art_ticks - total_ticks; 
+    if ( fine_ticks > 0xffdf )
+    {
+      // went over the limit, go back one and end
+      shift_count--;
+      break;
+    }
   }
-  // remainder is new fine value, Y
-  // start_dma_hrtimer_count is new DMA value, X
-  sprintf(print_buffer,"compute_level_ticks, final typical (DMA) value = %"PRIu32", fine value = %"PRIu32"\r\n", 
-    start_dma_hrtimer_count, remainder);
-  Serial.print(print_buffer);
-  *fine_count = (uint16_t)remainder;
-  *dma_count = (uint16_t)start_dma_hrtimer_count;
+  // figured out shift count proper, now use it
+  dma_typical_ticks -= shift_count;
+  total_ticks = ( dma_typical_ticks + 1) * effective_dma_count;
+  fine_ticks = art_ticks - total_ticks - 1;
+
+  *fine_count = (uint16_t)fine_ticks;
+  *dma_count = (uint16_t)dma_typical_ticks;
   return;
 }
 
@@ -163,7 +176,7 @@ void set_next_level_duration(uint64_t art_ticks, bool high_level)
 {
   sprintf(print_buffer, "Set next level duration, art_ticks=%"PRIu64 ", highlevel=%d\r\n",
     art_ticks, high_level);
-  Serial.print(print_buffer);
+  //Serial.print(print_buffer);
   if ( high_level ) {
     compute_level_ticks( (uint32_t)art_ticks, &next_highlevel_typical_count, &next_highlevel_fine_count);
   } else {
@@ -174,7 +187,7 @@ void set_next_level_duration(uint64_t art_ticks, bool high_level)
 void get_current_art_time(uint64_t * art_ticks_now)
 {  
 	*art_ticks_now = (uint64_t) HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].CNTxR; // current value of HRTIMer
-  *art_ticks_now += (DMA_PPS_COUNT - __HAL_DMA_GET_COUNTER(&hdma_hrtim) ) * HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].CMP2xR; // DMA ticks
+  *art_ticks_now += (DMA_PPS_COUNT - __HAL_DMA_GET_COUNTER(&hdma_hrtim_ppsout) ) * HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].CMP2xR; // DMA ticks
   *art_ticks_now += art_ticks; // ticks so far
 }
 void get_art_time_change(uint64_t * new_art_ticks)
@@ -189,9 +202,25 @@ void get_art_time_change(uint64_t * new_art_ticks)
     get_current_art_time(&this_art_time);
     *new_art_ticks = this_art_time - last_art_time;
     last_art_time = this_art_time;
+ 
   }
 }
 
+
+
+void get_art_timer_val_absolute(uint64_t * art_ticks, art_timer_val * val)
+{
+  // used excel simulation of hrtimer / hrtimer dma to compute this formula and avoid off by ones
+
+  *art_ticks = val->art_val_ts; // gross value
+  *art_ticks += val->capture_ts; // fine value
+  if ( val->dma_remaining_ts == DMA_PPS_COUNT) {
+    // either right before fine edge or right after fine edge, don't need anything
+  } else {
+    // in the middle of typical / coarse timeframe
+    *art_ticks += ( (uint64_t)((DMA_PPS_COUNT - (uint64_t)val->dma_remaining_ts)) ) * ((uint64_t)(val->typical_count_ts + 1)) ;
+  }
+}
 
 extern "C" {
 
@@ -199,35 +228,55 @@ extern "C" {
     art_ticks += ticks;
   }
   // top level DMA IRQ handler for HRTIMER 
-  void HRTIMER_DMA_STREAM_HANDLER(void) { 
-    HAL_DMA_IRQHandler(&hdma_hrtim);
+  void HRTIMER_PPSOUT_DMA_STREAM_HANDLER(void) { 
+    HAL_DMA_IRQHandler(&hdma_hrtim_ppsout);
   }
-  void __attribute__((weak)) hrtimer_DMAHalfReceiveCplt(DMA_HandleTypeDef *hdma) {
+  void HRTIMER_PPSIN_DMA_STREAM_HANDLER(void) { 
+    HAL_DMA_IRQHandler(&hdma_hrtim_ppsin);
   }
-    void __attribute__((weak)) hrtimer_DMAError(DMA_HandleTypeDef *hdma) {    
+
+	void __attribute__((weak)) hrtimer_DMAError(DMA_HandleTypeDef *hdma) {    
   }  
-  void __attribute__((weak)) hrtimer_DMAReceiveCplt(DMA_HandleTypeDef *hdma) {
-    if (hdma == &hdma_hrtim)
+  
+  void __attribute__((weak)) hrtimer_ppsin_DMAReceiveCplt(DMA_HandleTypeDef *hdma) {
+	  if ( hdma == &hdma_hrtim_ppsin)
+    {
+      ppsin_dma_complete_counter++;
+      // used excel simulation to figure out the off by 1s
+      add_to_art( ( (uint64_t)0xffdf + 1 ) * (DMA_PPS_COUNT+1) ); // basically just keep ART updated
+    }
+  }
+  
+  void __attribute__((weak)) hrtimer_ppsout_DMAReceiveCplt(DMA_HandleTypeDef *hdma) {
+    if (hdma == &hdma_hrtim_ppsout)
     {
       dma_complete_counter++;
       uint16_t cur_cmp = HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].CMP2xR;
       // enable set every other time on next compare 2
       // enable TIMER C interrupt for this next time so I can disable rst / set outputs
       // disable DMA request for this next time to prevent off by one cycle error
-      HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].TIMxDIER = HRTIM_TIM_FLAG_CMP2 | HRTIM_TIM_FLAG_CPT1;  
+      HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].TIMxDIER = HRTIM_TIM_FLAG_CMP2;  
       if ( set_next_output ) {
         // rising edge basically on next COMPARE 2 trigger
         HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].RSTx2R = HRTIM_OUTPUTRESET_NONE;
         HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].SETx2R = HRTIM_OUTPUTSET_TIMCMP2;
         // change the compare2 value to get the 2ns resolution
         HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].CMP2xR = next_highlevel_fine_count;
+
+        HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].RSTx1R = HRTIM_OUTPUTRESET_NONE;
+        HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].SETx1R = HRTIM_OUTPUTSET_TIMCMP2;
+        HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].CMP1xR = next_highlevel_fine_count;
       } else {
         // falling edge basically on next COMPARE 2 trigger
         HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].RSTx2R = HRTIM_OUTPUTRESET_TIMCMP2;
         HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].SETx2R = HRTIM_OUTPUTSET_NONE;
         HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].CMP2xR = next_lowlevel_fine_count;
+
+        HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].RSTx1R = HRTIM_OUTPUTRESET_TIMCMP2;
+        HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].SETx1R = HRTIM_OUTPUTSET_NONE;
+        HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].CMP1xR = next_lowlevel_fine_count;
       }
-      add_to_art( ((uint64_t)cur_cmp) * DMA_PPS_COUNT); // dma saw this many ticks of hrtimer
+      //add_to_art( ((uint64_t)cur_cmp) * DMA_PPS_COUNT); // dma saw this many ticks of hrtimer
     }
   }
 
@@ -240,7 +289,7 @@ extern "C" {
     uint16_t cur_cmp = HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].CMP2xR;
 
     // disable timc interrupt, enable DMA
-    HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].TIMxDIER = HRTIM_TIM_DMA_CMP2 | HRTIM_TIM_FLAG_CPT1;
+    HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].TIMxDIER = HRTIM_TIM_DMA_CMP2 ;
 
     // set_next_output = 1 here, means just generated rising edge and output is now high
     // set_next_output = 0 here, means just generated falling edge and output is now low
@@ -251,27 +300,41 @@ extern "C" {
     // set_next_output = 0 here, means just generated rising edge and output is now high
     if ( set_next_output ) { // setting up next level 
       HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].CMP2xR = next_lowlevel_typical_count;
+      HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].CMP1xR = next_lowlevel_typical_count;
 	    falling_edge_counter += 1;
     } else {
       HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].CMP2xR = next_highlevel_typical_count;
+      HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].CMP1xR = next_highlevel_typical_count;
 	    rising_edge_counter += 1;	  
     }
-    add_to_art( (uint64_t)cur_cmp ); // just one cycle of hrtimer, PHC saw this many ticks
+    //add_to_art( (uint64_t)cur_cmp ); // just one cycle of hrtimer, PHC saw this many ticks
     art_time_last_rising = art_ticks;
   }
   
-  // capture 1 used for PPS input
+  // capture 1 used for PPS input on ART Timescale
   void HAL_HRTIM_Capture1EventCallback(HRTIM_HandleTypeDef * hhrtim, uint32_t TimerIdx)
   {
     // PPS input capture
     // grab things most likely to change faster
-    dma_remaining_ts = __HAL_DMA_GET_COUNTER(&hdma_hrtim);
-    capture_ts = HAL_HRTIM_GetCapturedValue(hhrtim, HRTIM_TIMERINDEX_TIMER_C, HRTIM_CAPTUREUNIT_1);
-    art_val_ts = art_ticks;
-    // if you need typical_count , then the current compare register is the correct value
-    typical_count_ts = HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].CMP2xR;
-    millis_ts = millis();
-    valid_ts = 1;
+    last_pps_in_time.dma_remaining_ts = __HAL_DMA_GET_COUNTER(&hdma_hrtim_ppsin);
+    last_pps_in_time.capture_ts = HAL_HRTIM_GetCapturedValue(hhrtim, HRTIM_TIMERINDEX_TIMER_A, HRTIM_CAPTUREUNIT_1);
+    last_pps_in_time.art_val_ts = art_ticks;
+    last_pps_in_time.typical_count_ts = HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_A].PERxR;
+    last_pps_in_time.millis_ts = millis();
+    last_pps_in_time.valid_ts = 1;
+  }
+
+  // capture 2 used for PPS output compare on ART timescale
+  void HAL_HRTIM_Capture2EventCallback(HRTIM_HandleTypeDef * hhrtim, uint32_t TimerIdx)
+  {
+    // grab things most likely to change faster
+    last_pps_out_time.dma_remaining_ts = __HAL_DMA_GET_COUNTER(&hdma_hrtim_ppsin);
+    last_pps_out_time.capture_ts = HAL_HRTIM_GetCapturedValue(hhrtim, HRTIM_TIMERINDEX_TIMER_A, HRTIM_CAPTUREUNIT_2);
+    last_pps_out_time.art_val_ts = art_ticks;
+    // for ART, its only using the period 
+    last_pps_out_time.typical_count_ts = HRTIM1->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_A].PERxR;
+    last_pps_out_time.millis_ts = millis();
+    last_pps_out_time.valid_ts = 1;
   }
 
   // Interrupt handler for HRTIMER TIMC
@@ -280,19 +343,31 @@ extern "C" {
     //timc_interrupt_counter++;
     HAL_HRTIM_IRQHandler(&hhrtim, HRTIM_TIMERINDEX_TIMER_C);    
   }  
+  void HRTIM1_TIMA_IRQHandler(void)
+  {
+    HAL_HRTIM_IRQHandler(&hhrtim, HRTIM_TIMERINDEX_TIMER_A);
+  }
 }
 
 bool get_out_level()
 {
   return output_level;
 }
-bool has_timestamp()
+bool has_ppsout_timestamp()
 {
-  return valid_ts;
+  return last_pps_out_time.valid_ts;
 }
-void clear_has_timestamp()
+bool has_ppsin_timestamp()
 {
-  valid_ts = 0;
+  return last_pps_in_time.valid_ts;
+}
+void clear_has_ppsout_timestamp()
+{
+  last_pps_out_time.valid_ts = 0;
+}
+void clear_has_ppsin_timestamp()
+{
+  last_pps_in_time.valid_ts = 0;
 }
 
 uint64_t get_pps_in_timestamp_art()
@@ -311,7 +386,15 @@ uint64_t get_pps_in_timestamp_art()
   return temp;
 }
 
+uint16_t get_art_dma_remaining()
+{
+  return __HAL_DMA_GET_COUNTER(&hdma_hrtim_ppsin);
+}
 
+uint64_t get_art_dma_complete_count()
+{
+  return ppsin_dma_complete_counter;
+}
 
 
 
@@ -362,24 +445,19 @@ void GPIO_Init(void)
   // pin is pin 12 on WWVB RCB Board
   // hack code for input only
   GPIO_InitStruct.Pin = GPIO_PIN_10;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-  // GPIO test mode
-  //GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  //GPIO_InitStruct.Pull = GPIO_NOPULL;
-  
-  // HRTIMER EEV1 pin mode
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;  
   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Alternate = GPIO_AF2_HRTIM1; // Alternate function for HRTIM_EEV1
-  
+  GPIO_InitStruct.Alternate = GPIO_AF2_HRTIM1; // Alternate function for HRTIM_EEV1  
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
 
-  // CHC1 , PA9, using as a debug random toggle
+  // CHC1 , PA9, RCB header PPS out, same PPS out as CHC2
   GPIO_InitStruct.Pin = GPIO_PIN_9;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF2_HRTIM1;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
   HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_9);
 
@@ -438,7 +516,9 @@ void HRTIM_EEV1_PPSInput_Config(void)
   // HRTIM_CaptureUnitConfig code for capture unit 1
   uint32_t CaptureTrigger = 0xFFFFFFFFU;
   CaptureTrigger = HRTIM_CAPTURETRIGGER_EEV_1 ;
-  hhrtim.TimerParam[HRTIM_TIMERINDEX_TIMER_C].CaptureTrigger1 = CaptureTrigger;
+  hhrtim.TimerParam[HRTIM_TIMERINDEX_TIMER_A].CaptureTrigger1 = CaptureTrigger;
+
+  hhrtim.TimerParam[HRTIM_TIMERINDEX_TIMER_A].CaptureTrigger2 = HRTIM_CAPTURETRIGGER_TC1_SET; // also capture on channel C set
 }
 
 // Configure HRTIMER CH C for toggling output on rollover
@@ -450,6 +530,8 @@ void HRTIM_ChannelC_Config(void)
   pTimeBaseCfg.PrescalerRatio = HRTIM_PRESCALERRATIO_DIV1;
   pTimeBaseCfg.Mode = HRTIM_MODE_CONTINUOUS;
   HAL_HRTIM_TimeBaseConfig(&hhrtim, HRTIM_TIMERINDEX_TIMER_C, &pTimeBaseCfg);
+  HAL_HRTIM_TimeBaseConfig(&hhrtim, HRTIM_TIMERINDEX_TIMER_A, &pTimeBaseCfg);
+
 
   HRTIM_CompareCfgTypeDef pCompareCfg = {0};
   pCompareCfg.CompareValue = 1000;
@@ -465,15 +547,19 @@ void HRTIM_ChannelC_Config(void)
   ocCfg.IdleLevel = HRTIM_OUTPUTIDLELEVEL_INACTIVE;
   HAL_HRTIM_SimpleOCChannelConfig(&hhrtim, HRTIM_TIMERINDEX_TIMER_C,
     HRTIM_OUTPUT_TC2, &ocCfg);
+  HAL_HRTIM_SimpleOCChannelConfig(&hhrtim, HRTIM_TIMERINDEX_TIMER_C,
+    HRTIM_OUTPUT_TC1, &ocCfg);
+
+  HAL_HRTIM_SimpleOCChannelConfig(&hhrtim, HRTIM_TIMERINDEX_TIMER_A,
+    HRTIM_OUTPUT_TC2, &ocCfg);
 
   HRTIM_EEV1_PPSInput_Config();
 
-  // enable capture unit 1 for 1PPS in , API is HAL_HRTIM_SimpleCaptureStart
-  hhrtim.Instance->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].CPT1xCR = hhrtim.TimerParam[HRTIM_TIMERINDEX_TIMER_C].CaptureTrigger1;
-
-
   // output start, this starts the timer!
   HAL_HRTIM_SimpleOCStart(&hhrtim, HRTIM_TIMERINDEX_TIMER_C, HRTIM_OUTPUT_TC2);
+  HAL_HRTIM_SimpleOCStart(&hhrtim, HRTIM_TIMERINDEX_TIMER_C, HRTIM_OUTPUT_TC1);
+
+  HAL_HRTIM_SimpleBaseStart(&hhrtim, HRTIM_TIMERINDEX_TIMER_A); // start Timer A as well!
 
   hhrtim.Instance->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].RSTxR |= (1<<2); // make counter reset based on compare unit 2 
   // this makes the output respect the ocCfg, otherwise it doesn't
@@ -483,36 +569,61 @@ void HRTIM_ChannelC_Config(void)
 
   // Output set triggers (make output high) -> Set to nothing for now
   hhrtim.Instance->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].SETx2R = 0x0;
+  hhrtim.Instance->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].SETx1R = 0x0;
   // Output reset triggers (make output low) -> Set to nothing for now
   hhrtim.Instance->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].RSTx2R = 0x0;
+  hhrtim.Instance->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].RSTx1R = 0x0;
   // Interrupt / DMA enable flags -> Set to nothing for now
   hhrtim.Instance->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].TIMxDIER = 0x0;
 
 
 
+  // just doing raw register access here, HAL APIs annoying
+  hhrtim.Instance->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_A].SETx2R = 0x0;
+  hhrtim.Instance->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_A].RSTx2R = 0x0;
+  hhrtim.Instance->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_A].CPT1xCR = HRTIM_CAPTURETRIGGER_EEV_1; // EEV1, PPS in
+  hhrtim.Instance->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_A].CPT2xCR = HRTIM_CAPTURETRIGGER_TC1_SET; // TIMC SET 1
+  hhrtim.Instance->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_A].TIMxDIER = 0x0;
 
-  debug_print_hrtimer_registers(HRTIM_TIMERINDEX_TIMER_C);
-  debug_print_hrtimer_common_registers();
+
+
+
 }
 
 void DMA_Init(void)
 {
-    hdma_hrtim.Instance = HRTIMER_DMA_STREAM; // Example DMA stream
-    hdma_hrtim.Init.Request = DMA_REQUEST_HRTIM_TIMER_C;
-    hdma_hrtim.Init.Direction = DMA_PERIPH_TO_MEMORY;
-    hdma_hrtim.Init.PeriphInc = DMA_PINC_DISABLE;
-    hdma_hrtim.Init.MemInc = DMA_MINC_DISABLE;
-    hdma_hrtim.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
-    hdma_hrtim.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
-    hdma_hrtim.Init.Mode = DMA_CIRCULAR; // is normal or continuous easier???
-    hdma_hrtim.Init.Priority = DMA_PRIORITY_HIGH;
-    hdma_hrtim.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
-    hdma_hrtim.XferCpltCallback = hrtimer_DMAReceiveCplt;
-    hdma_hrtim.XferHalfCpltCallback = hrtimer_DMAHalfReceiveCplt;
-    HAL_DMA_Init(&hdma_hrtim);
+    hdma_hrtim_ppsout.Instance = HRTIMER_PPSOUT_DMA_STREAM; // Example DMA stream
+    hdma_hrtim_ppsout.Init.Request = DMA_REQUEST_HRTIM_TIMER_C;
+    hdma_hrtim_ppsout.Init.Direction = DMA_PERIPH_TO_MEMORY;
+    hdma_hrtim_ppsout.Init.PeriphInc = DMA_PINC_DISABLE;
+    hdma_hrtim_ppsout.Init.MemInc = DMA_MINC_DISABLE;
+    hdma_hrtim_ppsout.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
+    hdma_hrtim_ppsout.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
+    hdma_hrtim_ppsout.Init.Mode = DMA_CIRCULAR; // is normal or continuous easier???
+    hdma_hrtim_ppsout.Init.Priority = DMA_PRIORITY_HIGH;
+    hdma_hrtim_ppsout.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
+    hdma_hrtim_ppsout.XferCpltCallback = hrtimer_ppsout_DMAReceiveCplt;
+    HAL_DMA_Init(&hdma_hrtim_ppsout);
 
-    __HAL_LINKDMA(&hhrtim, hdmaTimerC, hdma_hrtim);
+    __HAL_LINKDMA(&hhrtim, hdmaTimerC, hdma_hrtim_ppsout);
     Serial.println("DMA init for HRTIMER C done!");
+
+
+    hdma_hrtim_ppsin.Instance = HRTIMER_PPSIN_DMA_STREAM; // Example DMA stream
+    hdma_hrtim_ppsin.Init.Request = DMA_REQUEST_HRTIM_TIMER_A;
+    hdma_hrtim_ppsin.Init.Direction = DMA_PERIPH_TO_MEMORY;
+    hdma_hrtim_ppsin.Init.PeriphInc = DMA_PINC_DISABLE;
+    hdma_hrtim_ppsin.Init.MemInc = DMA_MINC_DISABLE;
+    hdma_hrtim_ppsin.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
+    hdma_hrtim_ppsin.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
+    hdma_hrtim_ppsin.Init.Mode = DMA_CIRCULAR; // is normal or continuous easier???
+    hdma_hrtim_ppsin.Init.Priority = DMA_PRIORITY_HIGH;
+    hdma_hrtim_ppsin.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
+    hdma_hrtim_ppsin.XferCpltCallback = hrtimer_ppsin_DMAReceiveCplt;
+    HAL_DMA_Init(&hdma_hrtim_ppsin);
+
+    __HAL_LINKDMA(&hhrtim, hdmaTimerA, hdma_hrtim_ppsin);
+    Serial.println("DMA init for HRTIMER A done!");
 }
 
 void Start_PPS_DMA(void) 
@@ -521,34 +632,39 @@ void Start_PPS_DMA(void)
   // HRTIMER Channel C is setup and running with max period and no output set or reset config
 
   // NVIC initialization for HRTIMER and DMA interrupts
-  HAL_NVIC_SetPriority(HRTIMER_DMA_STREAM_IRQ, 9, 0);
-  HAL_NVIC_EnableIRQ(HRTIMER_DMA_STREAM_IRQ);
+  HAL_NVIC_SetPriority(HRTIMER_PPSOUT_DMA_STREAM_IRQ, 9, 0);
+  HAL_NVIC_EnableIRQ(HRTIMER_PPSOUT_DMA_STREAM_IRQ);
 
-  // enable interrupt on hrtimer , but the hrtimer interrupt enable is not enabled yet
-  HAL_NVIC_SetPriority(HRTIM1_TIMC_IRQn, 9, 0);
+  HAL_NVIC_SetPriority(HRTIMER_PPSIN_DMA_STREAM_IRQ, 9, 1);
+  HAL_NVIC_EnableIRQ(HRTIMER_PPSIN_DMA_STREAM_IRQ);
+
+  // PPS OUT -> enable interrupt on hrtimer , but the hrtimer interrupt enable is not enabled yet
+  HAL_NVIC_SetPriority(HRTIM1_TIMC_IRQn, 9, 2);
   HAL_NVIC_EnableIRQ(HRTIM1_TIMC_IRQn);
 
-  // enable DMA request from hrtimer for compare unit 2
-  hhrtim.Instance->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].TIMxDIER = HRTIM_TIM_DMA_CMP2 | HRTIM_TIM_FLAG_CPT1;
+  HAL_NVIC_SetPriority(HRTIM1_TIMA_IRQn, 9, 3);
+  HAL_NVIC_EnableIRQ(HRTIM1_TIMA_IRQn);
+
+  // PPS OUT -> enable DMA request from hrtimer for compare unit 2
+  hhrtim.Instance->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].TIMxDIER = HRTIM_TIM_DMA_CMP2;
+
+  // PPS IN -> enable DMA request for hrtimer A for period rollover , compare 1 (PPSIN), and compare 2 (PPSOUT timestamp)
+  hhrtim.Instance->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_A].TIMxDIER = HRTIM_TIM_DMA_RST | HRTIM_TIM_FLAG_CPT1 | HRTIM_TIM_FLAG_CPT2;
 
   // start the DMA
-  HAL_DMA_Start_IT(&hdma_hrtim,(uint32_t)&hhrtim.Instance->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].SETx2R,
+  HAL_DMA_Start_IT(&hdma_hrtim_ppsout,(uint32_t)&hhrtim.Instance->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_C].SETx2R,
     (uint32_t)&sram3_data->dummy_hrtimer_dma_val,DMA_PPS_COUNT); 
 
-
+  HAL_DMA_Start_IT(&hdma_hrtim_ppsin,(uint32_t)&hhrtim.Instance->sTimerxRegs[HRTIM_TIMERINDEX_TIMER_A].SETx2R,
+    (uint32_t)&sram3_data->dummy_hrtimera_dma_val,DMA_PPS_COUNT); 
 
   Serial.println("Start PPS DMA done!");
 
 }
 
+
 void stm32_hrtimer_init()
 {
-  art_val_ts = 0;
-  capture_ts = 0;
-  dma_remaining_ts = 0;
-  typical_count_ts = 0;
-  millis_ts = 0;
-  valid_ts = 0;
   // arduino set hrtim1 source initially as RCC_HRTIM1CLK_TIMCLK, need to change it
 
   __HAL_RCC_HRTIM1_CLK_DISABLE();
@@ -566,12 +682,25 @@ void stm32_hrtimer_init()
   __HAL_RCC_C1_HRTIM1_CLK_ENABLE();
   __HAL_RCC_C2_HRTIM1_CLK_ENABLE();
 
+  HRTIM_Init(); // Initialize HRTIMER
+
   GPIO_Init(); // Initialize GPIO PA10 as HRTIM_CHC2
 
-  HRTIM_Init(); // Initialize HRTIMER
+
+
   HRTIM_ChannelC_Config(); // Configure HRTIMER C for output compare mode
   DMA_Init(); // Initialize DMA
   Start_PPS_DMA();
+
+
+  Serial.println("******HRTIM Timer C registers********");
+  debug_print_hrtimer_registers(HRTIM_TIMERINDEX_TIMER_C);
+
+  Serial.println("******HRTIM Timer A registers********");
+  debug_print_hrtimer_registers(HRTIM_TIMERINDEX_TIMER_A);
+
+  Serial.println("*******HRTIM common registers*******");
+  debug_print_hrtimer_common_registers();
 
 }
 

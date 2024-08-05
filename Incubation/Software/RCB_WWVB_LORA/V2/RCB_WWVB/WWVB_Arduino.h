@@ -357,10 +357,13 @@ void wwvb_m4_print_bool(char * name, bool val);
 #define SX1257_Q_TX_DMA_STREAM_IRQ DMA2_Stream4_IRQn
 #define SX1257_Q_TX_DMA_STREAM_HANDLER DMA2_Stream4_IRQHandler
 
-#define HRTIMER_DMA_STREAM DMA2_Stream3
-#define HRTIMER_DMA_STREAM_IRQ DMA2_Stream3_IRQn
-#define HRTIMER_DMA_STREAM_HANDLER DMA2_Stream3_IRQHandler
+#define HRTIMER_PPSOUT_DMA_STREAM DMA2_Stream3
+#define HRTIMER_PPSOUT_DMA_STREAM_IRQ DMA2_Stream3_IRQn
+#define HRTIMER_PPSOUT_DMA_STREAM_HANDLER DMA2_Stream3_IRQHandler
 
+#define HRTIMER_PPSIN_DMA_STREAM DMA2_Stream2
+#define HRTIMER_PPSIN_DMA_STREAM_IRQ DMA2_Stream2_IRQn
+#define HRTIMER_PPSIN_DMA_STREAM_HANDLER DMA2_Stream2_IRQHandler
 
 /* Use of CMSIS compiler intrinsics for register exclusive access */
 /* Atomic 32-bit register access macro to set one or several bits */
@@ -406,6 +409,7 @@ typedef volatile struct sram2_data_struct_name {
 
 typedef volatile struct sram3_data_struct_name {
   uint32_t dummy_hrtimer_dma_val;
+  uint32_t dummy_hrtimera_dma_val;
 } sram3_data_struct;
 
 extern sram1_data_struct * sram1_data;
