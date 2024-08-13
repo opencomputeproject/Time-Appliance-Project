@@ -324,28 +324,14 @@ void processSingleCharCommand(char command) {
     case 'L':
     case 'd':
     case 'D':
-      adjust_val_accum += adjust_val;
-      sprintf(print_buffer,"FREQUENCY DECREASE, Increasing PPS output frequency by %"PRId64" ticks to %"PRId64"\r\n", adjust_val, adjust_val_accum);
-      Serial.print(print_buffer);
-      pps_freq_adjust(adjust_val_accum);
       break;
     case 'l':
     case 'a':
     case 'A':
-      adjust_val_accum -= adjust_val;
-      sprintf(print_buffer,"FREQUENCY INCREASE, Decreasing PPS output frequency by %"PRId64" ticks to %"PRId64"\r\n", adjust_val, adjust_val_accum);
-      Serial.print(print_buffer);
-      pps_freq_adjust(adjust_val_accum);
       break;
     case 'M':
-      sprintf(print_buffer,"PHASE SHIFT POSITIVE, INCREASING PPS output phase by %"PRId64" ticks\r\n", adjust_val);
-      Serial.print(print_buffer);
-      pps_step(adjust_val);
       break;
     case 'm':
-      sprintf(print_buffer,"PHASE SHIFT NEGATIVE, Decreasing PPS output phase by %"PRId64" ticks\r\n", adjust_val);
-      Serial.print(print_buffer);
-      pps_step(adjust_val * -1);
       break;
     case '&':
       Serial.print("User command, restarting STM32!\r\n");
