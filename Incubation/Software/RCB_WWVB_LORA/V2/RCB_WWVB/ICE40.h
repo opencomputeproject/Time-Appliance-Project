@@ -8,6 +8,7 @@
 #include <Arduino.h>
 
 #include "fpgaFirmware.h"
+#include "SX1257.h"
 
 
 
@@ -23,6 +24,9 @@ bool prog_bitstream_start();
 bool prog_bitstream_finish();
 bool prog_bitstream(bool reset_only); // not used
 bool prog_bitstream_send(unsigned char * buf, long size);
+
+
+void ice40_test();
 
 
 

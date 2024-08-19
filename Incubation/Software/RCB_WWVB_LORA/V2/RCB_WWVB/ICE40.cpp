@@ -35,6 +35,7 @@ void ice40_start_stream() {
 
 // implemented a stream stop logic in the FPGA based on DIO0
 // clear it with rising edge / falling edge on spare3
+/*
 void ice40_clear_stream_gate() {
   wwvb_digital_write(ICE_SPARE3, 0);
   delayMicroseconds(5);
@@ -43,7 +44,7 @@ void ice40_clear_stream_gate() {
   wwvb_digital_write(ICE_SPARE3, 0);
   delayMicroseconds(5);
 }
-
+*/
 
 
 // following https://github.com/mwelling/ICE-V-Wireless/blob/main/Firmware/main/ice.c
@@ -89,6 +90,10 @@ bool prog_bitstream_start() {
   wwvb_gpio_pinmode(ICE_SPI_MOSI_PIN,    OUTPUT);
   wwvb_gpio_pinmode(ICE_CRST_PIN,  OUTPUT);
   wwvb_gpio_pinmode(ICE_SPI_CS_PIN,      OUTPUT);
+  wwvb_gpio_pinmode(ICE_SPARE3, OUTPUT);
+
+  wwvb_digital_write(ICE_SPARE4, HIGH);
+  wwvb_digital_write(ICE_SPARE3, HIGH);
   // enable reset
   wwvb_digital_write(ICE_CRST_PIN, LOW);
   // start clock high
@@ -194,4 +199,64 @@ bool prog_bitstream(bool reset_only) {
   if (!cdone_high) return false;
 
   return true;
+}
+
+
+
+
+void ice40_read_reg_airhdl(uint32_t address, uint32_t * value)
+{
+  //https://github.com/airhdl/spi-to-axi-bridge/tree/main
+  //Serial.println("Ice40 Read Reg airhdl start");
+  uint8_t response;
+
+  uint8_t send_buf[11];
+  uint8_t recv_buf[11];
+
+  for ( int i = 0; i < 11; i++ ) {
+    send_buf[i] = 0;
+    recv_buf[i] = 0;
+  }
+
+  //Serial.println("Start SPI transmit receive");
+  wwvb_digital_write(ICE_SPARE3, LOW);
+  delayMicroseconds(10);
+
+  send_buf[0] = 0x1;
+  send_buf[1] = (uint8_t)((address >> 24) & 0xff);
+  send_buf[2] = (uint8_t)((address >> 16) & 0xff);
+  send_buf[3] = (uint8_t)((address >> 8) & 0xff);
+  send_buf[4] = (uint8_t)((address >> 0) & 0xff);
+
+  // just do one byte transfer
+  if (HAL_SPI_TransmitReceive(&SX1257_SDR._spi_mgmt, send_buf, recv_buf, 11, HAL_MAX_DELAY) != HAL_OK ) {
+    Serial.println("HAL SPI Transmit receive not good!");
+  }
+  //HAL_SPI_TransmitReceive(&SX1257_SDR._spi_mgmt, 0x0, &recv_buf, 1, HAL_MAX_DELAY); 
+
+  //Serial.println("Done with SPI transmit receive");
+  sprintf(print_buffer, "AXI Read 0x%x -> ", address);
+  for ( int i = 0; i < 11; i++ ){
+    sprintf(print_buffer, "%s0x%x ", print_buffer, recv_buf[i]);    
+  }
+  Serial.println(print_buffer);
+
+  delayMicroseconds(10);
+  wwvb_digital_write(ICE_SPARE3, HIGH);
+}
+
+void ice40_test()
+{
+  Serial.println("Ice40 test");
+
+  // SPARE3 is chip select for internal logic of FPGA
+  for ( int j = 0; j < 2; j++ ) {
+    uint32_t val = 0;
+    ice40_read_reg_airhdl(0x0, &val);
+    ice40_read_reg_airhdl(0x01000000, &val);
+    delay(1000);
+  }
+
+
+
 }

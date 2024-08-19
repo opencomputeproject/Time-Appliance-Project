@@ -470,7 +470,7 @@ si5341_revd_register_t const si5341_revd_registers[SI5341_REVD_REG_CONFIG_NUM_RE
  *   your configuration meets your jitter requirements
  * 
  * Footnotes:
- * [1] AC-coupled output clocks less than 300 kHz will be significantly attenuated when using 0.1 ï¿½F coupling capacitors as generally installed on Skyworks customer evaluation boards. To properly observe a clock with an output frequency <= 300 kHz, the output clock AC-coupling capacitor will need to be replaced with either a higher value capacitor or with a 0 ? resistor.
+ * [1] AC-coupled output clocks less than 300 kHz will be significantly attenuated when using 0.1 µF coupling capacitors as generally installed on Skyworks customer evaluation boards. To properly observe a clock with an output frequency <= 300 kHz, the output clock AC-coupling capacitor will need to be replaced with either a higher value capacitor or with a 0 ? resistor.
  * 
  * Device Grade
  * ============
@@ -612,8 +612,8 @@ si5341_revd_register_t const si5341_revd_registers[SI5341_REVD_REG_CONFIG_NUM_RE
  * Assumptions:
  * 
  * VDD:      1.8 V
- * Ta:       25 ï¿½C
- * Theta-JA: 18.30 ï¿½C/W (JEDEC Board with 2 m/s airflow)
+ * Ta:       25 °C
+ * Theta-JA: 18.30 °C/W (JEDEC Board with 2 m/s airflow)
  * 
  *                               Overall  On Chip
  * Condition                     Power    Power    Ta    Tj
@@ -647,7 +647,7 @@ si5341_revd_register_t const si5341_revd_registers[SI5341_REVD_REG_CONFIG_NUM_RE
  * 
  * Note:
  * 
- * - Tj is junction temperature. Tj must be less than 125 ï¿½C (on Si5341 Revision
+ * - Tj is junction temperature. Tj must be less than 125 °C (on Si5341 Revision
  *   D) for device to comply with datasheet specifications. Tj = Ta +
  *   Theta_JA*On_Chip_Power.
  * - Overall power includes on-chip power dissipation and adds differential load

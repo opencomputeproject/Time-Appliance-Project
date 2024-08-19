@@ -375,6 +375,9 @@ void processSingleCharCommand(char command) {
       delay(2000);
       break;
     // Add more cases as needed
+    case 'f':
+      ice40_test();
+      break;
     default:
       Serial.println("Unknown command");
       break;
@@ -582,9 +585,6 @@ void setup() {
 
   wwvb_gpio_pinmode(ICE_SPARE5, OUTPUT);
   wwvb_digital_write(ICE_SPARE5, 0); // disable FPGA stream by default
-
-  wwvb_gpio_pinmode(ICE_SPARE3, OUTPUT);
-  wwvb_digital_write(ICE_SPARE3, 0); // FPGA state reset
 
   release_ice40_reset(); // release ice40 reset so I can access SX1257
 
