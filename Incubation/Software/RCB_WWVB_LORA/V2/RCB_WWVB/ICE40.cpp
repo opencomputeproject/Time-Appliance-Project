@@ -249,14 +249,17 @@ void ice40_test()
 {
   Serial.println("Ice40 test");
 
+  // force reset
+  hold_ice40_reset();
+  delay(10);
+  release_ice40_reset();
+  delay(10);
+
   // SPARE3 is chip select for internal logic of FPGA
   for ( int j = 0; j < 2; j++ ) {
     uint32_t val = 0;
     ice40_read_reg_airhdl(0x0, &val);
-    ice40_read_reg_airhdl(0x01000000, &val);
+    ice40_read_reg_airhdl(0x01000054, &val);
     delay(1000);
   }
-
-
-
 }

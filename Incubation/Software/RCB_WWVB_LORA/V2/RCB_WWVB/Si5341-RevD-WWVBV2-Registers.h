@@ -10,7 +10,7 @@
  * Design ID:                                          WWVBV2
  * Includes Pre/Post Download Control Register Writes: Yes
  * Created By:                                         ClockBuilder Pro v4.12 [2024-01-19]
- * Timestamp:                                          2024-08-14 15:10:09 GMT-07:00
+ * Timestamp:                                          2024-08-20 17:21:56 GMT-07:00
  *
  * A complete design report corresponding to this export is included at the end 
  * of this header file.
@@ -65,7 +65,7 @@ si5341_revd_register_t const si5341_revd_registers[SI5341_REVD_REG_CONFIG_NUM_RE
 	{ 0x002B, 0x0A },
 	{ 0x002C, 0x31 },
 	{ 0x002D, 0x01 },
-	{ 0x002E, 0xAD },
+	{ 0x002E, 0xB9 },
 	{ 0x002F, 0x00 },
 	{ 0x0030, 0x00 },
 	{ 0x0031, 0x00 },
@@ -73,7 +73,7 @@ si5341_revd_register_t const si5341_revd_registers[SI5341_REVD_REG_CONFIG_NUM_RE
 	{ 0x0033, 0x00 },
 	{ 0x0034, 0x00 },
 	{ 0x0035, 0x00 },
-	{ 0x0036, 0xAD },
+	{ 0x0036, 0xB9 },
 	{ 0x0037, 0x00 },
 	{ 0x0038, 0x00 },
 	{ 0x0039, 0x00 },
@@ -175,40 +175,40 @@ si5341_revd_register_t const si5341_revd_registers[SI5341_REVD_REG_CONFIG_NUM_RE
 	{ 0x0236, 0x00 },
 	{ 0x0237, 0x00 },
 	{ 0x0238, 0x00 },
-	{ 0x0239, 0xA0 },
+	{ 0x0239, 0xD0 },
 	{ 0x023A, 0x02 },
 	{ 0x023B, 0x00 },
 	{ 0x023C, 0x00 },
 	{ 0x023D, 0x00 },
 	{ 0x023E, 0x80 },
-	{ 0x024A, 0x04 },
+	{ 0x024A, 0x18 },
 	{ 0x024B, 0x00 },
 	{ 0x024C, 0x00 },
-	{ 0x024D, 0x0F },
+	{ 0x024D, 0x4F },
 	{ 0x024E, 0x00 },
 	{ 0x024F, 0x00 },
-	{ 0x0250, 0x0F },
+	{ 0x0250, 0x4F },
 	{ 0x0251, 0x00 },
 	{ 0x0252, 0x00 },
 	{ 0x0253, 0x00 },
 	{ 0x0254, 0x00 },
 	{ 0x0255, 0x00 },
-	{ 0x0256, 0x04 },
+	{ 0x0256, 0x18 },
 	{ 0x0257, 0x00 },
 	{ 0x0258, 0x00 },
-	{ 0x0259, 0x0F },
+	{ 0x0259, 0x1F },
 	{ 0x025A, 0x00 },
 	{ 0x025B, 0x00 },
-	{ 0x025C, 0x0F },
+	{ 0x025C, 0x1F },
 	{ 0x025D, 0x00 },
 	{ 0x025E, 0x00 },
 	{ 0x025F, 0xFF },
-	{ 0x0260, 0x69 },
-	{ 0x0261, 0x18 },
+	{ 0x0260, 0x11 },
+	{ 0x0261, 0x7A },
 	{ 0x0262, 0xFF },
-	{ 0x0263, 0x69 },
-	{ 0x0264, 0x18 },
-	{ 0x0268, 0x0F },
+	{ 0x0263, 0x11 },
+	{ 0x0264, 0x7A },
+	{ 0x0268, 0x4F },
 	{ 0x0269, 0x00 },
 	{ 0x026A, 0x00 },
 	{ 0x026B, 0x57 },
@@ -222,8 +222,8 @@ si5341_revd_register_t const si5341_revd_registers[SI5341_REVD_REG_CONFIG_NUM_RE
 	{ 0x0302, 0x00 },
 	{ 0x0303, 0x00 },
 	{ 0x0304, 0x00 },
-	{ 0x0305, 0x00 },
-	{ 0x0306, 0x15 },
+	{ 0x0305, 0x80 },
+	{ 0x0306, 0x04 },
 	{ 0x0307, 0x00 },
 	{ 0x0308, 0x00 },
 	{ 0x0309, 0x00 },
@@ -423,7 +423,7 @@ si5341_revd_register_t const si5341_revd_registers[SI5341_REVD_REG_CONFIG_NUM_RE
 	{ 0x0A03, 0x01 },
 	{ 0x0A04, 0x01 },
 	{ 0x0A05, 0x01 },
-	{ 0x0A14, 0x00 },
+	{ 0x0A14, 0x08 },
 	{ 0x0A1A, 0x00 },
 	{ 0x0A20, 0x00 },
 	{ 0x0A26, 0x00 },
@@ -452,7 +452,7 @@ si5341_revd_register_t const si5341_revd_registers[SI5341_REVD_REG_CONFIG_NUM_RE
  * Project File:       C:\Users\julianstj\Desktop\WorkNotes\Projects\PTP\WWVB_SDR\Software\RCB_WWVB\PLL_Config\Si5341-RevD-WWVBV2-Project.slabtimeproj
  * Design ID:          WWVBV2
  * Created By:         ClockBuilder Pro v4.12 [2024-01-19]
- * Timestamp:          2024-08-14 15:10:09 GMT-07:00
+ * Timestamp:          2024-08-20 17:21:56 GMT-07:00
  * 
  * Design Rule Check
  * =================
@@ -518,9 +518,9 @@ si5341_revd_register_t const si5341_revd_registers[SI5341_REVD_REG_CONFIG_NUM_RE
  *    OUT3: Unused
  *    OUT4: 32 MHz
  *          Enabled, LVCMOS In-Phase 1.8 V 31 ?
- *    OUT5: 10 MHz
+ *    OUT5: 25 MHz
  *          Enabled, LVCMOS In-Phase 3.3 V 22 ?
- *    OUT6: 10 MHz
+ *    OUT6: 25 MHz
  *          Enabled, LVCMOS In-Phase 3.3 V 22 ?
  *    OUT7: 100 Hz
  *          Enabled, LVCMOS In-Phase 3.3 V 22 ?
@@ -547,8 +547,8 @@ si5341_revd_register_t const si5341_revd_registers[SI5341_REVD_REG_CONFIG_NUM_RE
  * Priority: maximize the number of low jitter outputs
  * 
  * Fpfd = 10 MHz
- * Fvco = 13.44 GHz
- * Fms0 = 320 MHz
+ * Fvco = 14.4 GHz
+ * Fms0 = 1.6 GHz
  * 
  * P dividers:
  *    P0  = 1
@@ -557,16 +557,16 @@ si5341_revd_register_t const si5341_revd_registers[SI5341_REVD_REG_CONFIG_NUM_RE
  *    P3  = Unused
  *    Pxaxb = Unused
  * 
- * M = 1344
+ * M = 1440
  * N dividers:
  *    N0:
- *       Value: 42
+ *       Value: 9
  *       OUT0: 32 MHz
  *       OUT1: 10 MHz
  *       OUT2: 10 MHz
  *       OUT4: 32 MHz
- *       OUT5: 10 MHz
- *       OUT6: 10 MHz
+ *       OUT5: 25 MHz
+ *       OUT6: 25 MHz
  *       OUT7: 100 Hz
  *       OUT8: 100 Hz
  *       OUT9: 10 MHz
@@ -580,16 +580,16 @@ si5341_revd_register_t const si5341_revd_registers[SI5341_REVD_REG_CONFIG_NUM_RE
  *       Unused
  * 
  * R dividers:
- *    R0 = 10
- *    R1 = 32
- *    R2 = 32
+ *    R0 = 50
+ *    R1 = 160
+ *    R2 = 160
  *    R3 = Unused
- *    R4 = 10
- *    R5 = 32
- *    R6 = 32
- *    R7 = 3200000
- *    R8 = 3200000
- *    R9 = 32
+ *    R4 = 50
+ *    R5 = 64
+ *    R6 = 64
+ *    R7 = 16000000
+ *    R8 = 16000000
+ *    R9 = 160
  * 
  * Dividers listed above show effective values. These values are translated to register settings by ClockBuilder Pro. For the actual register values, see below. Refer to the Family Reference Manual for information on registers related to frequency plan.
  * 
@@ -618,7 +618,7 @@ si5341_revd_register_t const si5341_revd_registers[SI5341_REVD_REG_CONFIG_NUM_RE
  *                               Overall  On Chip
  * Condition                     Power    Power    Ta    Tj
  * ----------------------------  -------  -------  ----  ----
- * Typical Ta, Voltage, Current  940 mW   940 mW   25 C  42 C
+ * Typical Ta, Voltage, Current  983 mW   983 mW   25 C  42 C
  * 
  *                                   -----------------------
  *                                           Typical        
@@ -626,23 +626,23 @@ si5341_revd_register_t const si5341_revd_registers[SI5341_REVD_REG_CONFIG_NUM_RE
  *                                   Voltage  Current  Power
  *        Output  Frequency  Format    (V)     (mA)    (mW) 
  *        ------  ---------  ------  -------  -------  -----
- * VDD                                  1.80      112    202
+ * VDD                                  1.80      134    241
  * VDDA                                 3.30      113    374
  * VDDO0  OUT0       32 MHz  LVCMOS (in-phase)     1.80       14     25
  * VDDO1  OUT1       10 MHz  LVCMOS (in-phase)     3.30       14     45
  * VDDO2  OUT2       10 MHz  LVCMOS (in-phase)     3.30       14     45
  * VDDO3  OUT3       Unused        
  * VDDO4  OUT4       32 MHz  LVCMOS (in-phase)     1.80       14     25
- * VDDO5  OUT5       10 MHz  LVCMOS (in-phase)     3.30       14     45
- * VDDO6  OUT6       10 MHz  LVCMOS (in-phase)     3.30       14     45
+ * VDDO5  OUT5       25 MHz  LVCMOS (in-phase)     3.30       15     48
+ * VDDO6  OUT6       25 MHz  LVCMOS (in-phase)     3.30       15     48
  * VDDO7  OUT7       100 Hz  LVCMOS (in-phase)     3.30       13     43
  * VDDO8  OUT8       100 Hz  LVCMOS (in-phase)     3.30       13     43
  * VDDO9  OUT9       10 MHz  LVCMOS (in-phase)     3.30       14     45
  *                                   -------  -------  -----
- *                                      1.80      141    253
- *                                      3.30      208    686
+ *                                      1.80      162    291
+ *                                      3.30      210    692
  *                                   -------  -------  -----
- *                                     Total             940
+ *                                     Total             983
  *                                   -------  -------  -----
  * 
  * Note:
@@ -685,11 +685,11 @@ si5341_revd_register_t const si5341_revd_registers[SI5341_REVD_REG_CONFIG_NUM_RE
  * 0x002D[3:2]   LOS1_VAL_TIME        0                  0x0              
  * 0x002D[5:4]   LOS2_VAL_TIME        0                  0x0              
  * 0x002D[7:6]   LOS3_VAL_TIME        0                  0x0              
- * 0x002E[15:0]  LOS0_TRG_THR         173                0x00AD           
+ * 0x002E[15:0]  LOS0_TRG_THR         185                0x00B9           
  * 0x0030[15:0]  LOS1_TRG_THR         0                  0x0000           
  * 0x0032[15:0]  LOS2_TRG_THR         0                  0x0000           
  * 0x0034[15:0]  LOS3_TRG_THR         0                  0x0000           
- * 0x0036[15:0]  LOS0_CLR_THR         173                0x00AD           
+ * 0x0036[15:0]  LOS0_CLR_THR         185                0x00B9           
  * 0x0038[15:0]  LOS1_CLR_THR         0                  0x0000           
  * 0x003A[15:0]  LOS2_CLR_THR         0                  0x0000           
  * 0x003C[15:0]  LOS3_CLR_THR         0                  0x0000           
@@ -841,18 +841,18 @@ si5341_revd_register_t const si5341_revd_registers[SI5341_REVD_REG_CONFIG_NUM_RE
  * 0x0222[31:0]  P2_SET               0                  0x00000000       
  * 0x0226[47:0]  P3                   0                  0x000000000000   
  * 0x022C[31:0]  P3_SET               0                  0x00000000       
- * 0x0235[43:0]  M_NUM                2886218022912      0x2A000000000    
+ * 0x0235[43:0]  M_NUM                3092376453120      0x2D000000000    
  * 0x023B[31:0]  M_DEN                2147483648         0x80000000       
- * 0x024A[23:0]  R0_REG               4                  0x000004         
- * 0x024D[23:0]  R1_REG               15                 0x00000F         
- * 0x0250[23:0]  R2_REG               15                 0x00000F         
+ * 0x024A[23:0]  R0_REG               24                 0x000018         
+ * 0x024D[23:0]  R1_REG               79                 0x00004F         
+ * 0x0250[23:0]  R2_REG               79                 0x00004F         
  * 0x0253[23:0]  R3_REG               0                  0x000000         
- * 0x0256[23:0]  R4_REG               4                  0x000004         
- * 0x0259[23:0]  R5_REG               15                 0x00000F         
- * 0x025C[23:0]  R6_REG               15                 0x00000F         
- * 0x025F[23:0]  R7_REG               1599999            0x1869FF         
- * 0x0262[23:0]  R8_REG               1599999            0x1869FF         
- * 0x0268[23:0]  R9_REG               15                 0x00000F         
+ * 0x0256[23:0]  R4_REG               24                 0x000018         
+ * 0x0259[23:0]  R5_REG               31                 0x00001F         
+ * 0x025C[23:0]  R6_REG               31                 0x00001F         
+ * 0x025F[23:0]  R7_REG               7999999            0x7A11FF         
+ * 0x0262[23:0]  R8_REG               7999999            0x7A11FF         
+ * 0x0268[23:0]  R9_REG               79                 0x00004F         
  * 0x026B[7:0]   DESIGN_ID0           87                 0x57             
  * 0x026C[7:0]   DESIGN_ID1           87                 0x57             
  * 0x026D[7:0]   DESIGN_ID2           86                 0x56             
@@ -861,7 +861,7 @@ si5341_revd_register_t const si5341_revd_registers[SI5341_REVD_REG_CONFIG_NUM_RE
  * 0x0270[7:0]   DESIGN_ID5           50                 0x32             
  * 0x0271[7:0]   DESIGN_ID6           0                  0x00             
  * 0x0272[7:0]   DESIGN_ID7           0                  0x00             
- * 0x0302[43:0]  N0_NUM               90194313216        0x01500000000    
+ * 0x0302[43:0]  N0_NUM               19327352832        0x00480000000    
  * 0x0308[31:0]  N0_DEN               2147483648         0x80000000       
  * 0x030C[0]     N0_UPDATE            0                  0x0              
  * 0x030D[43:0]  N1_NUM               0                  0x00000000000    
@@ -965,7 +965,7 @@ si5341_revd_register_t const si5341_revd_registers[SI5341_REVD_REG_CONFIG_NUM_RE
  * 0x0A03[4:0]   N_CLK_TO_OUTX_EN     1                  0x01             
  * 0x0A04[4:0]   N_PIBYP              1                  0x01             
  * 0x0A05[4:0]   N_PDNB               1                  0x01             
- * 0x0A14[3]     N0_HIGH_FREQ         0                  0x0              
+ * 0x0A14[3]     N0_HIGH_FREQ         1                  0x1              
  * 0x0A1A[3]     N1_HIGH_FREQ         0                  0x0              
  * 0x0A20[3]     N2_HIGH_FREQ         0                  0x0              
  * 0x0A26[3]     N3_HIGH_FREQ         0                  0x0              
