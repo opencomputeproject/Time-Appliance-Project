@@ -122,6 +122,24 @@ void wwvb_gpio_pinmode(int pin, int dir) {
 }
 
 
+
+
+void print_dma_registers(char * name, DMA_Stream_TypeDef * hdma) 
+{
+  char print_buf[256];  
+  sprintf(print_buf, "%s regs: LISR=0x%x HISR=0x%x CR=0x%x NDTR=0x%x PAR=0x%x M0AR=0x%x M1AR=0x%x FCR=0x%x" , 
+    name, DMA2->LISR, DMA2->HISR, 
+     hdma->CR,
+     hdma->NDTR,
+     hdma->PAR,
+     hdma->M0AR,
+     hdma->M1AR,
+     hdma->FCR );
+  Serial.println(print_buf);
+}
+
+
+
 void init_sram2_nocache() {
   Serial.println("Disabling data caching!");
   SCB_CleanDCache();

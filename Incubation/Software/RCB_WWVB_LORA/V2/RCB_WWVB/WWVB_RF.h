@@ -4,9 +4,8 @@
 #include "WWVB_Arduino.h"
 
 
-void init_wwvb_adc();
+void WWVB_RF_Init();
 
-// either 1 for direct or 0 for amplifier path
-void set_wwvb_antenna(bool direct);
+void WWVB_RF_Loop();
 
 #endif

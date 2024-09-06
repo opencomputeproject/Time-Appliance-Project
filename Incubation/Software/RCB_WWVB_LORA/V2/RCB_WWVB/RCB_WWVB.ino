@@ -10,6 +10,7 @@
 #include "stm32_sdr.h"
 #include "ICE40.h"
 #include "stm32_pps.h"
+#include "WWVB_RF.h"
 
 //#include "mbed.h"
 
@@ -457,7 +458,8 @@ void setup() {
   __HAL_RCC_GPIOJ_CLK_ENABLE(); // lots of GPIO on J
   __HAL_RCC_GPIOK_CLK_ENABLE(); // change K if using other GPIOs, but LED are all K
   
-
+  __HAL_RCC_ADC12_CLK_ENABLE(); // ADC for WWVB path
+  __HAL_RCC_ADC_CONFIG(RCC_ADCCLKSOURCE_CLKP);
   
 
   // SPI5 for SX1276
@@ -612,6 +614,8 @@ void setup() {
   // Put it back in continous RX mode
   switch_lora_to_rx();
 
+  WWVB_RF_Init();
+
 
   
   Serial.println("Init fully done!");
@@ -753,6 +757,8 @@ void loop() {
   wiwi_run();
 
   loop_stm_pps();
+
+  WWVB_RF_Loop();
 
 
   

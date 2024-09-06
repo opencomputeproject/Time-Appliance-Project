@@ -365,6 +365,10 @@ void wwvb_m4_print_bool(char * name, bool val);
 #define HRTIMER_PPSIN_DMA_STREAM_IRQ DMA2_Stream2_IRQn
 #define HRTIMER_PPSIN_DMA_STREAM_HANDLER DMA2_Stream2_IRQHandler
 
+#define WWVB_ADC_DMA_STREAM DMA2_Stream1
+#define WWVB_ADC_DMA_STREAM_IRQ DMA2_Stream1_IRQn
+#define WWVB_ADC_DMA_STREAM_HANDLER DMA2_Stream1_IRQHandler
+
 /* Use of CMSIS compiler intrinsics for register exclusive access */
 /* Atomic 32-bit register access macro to set one or several bits */
 #define ATOMIC_SET_BIT(REG, BIT)                             \
@@ -447,6 +451,8 @@ HAL_StatusTypeDef HAL_SPI_Receive_DMA_NoStart_HackWriteMDMA(SPI_HandleTypeDef *h
 int32_t extend_sign_24bit(uint32_t value);
 int countOneBits(uint32_t n);
 int bitDifference(uint32_t value);
+
+void print_dma_registers(char * name, DMA_Stream_TypeDef * hdma);
 
 uint32_t htonl(uint32_t hostlong);
 
