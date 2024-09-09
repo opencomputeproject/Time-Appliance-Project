@@ -391,6 +391,15 @@ struct ptp_ocp_serial_port {
 #define OCP_CONFIG_SIZE				4096
 #define OCP_SECOND_IN_NANOSECOND 	1000000000
 
+enum {
+	PORT_GNSS,
+	PORT_GNSS2,
+	PORT_MAC, /* miniature atomic clock */
+	PORT_NMEA,
+
+	__PORT_COUNT,
+};
+
 struct ptp_ocp {
 	struct pci_dev		*pdev;
 	struct device		dev;
@@ -437,10 +446,7 @@ struct ptp_ocp {
 	time64_t		gnss_lost;
 	int			id;
 	int			n_irqs;
-	struct ptp_ocp_serial_port	gnss_port;
-	struct ptp_ocp_serial_port	gnss2_port;
-	struct ptp_ocp_serial_port	mac_port;	/* miniature atomic clock */
-	struct ptp_ocp_serial_port	nmea_port;
+	struct ptp_ocp_serial_port	port[__PORT_COUNT];
 	bool			fw_loader;
 	u8			fw_tag;
 	u16			fw_version;
@@ -750,28 +756,28 @@ static struct ocp_resource ocp_fb_resource_rev1[] = {
 		},
 	},
 	{
-		OCP_SERIAL_RESOURCE(gnss_port),
+		OCP_SERIAL_RESOURCE(port[PORT_GNSS]),
 		.offset = 0x00160000 + 0x1000, .irq_vec = 3,
 		.extra = &(struct ptp_ocp_serial_port) {
 			.baud = 115200,
 		},
 	},
 	{
-		OCP_SERIAL_RESOURCE(gnss2_port),
+		OCP_SERIAL_RESOURCE(port[PORT_GNSS2]),
 		.offset = 0x00170000 + 0x1000, .irq_vec = 4,
 		.extra = &(struct ptp_ocp_serial_port) {
 			.baud = 115200,
 		},
 	},
 	{
-		OCP_SERIAL_RESOURCE(mac_port),
+		OCP_SERIAL_RESOURCE(port[PORT_MAC]),
 		.offset = 0x00180000 + 0x1000, .irq_vec = 5,
 		.extra = &(struct ptp_ocp_serial_port) {
 			.baud = 57600,
 		},
 	},
 	{
-		OCP_SERIAL_RESOURCE(nmea_port),
+		OCP_SERIAL_RESOURCE(port[PORT_NMEA]),
 		.offset = 0x00190000 + 0x1000, .irq_vec = 10,
 	},
 	{
@@ -986,28 +992,28 @@ static struct ocp_resource ocp_fb_resource_rev2[] = {
 		},
 	},
 	{
-		OCP_SERIAL_RESOURCE(gnss_port),
+		OCP_SERIAL_RESOURCE(port[PORT_GNSS]),
 		.offset = 0x02160000 + 0x1000, .irq_vec = 35,
 		.extra = &(struct ptp_ocp_serial_port) {
 			.baud = 115200,
 		},
 	},
 	{
-		OCP_SERIAL_RESOURCE(gnss2_port),
+		OCP_SERIAL_RESOURCE(port[PORT_GNSS2]),
 		.offset = 0x02170000 + 0x1000, .irq_vec = 36,
 		.extra = &(struct ptp_ocp_serial_port) {
 			.baud = 115200,
 		},
 	},
 	{
-		OCP_SERIAL_RESOURCE(mac_port),
+		OCP_SERIAL_RESOURCE(port[PORT_MAC]),
 		.offset = 0x02180000 + 0x1000, .irq_vec = 37,
 		.extra = &(struct ptp_ocp_serial_port) {
 			.baud = 57600,
 		},
 	},
 	{
-		OCP_SERIAL_RESOURCE(nmea_port),
+		OCP_SERIAL_RESOURCE(port[PORT_NMEA]),
 		.offset = 0x02190000 + 0x1000, .irq_vec = 42,
 	},
 	{
@@ -1115,7 +1121,7 @@ static struct ocp_resource ocp_art_resource[] = {
 		.offset = 0x01000000, .size = 0x10000,
 	},
 	{
-		OCP_SERIAL_RESOURCE(gnss_port),
+		OCP_SERIAL_RESOURCE(port[PORT_GNSS]),
 		.offset = 0x00160000 + 0x1000, .irq_vec = 3,
 	},
 	{
@@ -1215,7 +1221,7 @@ static struct ocp_resource ocp_art_resource[] = {
 		},
 	},
 	{
-		OCP_SERIAL_RESOURCE(mac_port),
+		OCP_SERIAL_RESOURCE(port[PORT_MAC]),
 		.offset = 0x00190000, .irq_vec = 7,
 		.extra = &(struct ptp_ocp_serial_port) {
 			.baud = 9600,
@@ -2047,6 +2053,15 @@ ptp_ocp_tod_gnss_spoof_state(int idx)
 	if (idx >= ARRAY_SIZE(spoof_state))
 		idx = 0;
 	return spoof_state[idx];
+}
+
+static const char *
+ptp_ocp_tty_port_name(int idx)
+{
+	static const char * const tty_name[] = {
+		"GNSS", "GNSS2", "MAC", "NMEA"
+	};
+	return tty_name[idx];
 }
 
 struct ptp_ocp_nvmem_match_info {
@@ -3400,6 +3415,58 @@ static const struct ocp_sma_op ocp_art_sma_op = {
 	.set_output	= ptp_ocp_art_sma_set,
 };
 
+#ifndef to_ext_attr
+#define to_ext_attr(x) container_of(x, struct dev_ext_attribute, attr)
+#endif
+
+static ssize_t
+ptp_ocp_tty_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct dev_ext_attribute *ea = to_ext_attr(attr);
+	struct ptp_ocp *bp = dev_get_drvdata(dev);
+
+	return sysfs_emit(buf, "ttyS%d", bp->port[(uintptr_t)ea->var].line);
+}
+
+static umode_t
+ptp_ocp_timecard_tty_is_visible(struct kobject *kobj, struct attribute *attr, int n)
+{
+	struct ptp_ocp *bp = dev_get_drvdata(kobj_to_dev(kobj));
+	struct ptp_ocp_serial_port *port;
+	struct device_attribute *dattr;
+	struct dev_ext_attribute *ea;
+
+	if (strncmp(attr->name, "tty", 3))
+		return attr->mode;
+
+	dattr = container_of(attr, struct device_attribute, attr);
+	ea = container_of(dattr, struct dev_ext_attribute, attr);
+	port = &bp->port[(uintptr_t)ea->var];
+	return port->line == -1 ? 0 : 0444;
+}
+
+#define EXT_TTY_ATTR_RO(_name, _val)			\
+	struct dev_ext_attribute dev_attr_tty##_name =	\
+		{ __ATTR(tty##_name, 0444, ptp_ocp_tty_show, NULL), (void *)_val }
+
+static EXT_TTY_ATTR_RO(GNSS, PORT_GNSS);
+static EXT_TTY_ATTR_RO(GNSS2, PORT_GNSS2);
+static EXT_TTY_ATTR_RO(MAC, PORT_MAC);
+static EXT_TTY_ATTR_RO(NMEA, PORT_NMEA);
+static struct attribute *ptp_ocp_timecard_tty_attrs[] = {
+	&dev_attr_ttyGNSS.attr.attr,
+	&dev_attr_ttyGNSS2.attr.attr,
+	&dev_attr_ttyMAC.attr.attr,
+	&dev_attr_ttyNMEA.attr.attr,
+	NULL,
+};
+
+static const struct attribute_group ptp_ocp_timecard_tty_group = {
+	.name = "tty",
+	.attrs = ptp_ocp_timecard_tty_attrs,
+	.is_visible = ptp_ocp_timecard_tty_is_visible,
+};
+
 static ssize_t
 ptp_ocp_show_output(const struct ocp_selector *tbl, u32 val, char *buf,
 		    int def_val)
@@ -3896,55 +3963,6 @@ static EXT_ATTR_RO(freq, frequency, 2);
 static EXT_ATTR_RO(freq, frequency, 3);
 
 static ssize_t
-ptp_ocp_tty_show(struct device *dev, struct device_attribute *attr, char *buf)
-{
-	struct dev_ext_attribute *ea = to_ext_attr(attr);
-	struct ptp_ocp *bp = dev_get_drvdata(dev);
-	struct ptp_ocp_serial_port *port;
-
-	port = (void *)((uintptr_t)bp +(uintptr_t)ea->var);
-	return sysfs_emit(buf, "ttyS%d", port->line);
-}
-
-static umode_t
-ptp_ocp_timecard_tty_is_visible(struct kobject *kobj, struct attribute *attr, int n)
-{
-	struct ptp_ocp *bp = dev_get_drvdata(kobj_to_dev(kobj));
-	struct ptp_ocp_serial_port *port;
-	struct device_attribute *dattr;
-	struct dev_ext_attribute *ea;
-
-	if (strncmp(attr->name, "tty", 3))
-		return attr->mode;
-
-	dattr = container_of(attr, struct device_attribute, attr);
-	ea = container_of(dattr, struct dev_ext_attribute, attr);
-	port = (void *)((uintptr_t)bp +(uintptr_t)ea->var);
-	return port->line == -1 ? 0 : 0444;
-}
-#define EXT_TTY_ATTR_RO(_name, _val)			\
-	struct dev_ext_attribute dev_attr_tty##_name =	\
-		{ __ATTR(tty##_name, 0444, ptp_ocp_tty_show, NULL), (void *)_val }
-
-static EXT_TTY_ATTR_RO(GNSS, offsetof(struct ptp_ocp, gnss_port));
-static EXT_TTY_ATTR_RO(GNSS2, offsetof(struct ptp_ocp, gnss2_port));
-static EXT_TTY_ATTR_RO(MAC, offsetof(struct ptp_ocp, mac_port));
-static EXT_TTY_ATTR_RO(NMEA, offsetof(struct ptp_ocp, nmea_port));
-static struct attribute *ptp_ocp_timecard_tty_attrs[] = {
-	&dev_attr_ttyGNSS.attr.attr,
-	&dev_attr_ttyGNSS2.attr.attr,
-	&dev_attr_ttyMAC.attr.attr,
-	&dev_attr_ttyNMEA.attr.attr,
-	NULL,
-};
-
-static const struct attribute_group ptp_ocp_timecard_tty_group = {
-	.name = "tty",
-	.attrs = ptp_ocp_timecard_tty_attrs,
-	.is_visible = ptp_ocp_timecard_tty_is_visible,
-};
-
-static ssize_t
 serialnum_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct ptp_ocp *bp = dev_get_drvdata(dev);
@@ -4108,7 +4126,7 @@ static DEVICE_ATTR_RW(holdover);
 
 static struct ocp_resource ocp_mac_resource[] = {
 	[0] = {
-		OCP_SERIAL_RESOURCE(mac_port),
+		OCP_SERIAL_RESOURCE(port[PORT_MAC]),
 		.offset = 0x00180000 + 0x1000, .irq_vec = 5,
 		.extra = &(struct ptp_ocp_serial_port) {
 			.baud = 57600,
@@ -4130,7 +4148,6 @@ static int
 mac_mode_select(struct ptp_ocp *bp, bool use_i2c)
 {
 	struct ocp_resource *r;
-	char buf[32];
 	int err;
 
 	if (bp->i2c_mac) {
@@ -4138,10 +4155,9 @@ mac_mode_select(struct ptp_ocp *bp, bool use_i2c)
 		bp->i2c_mac = NULL;
 	}
 
-	if (bp->mac_port.line != -1) {
-		sysfs_remove_link(&bp->dev.kobj, "ttyMAC");
-		serial8250_unregister_port(bp->mac_port.line);
-		bp->mac_port.line = -1;
+	if (bp->port[PORT_MAC].line != -1) {
+		serial8250_unregister_port(bp->port[PORT_MAC].line);
+		bp->port[PORT_MAC].line = -1;
 	}
 
 	r = &ocp_mac_resource[use_i2c];
@@ -4152,11 +4168,6 @@ mac_mode_select(struct ptp_ocp *bp, bool use_i2c)
 			"Could not register %s: err %d, skipping.\n",
 			r->name, err);
 
-	if (!err && bp->mac_port.line != -1) {
-		sprintf(buf, "ttyS%d", bp->mac_port.line);
-		ptp_ocp_link_child(bp, buf, "ttyMAC");
-	}
-
 	return err;
 }
 
@@ -4166,7 +4177,7 @@ mac_mode_selected(struct ptp_ocp *bp, bool use_i2c)
 	if (use_i2c)
 		return bp->i2c_mac != NULL;
 
-	return bp->mac_port.line != -1;
+	return bp->port[PORT_MAC].line != -1;
 }
 
 static ssize_t
@@ -4975,14 +4986,11 @@ ptp_ocp_summary_show(struct seq_file *s, void *data)
 	bp = dev_get_drvdata(dev);
 
 	seq_printf(s, "%7s: /dev/ptp%d\n", "PTP", ptp_clock_index(bp->ptp));
-	if (bp->gnss_port.line != -1)
-		seq_printf(s, "%7s: /dev/ttyS%d\n", "GNSS1", bp->gnss_port.line);
-	if (bp->gnss2_port.line != -1)
-		seq_printf(s, "%7s: /dev/ttyS%d\n", "GNSS2", bp->gnss2_port.line);
-	if (bp->mac_port.line != -1)
-		seq_printf(s, "%7s: /dev/ttyS%d\n", "MAC", bp->mac_port.line);
-	if (bp->nmea_port.line != -1)
-		seq_printf(s, "%7s: /dev/ttyS%d\n", "NMEA", bp->nmea_port.line);
+	for (i = 0; i < __PORT_COUNT; i++) {
+		if (bp->port[i].line != -1)
+			seq_printf(s, "%7s: /dev/ttyS%d\n", ptp_ocp_tty_port_name(i),
+				   bp->port[i].line);
+	}
 
 	memset(sma_val, 0xff, sizeof(sma_val));
 	if (bp->sma_map1) {
@@ -5337,7 +5345,7 @@ ptp_ocp_dev_release(struct device *dev)
 static int
 ptp_ocp_device_init(struct ptp_ocp *bp, struct pci_dev *pdev)
 {
-	int err;
+	int i, err;
 
 	mutex_lock(&ptp_ocp_lock);
 	err = idr_alloc(&ptp_ocp_idr, bp, 0, 0, GFP_KERNEL);
@@ -5351,10 +5359,8 @@ ptp_ocp_device_init(struct ptp_ocp *bp, struct pci_dev *pdev)
 	bp->ptp_info = ptp_ocp_clock_info;
 	spin_lock_init(&bp->lock);
 	mutex_init(&bp->mutex);
-	bp->gnss_port.line = -1;
-	bp->gnss2_port.line = -1;
-	bp->mac_port.line = -1;
-	bp->nmea_port.line = -1;
+	for (i = 0; i < __PORT_COUNT; i++)
+		bp->port[i].line = -1;
 	bp->pdev = pdev;
 
 	device_initialize(&bp->dev);
@@ -5413,24 +5419,6 @@ ptp_ocp_complete(struct ptp_ocp *bp)
 	char buf[32];
 	int i, err;
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 8, 0)
-	if (bp->gnss_port.line != -1) {
-		sprintf(buf, "ttyS%d", bp->gnss_port.line);
-		ptp_ocp_link_child(bp, buf, "ttyGNSS");
-	}
-	if (bp->gnss2_port.line != -1) {
-		sprintf(buf, "ttyS%d", bp->gnss2_port.line);
-		ptp_ocp_link_child(bp, buf, "ttyGNSS2");
-	}
-	if (bp->mac_port.line != -1) {
-		sprintf(buf, "ttyS%d", bp->mac_port.line);
-		ptp_ocp_link_child(bp, buf, "ttyMAC");
-	}
-	if (bp->nmea_port.line != -1) {
-		sprintf(buf, "ttyS%d", bp->nmea_port.line);
-		ptp_ocp_link_child(bp, buf, "ttyNMEA");
-	}
-#endif
 	sprintf(buf, "ptp%d", ptp_clock_index(bp->ptp));
 	ptp_ocp_link_child(bp, buf, "ptp");
 
@@ -5546,22 +5534,21 @@ ptp_ocp_info(struct ptp_ocp *bp)
 	};
 	struct device *dev = &bp->pdev->dev;
 	u32 reg;
+	int i;
 
 	ptp_ocp_phc_info(bp);
 
-	ptp_ocp_serial_info(dev, "GNSS", bp->gnss_port.line, bp->gnss_port.baud);
-	ptp_ocp_serial_info(dev, "GNSS2", bp->gnss2_port.line,
-						bp->gnss2_port.baud);
-	ptp_ocp_serial_info(dev, "MAC", bp->mac_port.line, bp->mac_port.baud);
-	if (bp->nmea_out && bp->nmea_port.line != -1) {
-		bp->nmea_port.baud = -1;
+	for (i = 0; i < __PORT_COUNT; i++) {
+		if (i == PORT_NMEA && bp->nmea_out && bp->port[i].line != -1) {
+			bp->port[i].baud = -1;
 
-		reg = ioread32(&bp->nmea_out->uart_baud);
-		if (reg < ARRAY_SIZE(nmea_baud))
-			bp->nmea_port.baud = nmea_baud[reg];
+			reg = ioread32(&bp->nmea_out->uart_baud);
+			if (reg < ARRAY_SIZE(nmea_baud))
+				bp->port[i].baud = nmea_baud[reg];
 
-		ptp_ocp_serial_info(dev, "NMEA", bp->nmea_port.line,
-							bp->nmea_port.baud);
+		}
+		ptp_ocp_serial_info(dev, ptp_ocp_tty_port_name(i), bp->port[i].line,
+				    bp->port[i].baud);
 	}
 }
 
@@ -5572,7 +5559,9 @@ ptp_ocp_detach_sysfs(struct ptp_ocp *bp)
 	int i;
 
 	sysfs_remove_link(&dev->kobj, "ttyGNSS");
+	sysfs_remove_link(&dev->kobj, "ttyGNSS2");
 	sysfs_remove_link(&dev->kobj, "ttyMAC");
+	sysfs_remove_link(&dev->kobj, "ttyNMEA");
 	sysfs_remove_link(&dev->kobj, "ptp");
 	sysfs_remove_link(&dev->kobj, "pps");
 	sysfs_remove_link(&dev->kobj, "mro50");
@@ -5605,14 +5594,9 @@ ptp_ocp_detach(struct ptp_ocp *bp)
 	for (i = 0; i < 4; i++)
 		if (bp->signal_out[i])
 			ptp_ocp_unregister_ext(bp->signal_out[i]);
-	if (bp->gnss_port.line != -1)
-		serial8250_unregister_port(bp->gnss_port.line);
-	if (bp->gnss2_port.line != -1)
-		serial8250_unregister_port(bp->gnss2_port.line);
-	if (bp->mac_port.line != -1)
-		serial8250_unregister_port(bp->mac_port.line);
-	if (bp->nmea_port.line != -1)
-		serial8250_unregister_port(bp->nmea_port.line);
+	for (i = 0; i < __PORT_COUNT; i++)
+		if (bp->port[i].line != -1)
+			serial8250_unregister_port(bp->port[i].line);
 	if (bp->spi_flash)
 		platform_device_unregister(bp->spi_flash);
 	if (bp->i2c_ctrl)
