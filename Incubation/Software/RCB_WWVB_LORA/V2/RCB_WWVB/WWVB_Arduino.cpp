@@ -851,3 +851,10 @@ uint32_t htonl(uint32_t hostlong) {
            ((hostlong & 0x00FF0000) >> 8)  |
            ((hostlong & 0xFF000000) >> 24);
 }
+
+// Function to convert a 16-bit integer from host to network byte order
+uint16_t htons(uint16_t hostlong) {
+    return ((hostlong & 0x00FF) << 8) |
+           ((hostlong & 0xFF00) >> 8);
+}
+

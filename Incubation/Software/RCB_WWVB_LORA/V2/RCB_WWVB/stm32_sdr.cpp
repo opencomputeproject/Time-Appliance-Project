@@ -356,6 +356,204 @@ inline int16_t get_q_from_start(int index) {
 
 
 
+
+
+inline float compute_phase_from_index_start_earliest(int index) 
+{
+  int last_I, last_Q;
+  get_lora_iq_pointers(&last_I, &last_Q);
+  float I_f32 = (float)  ((int16_t)(sram1_data->I_data[ (last_I + 1 + index) % BUFFER_SIZE ] & 0xffff));
+  float Q_f32 = (float) ((int16_t)(sram2_data->Q_data[ (last_Q + 1 + index) % BUFFER_SIZE ] & 0xffff));
+  /*
+  sprintf(print_buffer,"Compute phase from index, index=%d, int_I=0x%x I_f32=%f , int_Q=0x%x, Q_f32=%f\r\n",
+    index, 
+    (sram1_data->I_data[ (last_I + 1 + index) % BUFFER_SIZE ] & 0xffff), I_f32,
+    (sram2_data->Q_data[ (last_Q + 1 + index) % BUFFER_SIZE ] & 0xffff), Q_f32
+  );
+  Serial.print(print_buffer);
+  */
+  
+  float return_val = 0;
+  arm_atan2_f32(Q_f32, I_f32, &return_val);
+  /*
+  sprintf(print_buffer,"Index %d, Computed phase %f\r\n", index, return_val);
+  Serial.print(print_buffer);
+  */
+  
+  return return_val;
+}
+
+
+
+
+// simple phase estimation algorithm
+// Take the average amplitude of last 5 points (assuming no signal or end of packet)
+// take the average amplitude of 5 points 3000 points back (assuming middle of packet)
+// work backwards from last point until amplitude crosses 1/3 between no signal and middle of packet amplitude
+// consider that point as true "end of packet" sample
+// from that point, there's a nice waveform in the IQ at least for the modulation I'm experimenting with
+// go back 1240 samples
+// start from that point and compute 10 phase values
+// then unwrap those phases
+// then compute the average phase in there, and use that
+// very hacky, needs the zero bytes at end of packet and this specific SF / bandwidth etc
+
+float compute_end_of_packet_amplitude() 
+{
+  float sum = 0;
+  int end_of_packet_count = 5;
+  for ( int i = 0; i < end_of_packet_count; i++ ) {
+    sum += compute_amplitude_from_index_start_earliest(BUFFER_SIZE - i - 1);
+  }
+  sum = sum / ((float)end_of_packet_count);
+  return sum;
+}
+
+float compute_mid_packet_amplitude()
+{
+  float sum = 0;
+  int end_of_packet_count = 5;
+  int mid_packet_offset = 3000;
+  for ( int i = 0; i < end_of_packet_count; i++ ) {
+    sum += compute_amplitude_from_index_start_earliest(BUFFER_SIZE - mid_packet_offset - i - 1);
+  }
+  sum = sum / ((float)end_of_packet_count);
+  return sum;
+}
+
+int find_index_end_of_packet()
+{
+  float end_ampl, mid_ampl;
+  float cross_point;
+  int cross_index = -1;
+  end_ampl = compute_end_of_packet_amplitude();
+  mid_ampl = compute_mid_packet_amplitude();
+  cross_point = end_ampl + ((mid_ampl - end_ampl) /3); 
+  for ( int i = 0; i < BUFFER_SIZE; i++ ) { // bounded loop, not infinite loop
+    mid_ampl = compute_amplitude_from_index_start_earliest(BUFFER_SIZE - i - 1); // reuse variable
+    if ( mid_ampl >= cross_point ) {
+      cross_index = BUFFER_SIZE - i - 1;
+      break;
+    }
+  }
+  sprintf(print_buffer, "Find index end of packet, found %d\r\n", cross_index);
+  //Serial.print(print_buffer);
+  return cross_index;
+}
+
+
+#define TWO_PI (2.0 * M_PI)
+
+// Function to wrap a phase value to the range [-π, π]
+float wrap_phase(float phase) {
+    // Wrap phase to the range [0, 2π)
+    phase = fmod(phase, TWO_PI);
+    
+    // Adjust phase to the range [-π, π]
+    if (phase >= M_PI) {
+        phase -= TWO_PI;
+    } else if (phase < -M_PI) {
+        phase += TWO_PI;
+    }
+
+    return phase;
+}
+
+#define SAMPLE_LENGTH 20
+float phase_buffer[SAMPLE_LENGTH];
+float phase_buffer_unwrapped[SAMPLE_LENGTH];
+
+bool compute_phase_with_end_of_packet_index(float * val)
+{
+  int end_index = 0;
+  if ( val == 0 ) {
+    return 0;
+  }
+  //dump_lora_iq_from_oldest();
+  end_index = find_index_end_of_packet();
+  if ( end_index == -1 )
+  {
+    Serial.println("Find index end of packet failed!");
+    return 0; // bad return, couldn't compute
+  }
+  // found index of end of packet
+  // current hack, go back some samples
+  end_index -= 1280; // this is with respect to the earliest sample!
+  // 1280 is good number for 125KHz / SF7 , 500KHz / SF7 was something like 800
+  sprintf(print_buffer,"End index starting for phase calculation: %d\r\n", end_index);
+  //Serial.print(print_buffer);
+
+  // DEBUG test
+  bool all_zero = 1;
+  for ( int i = 0; i < SAMPLE_LENGTH; i++ ) {
+    if ( get_i_from_start(end_index+i) != 0x0 ) {
+      all_zero = 0;
+      break;
+    }
+  }
+  if ( all_zero ) {
+    Serial.println("*********************ALL ZERO I, FULL DUMP****************************");
+    SX1276_Lora.dumpRegisters(Serial);
+
+
+    print_spi_registers("SPI1 I when zero I", &SX1257_SDR._spi_I_Data);
+    print_spi_registers("SPI2 Q when zero I", &SX1257_SDR._spi_Q_Data);
+
+    print_dma_registers("SPI1 I DMA when zero I",(DMA_Stream_TypeDef *)(SX1257_SDR.hdma_spi1_rx.Instance) );
+    print_dma_registers("SPI2 Q DMA when zero I",(DMA_Stream_TypeDef *)(SX1257_SDR.hdma_spi2_rx.Instance) );
+    dump_lora_iq_from_oldest_count(2000);
+    return 0;
+  }
+
+
+
+  for ( int i = 0; i < SAMPLE_LENGTH; i++ ) {
+    phase_buffer[i] = compute_phase_from_index_start_earliest(end_index + i);
+  }
+  // do unwrap
+
+  float32_t sum = 0;
+  float32_t count = 0;
+  int uwcount, uwcount_prev = 0;
+
+  for ( int i = 1; i < SAMPLE_LENGTH; i++ ) {
+    if ( (phase_buffer[i] - phase_buffer[i-1]) > M_PI ) {
+      uwcount = uwcount_prev -1;
+    } else if (  ( phase_buffer[i] - phase_buffer[i-1]  ) < -M_PI ) {
+      uwcount = uwcount_prev+1;
+    } else {
+      uwcount = uwcount_prev;
+    }
+    phase_buffer_unwrapped[i] = phase_buffer[i] + ((float32_t)uwcount) * 2.0 * M_PI;
+    uwcount_prev = uwcount;
+  }
+
+  //Serial.print("Unwrapped phase values:");
+  sum = 0;
+  count = 0;
+  for ( int i = 0; i < SAMPLE_LENGTH; i++ ) {
+    sum += phase_buffer_unwrapped[i];
+    count++;
+  }
+
+  // need to implement euclidean modulo
+  sum = sum / count; // raw average
+  // a = sum
+  // n = 2*M_PI
+  // floor in C is non ideal , handle the sign myself
+  if ( sum < 0 ) {
+    count = sum - (-2*M_PI)*ceil(fabs(sum/(2*M_PI)));
+  } else {
+    count = sum - (2*M_PI)*floor(sum/(2*M_PI));
+  }
+
+  sprintf(print_buffer,"Average of unwrapped phase: %f\r\n", count);
+  Serial.print(print_buffer);
+  *val = count;
+  return 1; // good
+} 
+
+
 void compute_phase_from_lora_iq(phaseUnion * phi)
 {
   //Serial.println("Compute phase from LoRA IQ place holder!");
@@ -369,11 +567,15 @@ void compute_phase_from_lora_iq(phaseUnion * phi)
     return;
   }
   phi->value = 0; // initialize it
-
-  // not included in this implementation
+  //dump_lora_iq_from_oldest_start_count(BUFFER_SIZE-3000, 3000);
+  compute_phase_with_end_of_packet_index(&phi->value);
 
   return;
 }
+
+
+
+
 
 
 
@@ -392,7 +594,7 @@ bool receive_lora_packet(uint8_t * pkt_data, int * pktlen, phaseUnion * phase)
   if (!is_receive_packet_available() ) {
     return 0;
   }
-  Serial.println("Received one packet!");
+  //Serial.println("\r\nReceived one packet!");
   *pktlen = SX1276_Lora.parsePacket();
 
   //Serial.println("IQ Data:");
@@ -408,7 +610,7 @@ bool receive_lora_packet(uint8_t * pkt_data, int * pktlen, phaseUnion * phase)
   rssi = SX1276_Lora.packetRssi();
   snr = SX1276_Lora.packetSnr();
   sprintf(print_buffer, "Lora packet rssi=%d , snr=%f\r\n", rssi, snr);
-  Serial.print(print_buffer);
+  //Serial.print(print_buffer);
   Serial.print("Received packet data: ");
   for (int j = 0; j < *pktlen; j++) {
     if ( SX1276_Lora.available() ) {

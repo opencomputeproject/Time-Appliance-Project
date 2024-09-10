@@ -455,5 +455,6 @@ int bitDifference(uint32_t value);
 void print_dma_registers(char * name, DMA_Stream_TypeDef * hdma);
 
 uint32_t htonl(uint32_t hostlong);
+uint16_t htons(uint16_t hostlong);
 
 #endif

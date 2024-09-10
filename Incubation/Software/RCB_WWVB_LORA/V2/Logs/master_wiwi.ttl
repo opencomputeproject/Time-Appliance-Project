@@ -1,0 +1,21 @@
+
+pause 1
+logpause
+
+; Wait for the string "Init fully done!"
+wait 'Init fully done!'
+logstart
+
+; Once the string is found, send the character '0'
+; master wait 3 seconds, so other scripts can run 
+pause 2
+sendln '0'
+
+; Wait for 10 seconds 
+pause 5
+
+; Send & to reboot it
+sendln '&'
+
+; Close the Tera Term session
+closett

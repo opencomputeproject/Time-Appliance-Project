@@ -25,7 +25,7 @@ bool start_wiwi = false;
 
 void SDR_Test_init();
 
-
+RNG_HandleTypeDef hrng;
 
 
 
@@ -130,17 +130,34 @@ void processSingleCharCommand(char command) {
   static int64_t adjust_val = 1;
   static int64_t adjust_val_accum = 0;
   phaseUnion dummyVal;
+  uint32_t randval;
   switch (command) {
-    case '0':
+    case '0': // master anchor mode
+    case '!': // slave anchor mode
+    case '1': // tag mode, device tracking 
       Serial.println("Setting start_wiwi flag due to user input!\r\n");
       sprintf(print_buffer,"WiWi disc parameters: Kp=%0.15f Ki=%0.15f Kd=%0.15f\r\n", KP, KI, KD);
       Serial.print(print_buffer); 
       start_wiwi = true;
+      if ( command == '0' ) {
+        wiwi_network_mode = WIWI_MODE_MASTER_ANCHOR;
+        wiwi_mac_addr = 0; // only one master, 0
+		Serial.println("Starting as wiwi master anchor!");
+      } else if ( command == '!') {
+        wiwi_network_mode = WIWI_MODE_SLAVE_ANCHOR;
+        HAL_RNG_GenerateRandomNumber(&hrng, &randval);
+        wiwi_mac_addr = (randval % 100) + 1; // between 1 and 100
+		Serial.println("Starting as wiwi client anchor!");
+      } else {
+        wiwi_network_mode = WIWI_MODE_TAG;
+        HAL_RNG_GenerateRandomNumber(&hrng, &randval);
+        wiwi_mac_addr = (randval % 155) + 101; // between 101 and 255
+		Serial.println("Starting as Wiwi tag!");
+      }
       switch_lora_to_rx();
       sprintf(print_buffer,"My MAC = 0x%x\r\n", wiwi_mac_addr);
       Serial.print(print_buffer);  
       break;
-
     /********** Manual frequency up ************/
     case 'u': // ultra small frequency up
       // hack for current boards, frequency resolution is 5e-12
@@ -170,10 +187,6 @@ void processSingleCharCommand(char command) {
       apply_freq_change(0);
       break;
 
-    case '1':      
-      //Serial.println("Stopping RX IQ");
-      //SX1257_SDR.disable_dma();
-      break;
     case '2':
       wwvb_digital_write(WLED_RED, LOW);
       Serial.print("Set LED to red!\r\n");
@@ -186,56 +199,9 @@ void processSingleCharCommand(char command) {
       Serial.println("Printing IQ rx buffer");
       //SX1257_SDR.print_rx_iq_data(1);
       break;
-    case '5':
-      // test SX1276 transmit path basically
-      Serial.println("Starting SX1276 packet spam!");
-      SX1276_Lora.dumpRegisters(Serial);
-      Serial.flush();
-      delay(10);
-      
-      fake_packet.hdr.wiwi_id = htonl(0x77697769); // uin32_t / uint16_t needs reverse order when transferring to SiLabs!!!!!
-      fake_packet.hdr.mac_src = 0xfe;
-      fake_packet.hdr.mac_dest = 0xff;
-      fake_packet.hdr.pkt_type = WIWI_PKT_ANNOUNCE;
-      fake_packet.hdr.seq_num = 0;
-      fake_packet.hdr.ack_num = 0;
-      fake_packet.flags = 0;
-      fake_packet.previous_tx_time = 0;
-      fake_packet.previous_iq.value = 0;
-      fake_packet.unused[0] = 0;
-      fake_packet.unused[1] = 0;
-      fake_packet.reserved[0] = 0;
-      fake_packet.reserved[1] = 0;
-      fake_packet.reserved[2] = 0;
-      fake_packet.reserved[3] = 0;
-      fake_packet.unusedtwo[0] = 0;
-      fake_packet.unusedtwo[1] = 0;
-      fake_packet.unusedtwo[2] = 0;
-      SX1276_Lora.setantenna(1, 1, 1);
-      for ( int i = 0; i < 100000; i++ ) {
-        //sprintf(print_buffer, "Sending forced tx command, pktlen %d\r\n", sizeof(wiwi_pkt_announce));
-        //Serial.print(print_buffer);       
-
-        //clear_lora_done(); // make sure this flag is done  
-        //force_restart_lora_rx(); // make sure SDR path and DMA is running again        
-        SX1276_Lora.beginPacket(1);
-        SX1276_Lora.write( (uint8_t*) &fake_packet, sizeof(wiwi_pkt_announce));
-        SX1276_Lora.endPacket(); // finish packet and send it
-
-        /*
-        if ( check_lora_done() ) {
-          Serial.println("Got DIO0 proper after TX!");
-        }
-
-        compute_phase_from_lora_iq(0);
-        clear_lora_done(); // make sure this flag is done  
-        force_restart_lora_rx(); // make sure SDR path and DMA is running again
-        */
-      }
-      Serial.println("Done packet spam!");
-      break;
     case '6':
     case 'w':
+    /*
       // IQ testing announce packet
       fake_packet.hdr.wiwi_id = htonl(0x77697769); // uin32_t / uint16_t needs reverse order
       fake_packet.hdr.mac_src = 0xfe;
@@ -243,12 +209,7 @@ void processSingleCharCommand(char command) {
       fake_packet.hdr.pkt_type = WIWI_PKT_ANNOUNCE;
       fake_packet.hdr.seq_num = 0;
       fake_packet.hdr.ack_num = 0;
-      fake_packet.flags = 0;
-      fake_packet.previous_tx_time = 0xa5a5a5a5;
-      fake_packet.previous_iq.intval = 0xa5a5a5a5;
       fake_packet.checksum = 0xa5;
-      fake_packet.unused[0] = 0;
-      fake_packet.unused[1] = 0;
       fake_packet.reserved[0] = 0;
       fake_packet.reserved[1] = 0;
       fake_packet.reserved[2] = 0;
@@ -258,10 +219,11 @@ void processSingleCharCommand(char command) {
       fake_packet.unusedtwo[2] = 0;
 
       send_packet( (uint8_t*) &fake_packet, sizeof(wiwi_pkt_announce), 0, 0 );
-      
+      */
     
       break;
     case 'e':
+    /*
       // IQ testing delay packet
       fake_delay_packet.hdr.wiwi_id = htonl(0x77697769); // uin32_t / uint16_t needs reverse order
       fake_delay_packet.hdr.mac_src = 0xfe;
@@ -269,7 +231,6 @@ void processSingleCharCommand(char command) {
       fake_delay_packet.hdr.pkt_type = WIWI_PKT_DELAY_REQ;
       fake_delay_packet.hdr.seq_num = 0;
       fake_delay_packet.hdr.ack_num = 0;
-      fake_delay_packet.flags = 0;
       fake_delay_packet.previous_tx_ts = 0xa5a5a5a5;
       fake_delay_packet.previous_tx_iq.intval = 0xa5a5a5a5;
       fake_delay_packet.previous_rx_ts = 0xa5a5a5a5;
@@ -290,7 +251,7 @@ void processSingleCharCommand(char command) {
       fake_delay_packet.reserved[12] = 0;
 
       send_packet( (uint8_t*) &fake_delay_packet, WIWI_PKT_DELAY_LEN, 0, 0 );
-
+    */
 
       break;
     case '7':
@@ -438,7 +399,7 @@ void handle_user_data() {
 
 
 
-RNG_HandleTypeDef hrng;
+
 void setup() {
   
   // Using STM32 HAL in general
@@ -523,22 +484,23 @@ void setup() {
   Serial.println("");
 
   // enable hardware RNG in STM32
-  
+  // wiwi_mac_addr = 0 for master anchor, 1 to 100 for slave anchors, 101 to 255 for tags
   hrng.Instance = RNG;
   if (HAL_RNG_Init(&hrng) != HAL_OK) {
     Serial.println("Failed to init hardware RNG");
-    wiwi_mac_addr = random(0,255);
+    wiwi_mac_addr = random(1,100);
     sprintf(print_buffer, "Using wiwi mac 0x%x\r\n", wiwi_mac_addr);
     Serial.print(print_buffer);
   } else {
     uint32_t rand_num = 0;
     if (HAL_RNG_GenerateRandomNumber(&hrng, &rand_num) != HAL_OK) {
       Serial.println("Failed to get hardware RNG value");
-      wiwi_mac_addr = random(0,255);
+      wiwi_mac_addr = random(1,100);
       sprintf(print_buffer, "Using wiwi mac 0x%x\r\n", wiwi_mac_addr);
       Serial.print(print_buffer);
     } else {
       Serial.println("Hardware RNG value successful!");
+      if ( rand_num == 0 ) rand_num = 1;
       wiwi_mac_addr = (uint8_t) (rand_num % 255);
       sprintf(print_buffer, "Using wiwi mac 0x%x\r\n", wiwi_mac_addr);
       Serial.print(print_buffer);
@@ -677,7 +639,7 @@ void run_wiwi_rx() {
   if ( is_receive_packet_available() )
   {
 
-    Serial.println("Run wiwi RX, packet available!");
+    //Serial.println("Run wiwi RX, packet available!");
     // could either be reception or TX done
     // get IQ data from DMA for both TX and RX 
 
@@ -693,11 +655,13 @@ void run_wiwi_rx() {
     packet_buffer[rx_packet_index].phase.value = tempPhase.value;
     packet_buffer[rx_packet_index].pkt_len = (uint8_t) rssi;
     packet_buffer[rx_packet_index].timestamp = micros();
-    sprintf(print_buffer, "RX timestamp: %ld\r\n", packet_buffer[rx_packet_index].timestamp);
+    sprintf(print_buffer, "Run_wiwi_rx, Received packet, phase = 0x%x, timestamp: %ld\r\n", 
+		tempPhase.intval,
+		packet_buffer[rx_packet_index].timestamp);
     Serial.print(print_buffer);
 
     rx_packet_list.add(rx_packet_index); // put into RX list for network stack
-    Serial.println("Done with run_wiwi_rx");
+    //Serial.println("Done with run_wiwi_rx\r\n\r\n");
 
   }
 }

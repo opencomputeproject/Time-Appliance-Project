@@ -1,0 +1,22 @@
+; do pause to skip all the canned init messages I print
+
+pause 1
+logpause
+
+; Wait for the string "Init fully done!"
+wait 'Init fully done!'
+logstart
+
+; Once the string is found, send the character '!'
+pause 1
+sendln '!'
+
+; Wait for 10 seconds
+pause 5
+
+; Send & to reboot it
+sendln '&'
+
+
+; Close the Tera Term session
+closett
