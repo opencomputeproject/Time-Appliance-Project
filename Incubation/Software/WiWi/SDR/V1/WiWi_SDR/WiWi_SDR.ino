@@ -25,7 +25,7 @@ bool start_wiwi = false;
 
 void SDR_Test_init();
 
-Adafruit_NeoPixel pixels(1, NEOPIXEL_PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel pixels(1, 1, NEO_GRB + NEO_KHZ800);
 
 
 
@@ -504,7 +504,12 @@ void setup() {
   }
   init_sram2_nocache();
   //init_sitime(10e6);
-  init_si5341b();
+  //init_si5341b();
+
+  pixels.setPin(0);
+  Serial.println("Start neopixel!");
+  pixels.begin();
+
 
   Serial.println("");
   Serial.println("");
@@ -619,11 +624,12 @@ int led_count = 0;
 
 void led_loop() {
   if ( millis() - last_led_toggle_millis >= 1000 ) {
+    Serial.println("LED Loop run!");
     pixels.clear();
     if ( leds_on ) {
-      pixels.setPixelColor(0, pixels.Color(0, 150, 0));
+      pixels.setPixelColor(0, pixels.Color(255, 255, 255));
     } else {
-      pixels.setPixelColor(0, pixels.Color(150, 0, 0));
+      pixels.setPixelColor(0, pixels.Color(0, 0, 0));
     }
     
     pixels.show();

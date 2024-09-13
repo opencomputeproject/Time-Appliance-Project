@@ -114,7 +114,7 @@ static uint32_t prev_tx_ts;
 static uint8_t rcvdDelayReqSeqNum = 0;
 
 ///////////////////////////////// Client anchor wiwi management data 
-t_clientAnchor_selfWiWiData client_wiwidata[CLIENT_ANCHOR_WIWI_DATA_HISTORY];
+
 
 
 void clientAnchor_handleDelayReq(packet * single_packet)
@@ -143,12 +143,19 @@ void clientAnchor_handleDelayReq(packet * single_packet)
 	for ( int i = 0; i < wiwi_pkt->num_anchor_responses_requested; i++ ) {
 		add_mac_to_schedule(ancInfo->anchor_mac, 0);		
 		if ( ancInfo->anchor_mac == wiwi_mac_addr ) {
-			if ( clientAnchor_newRcvdWiwi_dat( client_wiwidata,
-				CLIENT_ANCHOR_WIWI_DATA_HISTORY,
+			// client anchor, make a new entry 
+			Anchor_startNewRcvdWiWiEntry( client_wiwidata,
+				ANCHOR_WIWI_DATA_HISTORY,
+				wiwi_pkt->hdr.seq_num,
+				0 );
+			
+			// put this data in 
+			if ( Anchor_newRcvdWiwi_dat( client_wiwidata,
+				ANCHOR_WIWI_DATA_HISTORY,
 				wiwi_pkt->hdr.seq_num, 
 				single_packet->phase.intval,
 				ancInfo->prev_phi_ab.intval, 
-				ancInfo->prev_phi_aa.intval ) != -1 ) {
+				ancInfo->prev_phi_aa.intval, 0 ) != -1 ) {
 				Serial.println("************** WIWI HAS FULL DATA *******************");
 			}
 		}
@@ -157,7 +164,7 @@ void clientAnchor_handleDelayReq(packet * single_packet)
 	rcvdDelayReqSeqNum = wiwi_pkt->hdr.seq_num;
 	//prev_phi_ab.intval = single_packet->phase.intval;
 	
-	
+	printAnchorData(client_wiwidata, ANCHOR_WIWI_DATA_HISTORY);
 	sprintf(print_buffer, "*******Client Anchor, Store Master anchor delay req, seq=%d, phase=0x%x\r\n",
 		wiwi_pkt->hdr.seq_num, single_packet->phase.intval);
 	Serial.print(print_buffer);
@@ -181,11 +188,11 @@ void clientAnchor_handleSentDelayResp(packet * single_packet)
 	//phi_bb.intval = single_packet->phase.intval;
 	prev_tx_ts = single_packet->timestamp;
 	
-	clientAnchor_newTxWiWi( client_wiwidata,
-		CLIENT_ANCHOR_WIWI_DATA_HISTORY,
-		single_hdr->seq_num, single_packet->phase.intval );
+	Anchor_newTxWiWi( client_wiwidata,
+		ANCHOR_WIWI_DATA_HISTORY,
+		single_hdr->seq_num, single_packet->phase.intval, 0);
 	
-	
+	printAnchorData(client_wiwidata, ANCHOR_WIWI_DATA_HISTORY);
 	sprintf(print_buffer, "*******Client anchor, sent Delay resp, phase=0x%x time=%ld\r\n",
 		single_packet->phase.intval, prev_tx_ts);
 	Serial.print(print_buffer);
@@ -230,13 +237,15 @@ void clientAnchor_sendDelayResp()
 	// my info sharing with anchor 
 	wiwi_pkt->my_prev_info.anchor_mac = 0;
 	wiwi_pkt->my_prev_info.prev_phi_ab.intval = get_prev_rcvd_phase(client_wiwidata,
-		CLIENT_ANCHOR_WIWI_DATA_HISTORY, delayRespSeqNum);
+		ANCHOR_WIWI_DATA_HISTORY, delayRespSeqNum, 0);
 	wiwi_pkt->my_prev_info.prev_phi_aa.intval = get_prev_tx_phase(client_wiwidata,
-		CLIENT_ANCHOR_WIWI_DATA_HISTORY, delayRespSeqNum);
+		ANCHOR_WIWI_DATA_HISTORY, delayRespSeqNum-1, 0);
+	
+
 	wiwi_pkt->my_prev_info.previous_tx_ts = prev_tx_ts;
 	sprintf(print_buffer, "Client anchor delay resp, prev_phi_ab=0x%x, prev_phi_aa=0x%x, ts=0x%x\r\n",
-		get_prev_rcvd_phase(client_wiwidata, CLIENT_ANCHOR_WIWI_DATA_HISTORY, delayRespSeqNum), 
-		get_prev_tx_phase(client_wiwidata, CLIENT_ANCHOR_WIWI_DATA_HISTORY, delayRespSeqNum), 
+		get_prev_rcvd_phase(client_wiwidata, ANCHOR_WIWI_DATA_HISTORY, delayRespSeqNum, 0), 
+		get_prev_tx_phase(client_wiwidata, ANCHOR_WIWI_DATA_HISTORY, delayRespSeqNum, 0), 
 		prev_tx_ts);
 	Serial.print(print_buffer);
 	
@@ -282,6 +291,12 @@ void clientAnchor_sendDelayResp()
 		}
 	}
 	*((uint8_t*)tag_data) = 0; // append one byte of zero
+	single_packet->pkt_len++;
+	*(((uint8_t*)tag_data)+1) = 0; // append one byte of zero
+	single_packet->pkt_len++;
+	*(((uint8_t*)tag_data)+2) = 0; // append one byte of zero
+	single_packet->pkt_len++;
+	*(((uint8_t*)tag_data)+3) = 0; // append one byte of zero
 	single_packet->pkt_len++;
 	delayRespSeqNum++;
 	
@@ -337,6 +352,29 @@ void clientAnchor_handleTagResponse(packet * single_packet)
 
 
 
+void clientAnchor_handleFullWiWiData()
+{
+	static int last_complete_index = -1;
+	int cur_latest_complete = -1;
+	t_Anchor_selfWiWiData * wiwiData;
+	
+	cur_latest_complete = get_newest_wiwi_complete_index(client_wiwidata, ANCHOR_WIWI_DATA_HISTORY);
+	
+	if ( cur_latest_complete != -1 && cur_latest_complete != last_complete_index ) {
+		Serial.println("clientAnchor handleFullWiWidata!");
+		last_complete_index = cur_latest_complete;
+		wiwiData = &client_wiwidata[cur_latest_complete];
+		sprintf(print_buffer, "ClientAnchor handleFullWiwidata new index %d, aa=0x%x, ab=0x%x, ba=0x%x, bb=0x%x\r\n",
+			cur_latest_complete, wiwiData->phi_aa.intval, wiwiData->phi_ab.intval,
+			wiwiData->phi_ba.intval, wiwiData->phi_bb.intval);
+		// compute phi_c and phi_d
+		Anchor_wiwi_compute_unwrapped_phi_c_d( wiwiData->phi_aa.value, wiwiData->phi_ab.value, wiwiData->phi_ba.value, 
+			wiwiData->phi_bb.value, 0, 0);
+	}
+}
+
+
+
 static bool firstRun = 1;
 static unsigned long lastCleanTime = 0;
 void run_wiwi_network_client()
@@ -345,7 +383,11 @@ void run_wiwi_network_client()
 		firstRun = 0;
 		masterAnchor_InitTagSubs();
 		initSchedule();
-		initClientAnchorWiWidata(client_wiwidata, CLIENT_ANCHOR_WIWI_DATA_HISTORY);
+		initAnchorWiWidata(client_wiwidata, ANCHOR_WIWI_DATA_HISTORY);
+		client_unwrapped_phi_c.intval = 0;
+		client_unwrapped_phi_d.intval = 0;
+		client_prev_phi_c.intval = 0;
+		client_prev_phi_d.intval = 0;
 	}
 	
 	if ( millis() - lastCleanTime > 1000 ) {

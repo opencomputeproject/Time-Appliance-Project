@@ -254,9 +254,12 @@ void dump_lora_iq_from_oldest_start_count(int start, int count) {
   for ( int i = 0; i < count; i++ ) {
     i_index = (last_I + 1 + i + start) % BUFFER_SIZE;
     q_index = (last_Q + 1 + i + start) % BUFFER_SIZE;
-    sprintf(print_buffer,"I=%08d, I=0x%x, Q=0x%x\r\n", i, sram1_data->I_data[i_index] & 0xffff, sram2_data->Q_data[q_index] & 0xffff );
+    sprintf(print_buffer,"Index=%08d, I=0x%x, Q=0x%x\r\n", 
+		start+i, sram1_data->I_data[i_index] & 0xffff, 
+		sram2_data->Q_data[q_index] & 0xffff );
     Serial.print(print_buffer);
   }
+  Serial.flush();
 }
 
 void dump_lora_iq_from_oldest_count(int count) 
@@ -386,18 +389,6 @@ inline float compute_phase_from_index_start_earliest(int index)
 
 
 
-// simple phase estimation algorithm
-// Take the average amplitude of last 5 points (assuming no signal or end of packet)
-// take the average amplitude of 5 points 3000 points back (assuming middle of packet)
-// work backwards from last point until amplitude crosses 1/3 between no signal and middle of packet amplitude
-// consider that point as true "end of packet" sample
-// from that point, there's a nice waveform in the IQ at least for the modulation I'm experimenting with
-// go back 1240 samples
-// start from that point and compute 10 phase values
-// then unwrap those phases
-// then compute the average phase in there, and use that
-// very hacky, needs the zero bytes at end of packet and this specific SF / bandwidth etc
-
 float compute_end_of_packet_amplitude() 
 {
   float sum = 0;
@@ -421,47 +412,173 @@ float compute_mid_packet_amplitude()
   return sum;
 }
 
-int find_index_end_of_packet()
-{
-  float end_ampl, mid_ampl;
-  float cross_point;
-  int cross_index = -1;
-  end_ampl = compute_end_of_packet_amplitude();
-  mid_ampl = compute_mid_packet_amplitude();
-  cross_point = end_ampl + ((mid_ampl - end_ampl) /3); 
-  for ( int i = 0; i < BUFFER_SIZE; i++ ) { // bounded loop, not infinite loop
-    mid_ampl = compute_amplitude_from_index_start_earliest(BUFFER_SIZE - i - 1); // reuse variable
-    if ( mid_ampl >= cross_point ) {
-      cross_index = BUFFER_SIZE - i - 1;
-      break;
+
+// returns the end index (when packet is actually over) with respect to beginning of the buffer (earliest sample)
+// Function to find the end of the packet based on amplitude drop
+// Function to find the end of the packet based on amplitude drop, working backwards
+int find_index_end_of_packet() {
+    float initial_amplitude, current_amplitude, amplitude_threshold;
+
+    // Get the initial amplitude (at the oldest sample, index 0)
+    initial_amplitude = compute_amplitude_from_index_start_earliest(0);
+    //sprintf(print_buffer, "Initial amplitude: %f\r\n", initial_amplitude);
+    //Serial.print(print_buffer);
+
+    // Set the threshold to one-third of the initial amplitude
+    amplitude_threshold = initial_amplitude / 3.0f;
+    //sprintf(print_buffer, "Amplitude threshold (1/3 of initial): %f\r\n", amplitude_threshold);
+    //Serial.print(print_buffer);
+
+    // Start from the most recent sample and work backwards
+    for (int i = BUFFER_SIZE - 1; i >= 0; i--) {
+        current_amplitude = compute_amplitude_from_index_start_earliest(i);
+        //sprintf(print_buffer, "Amplitude at index=%d: %f\r\n", i, current_amplitude);
+        //Serial.print(print_buffer);
+
+        // Check if the current amplitude is less than the threshold
+        if (current_amplitude >= amplitude_threshold) {
+			//sprintf(print_buffer, "Packet end detected at index %d\r\n", i);
+			//Serial.print(print_buffer);
+			return i;
+        }
     }
-  }
-  sprintf(print_buffer, "Find index end of packet, found %d\r\n", cross_index);
-  //Serial.print(print_buffer);
-  return cross_index;
+
+    // If no drop is detected, return -1 (indicating no packet end found)
+    //sprintf(print_buffer, "No packet end detected\r\n");
+    //Serial.print(print_buffer);
+    return -1;
 }
+
 
 
 #define TWO_PI (2.0 * M_PI)
 
-// Function to wrap a phase value to the range [-π, π]
-float wrap_phase(float phase) {
-    // Wrap phase to the range [0, 2π)
-    phase = fmod(phase, TWO_PI);
-    
-    // Adjust phase to the range [-π, π]
-    if (phase >= M_PI) {
-        phase -= TWO_PI;
-    } else if (phase < -M_PI) {
-        phase += TWO_PI;
-    }
 
+// Function to wrap a phase value to [-M_PI, M_PI]
+float wrap_phase(float phase) {
+    while (phase > M_PI) {
+        phase -= 2 * M_PI;
+    }
+    while (phase < -M_PI) {
+        phase += 2 * M_PI;
+    }
     return phase;
 }
 
-#define SAMPLE_LENGTH 20
-float phase_buffer[SAMPLE_LENGTH];
-float phase_buffer_unwrapped[SAMPLE_LENGTH];
+
+// Function to unwrap phase consistently
+float unwrap_phase(float current_phase, float *cumulative_phase_correction, float previous_phase) {
+    float delta_phase = current_phase - previous_phase;
+
+    // Adjust the cumulative phase correction based on the wraparound
+    if (delta_phase > M_PI) {
+        *cumulative_phase_correction += 2 * M_PI;  // Positive wrap
+    } else if (delta_phase < -M_PI) {
+        *cumulative_phase_correction -= 2 * M_PI;  // Negative wrap
+    }
+
+    // Return the unwrapped phase
+    return current_phase + *cumulative_phase_correction;
+}
+
+
+
+
+#define PHASE_BUFFER_SIZE 1000
+#define SLOPE_WINDOW_SIZE 15
+static float phase_buffer[PHASE_BUFFER_SIZE];  // Buffer to store unwrapped phases
+
+// Function to compute unwrapped phases and detect where the slope changes sign
+int find_phase_flattening(int end_index, float * calc_phase) {
+    int buffer_idx = 0;  // Index for storing in phase_buffer
+    float current_phase, previous_phase, unwrapped_phase;
+    float cumulative_phase_correction = 0.0f;  // To track the total phase correction over time
+    float slope = 0.0, previous_slope = 0.0;
+    int slope_idx_start = 0;
+
+    //sprintf(print_buffer, "\r\n========== Start of Phase Unwrapping and Slope Detection ==========\r\n");
+    //Serial.print(print_buffer);
+
+    // Step 1: Compute the phase at the end_index (starting point)
+    previous_phase = compute_phase_from_index_start_earliest(end_index);
+    unwrapped_phase = previous_phase;
+
+    // Store the first unwrapped phase in the buffer
+    phase_buffer[buffer_idx++] = unwrapped_phase;
+    //sprintf(print_buffer, "Index=%d, Initial Phase=%f, Unwrapped Phase=%f\r\n", end_index, previous_phase, unwrapped_phase);
+    //Serial.print(print_buffer);
+
+    // Step 2: Walk backwards through the data from the packet end
+    for (int i = end_index - 1; i >= 0 && buffer_idx < PHASE_BUFFER_SIZE; i--) {
+        // Get the current phase at index i
+        current_phase = compute_phase_from_index_start_earliest(i);
+
+        // Step 3: Unwrap the phase by detecting phase jumps
+        float delta_phase = current_phase - previous_phase;
+        if (delta_phase > M_PI) {
+            cumulative_phase_correction -= 2 * M_PI;  // Phase wrapped forward
+        } else if (delta_phase < -M_PI) {
+            cumulative_phase_correction += 2 * M_PI;  // Phase wrapped backward
+        }
+
+        // Compute the unwrapped phase
+        unwrapped_phase = current_phase + cumulative_phase_correction;
+        phase_buffer[buffer_idx++] = unwrapped_phase;
+
+        // Debug print for unwrapped phase
+        //sprintf(print_buffer, "Index=%d, Phase=%f, Delta Phase=%f, Unwrapped Phase=%f\r\n", i, current_phase, delta_phase, unwrapped_phase);
+        //Serial.print(print_buffer);
+
+        // Step 4: Check if we have enough points to calculate the slope (at least 5 points)
+        if (buffer_idx >= SLOPE_WINDOW_SIZE) {
+            float slope_sum = 0.0;
+            for (int j = 0; j < SLOPE_WINDOW_SIZE - 1; j++) {
+                slope_sum += phase_buffer[buffer_idx - j - 1] - phase_buffer[buffer_idx - j - 2];
+            }
+            slope = slope_sum / SLOPE_WINDOW_SIZE;  // Compute the average slope over 5 points
+
+            //sprintf(print_buffer, "Index=%d, Slope over %d points: %f\r\n", i, SLOPE_WINDOW_SIZE, slope);
+            //Serial.print(print_buffer);
+
+            // Step 5: Detect slope change (either positive-to-negative or negative-to-positive)
+            if (previous_slope != 0 && ((previous_slope > 0 && slope < 0) || (previous_slope < 0 && slope > 0))) {
+                // Slope changed direction, indicating possible flattening or trend shift
+                //sprintf(print_buffer, "**** Slope change detected at index=%d ****\r\n", i);
+                //Serial.print(print_buffer);
+				*calc_phase = wrap_phase(unwrapped_phase);
+				//sprintf(print_buffer, "**** Phase at slope change index, unwrapped=%f, wrapped=%f\r\n", 
+				//	unwrapped_phase, *calc_phase);
+				//Serial.print(print_buffer);
+				
+				return i;
+                break;
+            }
+
+            // Update previous slope for the next iteration
+            previous_slope = slope;
+        }
+
+        // Update previous phase for the next iteration
+        previous_phase = current_phase;
+    }
+
+    //sprintf(print_buffer, "========== End of Slope Detection ==========\r\n\r\n");
+    //Serial.print(print_buffer);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 bool compute_phase_with_end_of_packet_index(float * val)
 {
@@ -476,39 +593,30 @@ bool compute_phase_with_end_of_packet_index(float * val)
     Serial.println("Find index end of packet failed!");
     return 0; // bad return, couldn't compute
   }
-  // found index of end of packet
-  // current hack, go back some samples
-  end_index -= 1280; // this is with respect to the earliest sample!
-  // 1280 is good number for 125KHz / SF7 , 500KHz / SF7 was something like 800
-  sprintf(print_buffer,"End index starting for phase calculation: %d\r\n", end_index);
-  //Serial.print(print_buffer);
+  
+  int last_I, last_Q;
+  get_lora_iq_pointers(&last_I, &last_Q);
+  
+  sprintf(print_buffer,"End index starting for phase calculation: %d, last I index=%d\r\n", 
+	end_index, last_I);
+  Serial.print(print_buffer);
 
-  // DEBUG test
-  bool all_zero = 1;
+  
+  
+  
+  
+	int phase_flat_point = 0;
+	float calc_phase = 0;
+	phase_flat_point = find_phase_flattening(end_index, &calc_phase);
+	sprintf(print_buffer, "Calculating phase, end_index = %d, flat_point=%d, calc_phase=%f\r\n",
+		end_index, phase_flat_point, calc_phase);
+	Serial.print(print_buffer);
+	*val = calc_phase;
+	return 1;
+
+	/*
   for ( int i = 0; i < SAMPLE_LENGTH; i++ ) {
-    if ( get_i_from_start(end_index+i) != 0x0 ) {
-      all_zero = 0;
-      break;
-    }
-  }
-  if ( all_zero ) {
-    Serial.println("*********************ALL ZERO I, FULL DUMP****************************");
-    SX1276_Lora.dumpRegisters(Serial);
-
-
-    print_spi_registers("SPI1 I when zero I", &SX1257_SDR._spi_I_Data);
-    print_spi_registers("SPI2 Q when zero I", &SX1257_SDR._spi_Q_Data);
-
-    print_dma_registers("SPI1 I DMA when zero I",(DMA_Stream_TypeDef *)(SX1257_SDR.hdma_spi1_rx.Instance) );
-    print_dma_registers("SPI2 Q DMA when zero I",(DMA_Stream_TypeDef *)(SX1257_SDR.hdma_spi2_rx.Instance) );
-    dump_lora_iq_from_oldest_count(2000);
-    return 0;
-  }
-
-
-
-  for ( int i = 0; i < SAMPLE_LENGTH; i++ ) {
-    phase_buffer[i] = compute_phase_from_index_start_earliest(end_index + i);
+    phase_buffer[i] = compute_phase_from_index_start_earliest(phase_flat_point + i);
   }
   // do unwrap
 
@@ -550,6 +658,7 @@ bool compute_phase_with_end_of_packet_index(float * val)
   sprintf(print_buffer,"Average of unwrapped phase: %f\r\n", count);
   Serial.print(print_buffer);
   *val = count;
+  */
   return 1; // good
 } 
 
@@ -567,7 +676,7 @@ void compute_phase_from_lora_iq(phaseUnion * phi)
     return;
   }
   phi->value = 0; // initialize it
-  //dump_lora_iq_from_oldest_start_count(BUFFER_SIZE-3000, 3000);
+  //dump_lora_iq_from_oldest_start_count(BUFFER_SIZE-3000-1, 3000);
   compute_phase_with_end_of_packet_index(&phi->value);
 
   return;

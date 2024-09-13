@@ -31,7 +31,7 @@ void wiwi_use_phi_c(phaseUnion phi_aa, phaseUnion phi_ab, phaseUnion phi_ba, pha
 // a single delay req / delay resp, I need a second transaction
 int valid_delay_req_resp_sequences = 0;
 // consider myself as client as a, master is b
-phaseUnion phi_aa= {.intval=0};
+phaseUnion phi_aa={.intval=0};
 phaseUnion phi_ab={.intval=0}; 
 phaseUnion phi_ba={.intval=0};
 phaseUnion phi_bb={.intval=0};

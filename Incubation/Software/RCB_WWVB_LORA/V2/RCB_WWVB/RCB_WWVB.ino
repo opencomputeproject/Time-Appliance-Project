@@ -701,6 +701,15 @@ void run_wiwi_tx() {
 
 }
 
+void run_wiwi_discipline()
+{
+	if ( wiwi_network_mode == WIWI_MODE_MASTER_ANCHOR ) {
+		masterAnchor_handleFullWiWiData();
+	} else if ( wiwi_network_mode == WIWI_MODE_SLAVE_ANCHOR ) {
+		clientAnchor_handleFullWiWiData();
+	}
+}
+
 void wiwi_run() {
   if ( !start_wiwi ) return;
 
@@ -709,6 +718,8 @@ void wiwi_run() {
   run_wiwi_network();
 
   run_wiwi_tx();
+  
+  run_wiwi_discipline();
 
 
 }

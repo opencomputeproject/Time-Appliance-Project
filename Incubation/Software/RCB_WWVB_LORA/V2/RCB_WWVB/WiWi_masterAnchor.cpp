@@ -157,13 +157,19 @@ void masterAnchor_handleSentDelayReq(packet * single_packet)
 		got_mac_response[i] = 0;
 	}
 	
+	sprintf(print_buffer, "masterAnchor_handleSentDelayReq, num_tags=%d, num_anchors=%d\r\n",
+		delay_req->num_tag_responses_requested, delay_req->num_anchor_responses_requested);
+	Serial.print(print_buffer);
+	
 	// start at data , then move through it 
 	// packet payload is dynamic based on the two counters 
 	uint8_t * mac_ptr = delay_req->data;
 	uint8_t mac_count = 0;
 	
-	for ( int i = 0; i < delay_req->num_tag_responses_requested; i++ ) {
+	for ( int i = 0; i < delay_req->num_tag_responses_requested; i++ ) {		
 		macs_requested_from[i] = *(mac_ptr + i);
+		sprintf(print_buffer, "Delay req from tag 0x%x\r\n", macs_requested_from[i]);
+		Serial.print(print_buffer);
 	}
 	
 	wiwi_pkt_anchor_info * ancInfo = (wiwi_pkt_anchor_info *)(delay_req->data + 
@@ -172,16 +178,36 @@ void masterAnchor_handleSentDelayReq(packet * single_packet)
 	
 	for ( int i = 0; i < delay_req->num_anchor_responses_requested; i++ ) {		
 		macs_requested_from[i+delay_req->num_tag_responses_requested] = ancInfo->anchor_mac;
-		// store this info here as well for every anchor I broadcasted to		
-		masterAnchor_isAnchorSubbed(ancInfo->anchor_mac, &ancSubInfo);		
-		clientAnchor_newTxWiWi( ancSubInfo->anchorInfo.ancData, 
-			CLIENT_ANCHOR_WIWI_DATA_HISTORY,
-			delay_req->hdr.seq_num,
-			single_packet->phase.intval );
-		ancInfo += 1;			
+		sprintf(print_buffer, "MasterAnchor, Delay req for anchor 0x%x\r\n", 
+			macs_requested_from[i+delay_req->num_tag_responses_requested] ) ;
+		Serial.print(print_buffer);
+		
+		// store this info here as well for every anchor I broadcasted to	
+		
+		if ( masterAnchor_isAnchorSubbed(ancInfo->anchor_mac, &ancSubInfo) ) {
+			sprintf(print_buffer, "Delay req info for 0x%x\r\n",
+				ancSubInfo->anchorInfo.anchor_mac);
+			Serial.print(print_buffer);
+			// this is correct seq num, when I sent, store with respect to 
+			// seq num in that packet 
+			// for master, this will make a new wiwi entry 
+			Anchor_newTxWiWi( ancSubInfo->anchorInfo.ancData, 
+				ANCHOR_WIWI_DATA_HISTORY,
+				delay_req->hdr.seq_num,
+				single_packet->phase.intval, 1 );
+			sprintf(print_buffer, "Anchor 0x%x, add tx wiwi seq=%d, tx phase=0x%x\r\n",
+				ancSubInfo->anchorInfo.anchor_mac,
+				delay_req->hdr.seq_num,
+				single_packet->phase.intval);
+			Serial.print(print_buffer);
+			printAnchorData(ancSubInfo->anchorInfo.ancData, ANCHOR_WIWI_DATA_HISTORY);
+			ancInfo += 1;			
+		} else {
+			Serial.println("!!!! Masteranchor is anchor subbed not true in sent delay req????!!!!");
+		}
 	}		
 	
-	sprintf(print_buffer, "*******Master anchor, delayReq phase 0x%x time %ld\r\n",
+	sprintf(print_buffer, "Master anchor, delayReq phase 0x%x time %ld\r\n",
 		single_packet->phase.intval,
 		millis() );
 	Serial.print(print_buffer);
@@ -206,9 +232,9 @@ void masterAnchor_handleDelayResp(packet * single_packet)
 	// master getting a delay response from someone 
 	// parse who its from, find its client connection and store its info
 	wiwi_pkt_hdr * single_hdr;
-	wiwi_pkt_delay_resp * delay_pkt;
+	wiwi_pkt_delay * delay_pkt;
 	single_hdr = (wiwi_pkt_hdr *)single_packet->data;
-	delay_pkt = (wiwi_pkt_delay_resp *) single_packet->data;
+	delay_pkt = (wiwi_pkt_delay *) single_packet->data;
 	Serial.println("masterAnchor_handleDelayResp start!");
 	
 	t_anchorSubscriptionInfo * ancInfo = 0;
@@ -228,13 +254,16 @@ void masterAnchor_handleDelayResp(packet * single_packet)
 	ancInfo->anchorInfo.sequenceNumber = single_hdr->seq_num;
 	
 	// pull out the data from far side that it saw
-	clientAnchor_newRcvdWiwi_dat( ancInfo->anchorInfo.ancData, 
-		CLIENT_ANCHOR_WIWI_DATA_HISTORY,
+	// 
+	Anchor_newRcvdWiwi_dat( ancInfo->anchorInfo.ancData, 
+		ANCHOR_WIWI_DATA_HISTORY,
 		single_hdr->seq_num,
 		single_packet->phase.intval,
-		delay_pkt->my_prev_info.prev_phi_aa.intval,
-		delay_pkt->my_prev_info.prev_phi_ab.intval );
-		
+		delay_pkt->my_prev_info.prev_phi_ab.intval,
+		delay_pkt->my_prev_info.prev_phi_aa.intval, 1 );
+	
+
+	printAnchorData(ancInfo->anchorInfo.ancData, ANCHOR_WIWI_DATA_HISTORY);	
 	ancInfo->anchorInfo.previous_tx_ts = delay_pkt->my_prev_info.previous_tx_ts;
 	
 	sprintf(print_buffer, "*******Master anchor, received phase 0x%x, rcvd ts = %d\r\n",
@@ -298,6 +327,7 @@ void masterAnchor_handleTagResponse(packet * single_packet)
 
 
 uint8_t masterAnchor_delayReq_SeqNum = 0;
+bool firstDelayReq = 1;
 void masterAnchor_sendDelayReq() 
 {
 	// request from all tags first 	
@@ -351,6 +381,7 @@ void masterAnchor_sendDelayReq()
 
 	uint8_t * tag_mac_ptr = &wiwi_pkt->data[0];
 	// tags
+	wiwi_pkt->num_tag_responses_requested = 0; 
 	for ( int i = 0; i < MAX_TAG_CONNECTIONS; i++ ) {
 		if ( !masterAnchor_getValidTagSubFromZero(i, &mac) ) {
 			break;
@@ -367,6 +398,7 @@ void masterAnchor_sendDelayReq()
 	// anchors 
 	wiwi_pkt_anchor_info * anchor_info = (wiwi_pkt_anchor_info*) tag_mac_ptr;
 	t_anchorSubscriptionInfo * ancSubInfo = 0;
+	wiwi_pkt->num_anchor_responses_requested = 0;
 	for ( int i = 0; i < MAX_ANCHOR_CONNECTIONS; i++ ) {
 		if ( !masterAnchor_getValidAnchorSubFromZero(i, &mac) ) {
 			break;
@@ -375,25 +407,42 @@ void masterAnchor_sendDelayReq()
 		// add in anchor requests
 		wiwi_pkt->num_anchor_responses_requested++;
 		anchor_info->anchor_mac = mac;
-		anchor_info->prev_phi_aa.intval = get_prev_tx_phase( ancSubInfo->anchorInfo.ancData, 
-			CLIENT_ANCHOR_WIWI_DATA_HISTORY, masterAnchor_delayReq_SeqNum) ;
-		anchor_info->prev_phi_ab.intval = get_prev_rcvd_phase( ancSubInfo->anchorInfo.ancData, 
-			CLIENT_ANCHOR_WIWI_DATA_HISTORY, masterAnchor_delayReq_SeqNum);
+		if ( firstDelayReq ) {
+			anchor_info->prev_phi_aa.intval = 0;
+			anchor_info->prev_phi_ab.intval = 0;
+		} else {
+			// when master sends delay req, the data is always for the previous seq num
+			anchor_info->prev_phi_aa.intval = get_prev_tx_phase( ancSubInfo->anchorInfo.ancData, 
+				ANCHOR_WIWI_DATA_HISTORY, masterAnchor_delayReq_SeqNum-1, 1) ;
+			anchor_info->prev_phi_ab.intval = get_prev_rcvd_phase( ancSubInfo->anchorInfo.ancData, 
+				ANCHOR_WIWI_DATA_HISTORY, masterAnchor_delayReq_SeqNum-1, 1);
+		}
+
 		anchor_info->previous_tx_ts = ancSubInfo->anchorInfo.previous_tx_ts;
 		single_packet->pkt_len += sizeof(wiwi_pkt_anchor_info);
 		//sprintf(print_buffer,"Master anchor add client anchor connection to delay req for mac 0x%x, new size %d\r\n", mac,
 		//	single_packet->pkt_len);
-		sprintf(print_buffer, "*******Master anchor, sendDelayReq, client 0x%x -> prev_aa = 0x%x , prev_ab = 0x%x\r\n",
-			mac, get_prev_tx_phase( ancSubInfo->anchorInfo.ancData, 
-			CLIENT_ANCHOR_WIWI_DATA_HISTORY, masterAnchor_delayReq_SeqNum), 
+		sprintf(print_buffer, "*******Master anchor, sendDelayReq, client 0x%x seq=%d -> prev_aa = 0x%x , prev_ab = 0x%x\r\n",
+			mac, masterAnchor_delayReq_SeqNum,
+			get_prev_tx_phase( ancSubInfo->anchorInfo.ancData, 
+			ANCHOR_WIWI_DATA_HISTORY, masterAnchor_delayReq_SeqNum, 1), 
 			get_prev_rcvd_phase( ancSubInfo->anchorInfo.ancData, 
-			CLIENT_ANCHOR_WIWI_DATA_HISTORY, masterAnchor_delayReq_SeqNum) );
+			ANCHOR_WIWI_DATA_HISTORY, masterAnchor_delayReq_SeqNum, 1) );
 		Serial.print(print_buffer);
 		anchor_info += 1;
 	}	
 	*((uint8_t *) anchor_info) = 0; // append one byte of zero
 	single_packet->pkt_len++;
+	*(((uint8_t *) anchor_info)+1) = 0; // append one byte of zero
+	single_packet->pkt_len++;
+	*(((uint8_t *) anchor_info)+2) = 0; // append one byte of zero
+	single_packet->pkt_len++;
+	*(((uint8_t *) anchor_info)+3) = 0; // append one byte of zero
+	single_packet->pkt_len++;
 	masterAnchor_delayReq_SeqNum++;
+	if ( firstDelayReq ) {
+		firstDelayReq = 0;
+	}
 	
 
 	sprintf(print_buffer, "masterAnchor_sendDelayReq before buffer add %d index %d\r\n", single_packet->pkt_len, single_packet_index);
@@ -405,6 +454,33 @@ void masterAnchor_sendDelayReq()
 	Serial.println("");
 	// push this packet into linked list to send out 
 	tx_packet_list.add(single_packet_index);
+}
+
+
+void masterAnchor_handleFullWiWiData()
+{
+	wiwi_anchor_info * ancInfo;
+	t_Anchor_selfWiWiData * ancData; 
+	for ( int i = 0; i < MAX_ANCHOR_CONNECTIONS; i++ ) {
+		int index = 0;
+		ancInfo = &masterAnchor_AnchorSubs.anchorSubscriptionInfo[i].anchorInfo;
+		index = masterAnchor_get_newest_wiwi_complete_index(ancInfo);
+		if ( index != -1 ) {
+			ancData = &ancInfo->ancData[index];
+			sprintf(print_buffer, "Master anchor handle full WiWi data for anchor 0x%x, index %d\r\n",
+				ancInfo->anchor_mac, index);
+			Serial.print(print_buffer);
+			Serial.flush();
+			
+			sprintf(print_buffer, "Phi_aa=0x%x, phi_ab=0x%x, phi_ba=0x%x, phi_bb=0x%x\r\n",
+				ancData->phi_aa.intval, ancData->phi_ab.intval, ancData->phi_ba.intval, ancData->phi_bb.intval);
+			Serial.print(print_buffer);
+			// compute phi_c and phi_d
+			Anchor_wiwi_compute_unwrapped_phi_c_d( ancData->phi_aa.value, ancData->phi_ab.value, ancData->phi_ba.value, 
+				ancData->phi_bb.value, 1, ancInfo);
+			
+		}
+	}
 }
 
 
@@ -422,7 +498,8 @@ void run_masterAnchor()
 		Serial.println("First run of master anchor!");
 		firstRun = 0;
 		masterAnchor_InitTagSubs();
-		masterAnchor_InitAnchorSubs();		
+		masterAnchor_InitAnchorSubs();	
+		Serial.println("Master firstrun done!");
 	}
 	
 	if ( millis() - last_clean_time > 1000 ) {
@@ -463,18 +540,24 @@ void run_masterAnchor()
 		for ( int i = 0; i < MAX_TAG_CONNECTIONS + MAX_ANCHOR_CONNECTIONS; i++ ) {
 			if ( macs_requested_from[i] != 0 ) {
 				if ( !got_mac_response[i] ) { // didnt get a reply from this one, just wait
-					break;
+					return;
 				}
 			}
-		}		
+		}
+		waitingAfterDelayReq = 0; // go immediately next loop 
 	} else {
 		// haven't sent out delay request yet, do that 
 		// put some minimum interval 
+		
+		masterAnchor_sendDelayReq();
+		last_potential_delay_time = millis();
+		/*
 		if ( millis() - last_potential_delay_time > 500 ) {			
 			masterAnchor_sendDelayReq();
 			last_potential_delay_time = millis();
 			return;
 		}
+		*/
 	}
 	
 }

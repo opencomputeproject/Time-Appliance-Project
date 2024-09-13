@@ -119,7 +119,7 @@ Adafruit_NeoPixel::Adafruit_NeoPixel()
 Adafruit_NeoPixel::~Adafruit_NeoPixel() {
   free(pixels);
   if (pin >= 0)
-    wwvb_gpio_pinmode(pin, INPUT);
+    pinMode(pin, INPUT);
 }
 
 /*!
@@ -127,8 +127,8 @@ Adafruit_NeoPixel::~Adafruit_NeoPixel() {
 */
 void Adafruit_NeoPixel::begin(void) {
   if (pin >= 0) {
-    wwvb_gpio_pinmode(pin, OUTPUT);
-    wwvb_digital_write(pin, LOW);
+    pinMode(pin, OUTPUT);
+    digitalWrite(pin, LOW);
   }
   begun = true;
 }
@@ -193,6 +193,57 @@ void Adafruit_NeoPixel::updateType(neoPixelType t) {
   }
 }
 
+// RP2040 specific driver
+#if defined(ARDUINO_ARCH_RP2040)
+void Adafruit_NeoPixel::rp2040Init(uint8_t pin, bool is800KHz)
+{
+  uint offset = pio_add_program(pio, &ws2812_program);
+
+  if (is800KHz)
+  {
+    // 800kHz, 8 bit transfers
+    ws2812_program_init(pio, sm, offset, pin, 800000, 8);
+  }
+  else
+  {
+    // 400kHz, 8 bit transfers
+    ws2812_program_init(pio, sm, offset, pin, 400000, 8);
+  }
+}
+// Not a user API
+void  Adafruit_NeoPixel::rp2040Show(uint8_t pin, uint8_t *pixels, uint32_t numBytes, bool is800KHz)
+{
+  if (this->init)
+  {
+    // On first pass through initialise the PIO
+    rp2040Init(pin, is800KHz);
+    this->init = false;
+  }
+
+  while(numBytes--)
+    // Bits for transmission must be shifted to top 8 bits
+    pio_sm_put_blocking(pio, sm, ((uint32_t)*pixels++)<< 24);
+}
+
+#endif
+
+#if defined(ESP8266)
+// ESP8266 show() is external to enforce ICACHE_RAM_ATTR execution
+extern "C" IRAM_ATTR void espShow(uint16_t pin, uint8_t *pixels,
+                                  uint32_t numBytes, uint8_t type);
+#elif defined(ESP32)
+extern "C" void espShow(uint16_t pin, uint8_t *pixels, uint32_t numBytes,
+                        uint8_t type);
+#endif // ESP8266
+
+#if defined(K210)
+#define KENDRYTE_K210 1
+#endif
+
+#if defined(KENDRYTE_K210)
+extern "C" void k210Show(uint8_t pin, uint8_t *pixels, uint32_t numBytes,
+                         boolean is800KHz);
+#endif // KENDRYTE_K210
 /*!
   @brief   Transmit pixel data in RAM to NeoPixels.
   @note    On most architectures, interrupts are temporarily disabled in
@@ -231,8 +282,11 @@ void Adafruit_NeoPixel::show(void) {
     // state, computes 'pin high' and 'pin low' values, and writes these back
     // to the PORT register as needed.
 
-  // NRF52 may use PWM + DMA (if available), may not need to disable interrupt
-
+    // NRF52 may use PWM + DMA (if available), may not need to disable interrupt
+    // ESP32 may not disable interrupts because espShow() uses RMT which tries to acquire locks
+#if !(defined(NRF52) || defined(NRF52_SERIES) || defined(ESP32))
+  noInterrupts(); // Need 100% focus on instruction timing
+#endif
 
 #if defined(__AVR__)
   // AVR MCUs -- ATmega & ATtiny (no XMEGA) ---------------------------------
@@ -1618,9 +1672,76 @@ void Adafruit_NeoPixel::show(void) {
 
 #elif defined(__arm__)
 
+#if defined(TARGET_GIGA) || defined(TARGET_M4)
+  // Arduino GIGA -----------------------------------------------------------
+  uint8_t *p = pixels, *end = p + numBytes, pix;
+  while (p < end)
+  {
+    pix = *p++;
+    for (int i = 0; i < 8; i++)
+    {
+      // gpio_write(&gpio->gpio, 1);
+      // hard code for my board, GPIO K pin 7, PK7
+      GPIOK->BSRR = GPIO_PIN_7;
+      //HAL_GPIO_WritePin(GPIOK, GPIO_PIN_7, GPIO_PIN_SET);
+      //gpio->write(1);
+
+      // duty cycle determines bit value
+      // if (pix & 0x80)
+      if (bitRead(pix, i) == 0)
+      {
+        // one
+        // wait_ns(400); -> 192 cycles
+#if defined(TARGET_GIGA)
+        for (int j = 0; j < 96; j++)
+#else
+        for (int j = 0; j < 48; j++)
+#endif
+          __NOP();
+
+        // gpio_write(&gpio->gpio, 0);
+        //gpio->write(0);
+        GPIOK->BSRR = 0x800000; // GPIO_PIN_7 << GPIO_NUMBER 
+        //HAL_GPIO_WritePin(GPIOK, GPIO_PIN_7, GPIO_PIN_RESET);
+
+        // wait_ns(850) -> 408 cycles
+#if defined(TARGET_GIGA)
+        for (int j = 0; j < 204; j++)
+#else
+        for (int j = 0; j < 102; j++)
+#endif
+          __NOP();
+      }
+      else
+      {
+        // zero
+        // wait_ns(800) -> 384 cycles
+#if defined(TARGET_GIGA)
+        for (int j = 0; j < 192; j++)
+#else
+        for (int j = 0; j < 96; j++)
+#endif
+          __NOP();
+
+        //gpio->write(0);
+        GPIOK->BSRR = 0x800000; // GPIO_PIN_7 << GPIO_NUMBER 
+        //HAL_GPIO_WritePin(GPIOK, GPIO_PIN_7, GPIO_PIN_RESET);
+        // gpio_write(&gpio->gpio, 0);
+        // wait_ns(450) -> 216 cycles
+#if defined(TARGET_GIGA)
+        for (int j = 0; j < 108; j++)
+#else
+        for (int j = 0; j < 54; j++)
+#endif
+          __NOP();
+      }
+
+      // pix = pix << 1; // shift to next bit
+    }
+  }
     // ARM MCUs -- Teensy 3.0, 3.1, LC, Arduino Due, RP2040 -------------------
 
-#if defined(ARDUINO_ARCH_RP2040)
+#elif defined(ARDUINO_ARCH_RP2040)
   // Use PIO
   rp2040Show(pin, pixels, numBytes, is800KHz);
 
@@ -2202,7 +2323,7 @@ void Adafruit_NeoPixel::show(void) {
 
 #elif defined(__SAMD21E17A__) || defined(__SAMD21G18A__) || \
       defined(__SAMD21E18A__) || defined(__SAMD21J18A__) || \
-      defined(__SAMD11C14A__) || defined(__SAMD21G17A__)
+      defined (__SAMD11C14A__)
   // Arduino Zero, Gemma/Trinket M0, SODAQ Autonomo
   // and others
   // Tried this with a timer/counter, couldn't quite get adequate
@@ -2860,89 +2981,7 @@ if(is800KHz) {
     ; // Wait for last bit
   TC_Stop(TC1, 0);
 
-
-// RENESAS including UNO R4
-#elif defined(ARDUINO_ARCH_RENESAS) || defined(ARDUINO_ARCH_RENESAS_UNO) || defined(ARDUINO_ARCH_RENESAS_PORTENTA)
-
-// Definition for a single channel clockless controller for RA4M1 (Cortex M4)
-// See clockless.h for detailed info on how the template parameters are used.
-#define ARM_DEMCR               (*(volatile uint32_t *)0xE000EDFC) // Debug Exception and Monitor Control
-#define ARM_DEMCR_TRCENA                (1 << 24)        // Enable debugging & monitoring blocks
-#define ARM_DWT_CTRL            (*(volatile uint32_t *)0xE0001000) // DWT control register
-#define ARM_DWT_CTRL_CYCCNTENA          (1 << 0)                // Enable cycle count
-#define ARM_DWT_CYCCNT          (*(volatile uint32_t *)0xE0001004) // Cycle count register
-
-#define F_CPU 48000000
-#define CYCLES_800_T0H (F_CPU / 4000000)
-#define CYCLES_800_T1H (F_CPU / 1250000)
-#define CYCLES_800 (F_CPU / 800000)
-#define CYCLES_400_T0H (F_CPU / 2000000)
-#define CYCLES_400_T1H (F_CPU / 833333)
-#define CYCLES_400 (F_CPU / 400000)
-
-  uint8_t *p = pixels, *end = p + numBytes, pix, mask;
-
-  bsp_io_port_pin_t io_pin = g_pin_cfg[pin].pin;
-  #define PIN_IO_PORT_ADDR(pn)      (R_PORT0 + ((uint32_t) (R_PORT1 - R_PORT0) * ((pn) >> 8u)))
-
-  volatile uint16_t *set = &(PIN_IO_PORT_ADDR(io_pin)->POSR);
-  volatile uint16_t *clr = &(PIN_IO_PORT_ADDR(io_pin)->PORR);
-  uint16_t msk = (1U << (io_pin & 0xFF));
-
-  uint32_t cyc;
-
-  ARM_DEMCR |= ARM_DEMCR_TRCENA;
-  ARM_DWT_CTRL |= ARM_DWT_CTRL_CYCCNTENA;
-
-#if defined(NEO_KHZ400) // 800 KHz check needed only if 400 KHz support enabled
-  if (is800KHz) {
-#endif
-    cyc = ARM_DWT_CYCCNT + CYCLES_800;
-    while (p < end) {
-      pix = *p++;
-      for (mask = 0x80; mask; mask >>= 1) {
-        while (ARM_DWT_CYCCNT - cyc < CYCLES_800)
-          ;
-        cyc = ARM_DWT_CYCCNT;
-        *set = msk;
-        if (pix & mask) {
-          while (ARM_DWT_CYCCNT - cyc < CYCLES_800_T1H)
-            ;
-        } else {
-          while (ARM_DWT_CYCCNT - cyc < CYCLES_800_T0H)
-            ;
-        }
-        *clr = msk;
-      }
-    }
-    while (ARM_DWT_CYCCNT - cyc < CYCLES_800)
-      ;
-#if defined(NEO_KHZ400)
-  } else { // 400 kHz bitstream
-    cyc = ARM_DWT_CYCCNT + CYCLES_400;
-    while (p < end) {
-      pix = *p++;
-      for (mask = 0x80; mask; mask >>= 1) {
-        while (ARM_DWT_CYCCNT - cyc < CYCLES_400)
-          ;
-        cyc = ARM_DWT_CYCCNT;
-        *set = msk;
-        if (pix & mask) {
-          while (ARM_DWT_CYCCNT - cyc < CYCLES_400_T1H)
-            ;
-        } else {
-          while (ARM_DWT_CYCCNT - cyc < CYCLES_400_T0H)
-            ;
-        }
-        *clr = msk;
-      }
-    }
-    while (ARM_DWT_CYCCNT - cyc < CYCLES_400)
-      ;
-  }
-#endif // NEO_KHZ400
-
-#endif // ARM
+#endif // end Due
 
   // END ARM ----------------------------------------------------------------
 
@@ -3054,8 +3093,6 @@ if(is800KHz) {
     }
   }
 
-#elif defined(ARDUINO_ARCH_CH32)
-  ch32Show(gpioPort, gpioPin, pixels, numBytes, is800KHz);
 #else
 #error Architecture not supported
 #endif
@@ -3075,12 +3112,27 @@ if(is800KHz) {
   @param   p  Arduino pin number (-1 = no pin).
 */
 void Adafruit_NeoPixel::setPin(int16_t p) {
+
+#if defined(TARGET_GIGA) || defined(TARGET_M4)
+  __HAL_RCC_GPIOK_CLK_ENABLE(); // make sure this is enabled
+  GPIO_InitTypeDef gpio_init;
+  gpioPort = GPIOK;
+  gpioPin = GPIO_PIN_7;
+  gpio_init.Pin = gpioPin;
+  gpio_init.Mode = GPIO_MODE_OUTPUT_PP;
+	gpio_init.Pull = GPIO_NOPULL;
+	gpio_init.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+	gpio_init.Alternate = 0x0;
+	HAL_GPIO_Init(gpioPort , &gpio_init);	
+  HAL_GPIO_WritePin(GPIOK, GPIO_PIN_7, GPIO_PIN_RESET);
+  return;
+#endif
   if (begun && (pin >= 0))
-    wwvb_gpio_pinmode(pin, INPUT); // Disable existing out pin
+    pinMode(pin, INPUT); // Disable existing out pin
   pin = p;
   if (begun) {
-    wwvb_gpio_pinmode(p, OUTPUT);
-    wwvb_digital_write(p, LOW);
+    pinMode(p, OUTPUT);
+    digitalWrite(p, LOW);
   }
 #if defined(__AVR__)
   port = portOutputRegister(digitalPinToPort(p));
@@ -3089,16 +3141,8 @@ void Adafruit_NeoPixel::setPin(int16_t p) {
 #if defined(ARDUINO_ARCH_STM32) || defined(ARDUINO_ARCH_ARDUINO_CORE_STM32)
   gpioPort = digitalPinToPort(p);
   gpioPin = STM_LL_GPIO_PIN(digitalPinToPinName(p));
-#elif defined(ARDUINO_ARCH_CH32)
-  PinName const pin_name = digitalPinToPinName(pin);
-  gpioPort = get_GPIO_Port(CH_PORT(pin_name));
-  gpioPin = CH_GPIO_PIN(pin_name);
-  #if defined (CH32V20x_D6)
-  if (gpioPort == GPIOC && ((*(volatile uint32_t*)0x40022030) & 0x0F000000) == 0) {
-    gpioPin = gpioPin >> 13;
-  }
-  #endif
 #endif
+
 }
 
 /*!
@@ -3510,4 +3554,4 @@ neoPixelType Adafruit_NeoPixel::str2order(const char *v) {
   }
   if (w < 0) w = r; // If 'w' not specified, duplicate r bits
   return (w << 6) | (r << 4) | ((g & 3) << 2) | (b & 3);
-}
+} 

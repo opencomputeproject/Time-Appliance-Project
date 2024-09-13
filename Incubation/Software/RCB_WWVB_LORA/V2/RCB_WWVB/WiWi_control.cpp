@@ -38,7 +38,36 @@ float lowPassFilter(float currentValue, float previousValue, float alpha) {
 
 // Function to update the control state with a new phase error measurement
 void updateControlState(ControlState *state, float newPhaseError, float dt) {
-  // not included in this release
+  // apply low pass filter to the error signal
+  state->filteredError = lowPassFilter(newPhaseError, state->filteredError, ALPHA);
+  sprintf(print_buffer, "Filtered error: %f\r\n", state->filteredError);
+  Serial.print(print_buffer);
+  
+  // calculate proportional
+  float proportional = KP * state->filteredError;
+  
+  // calculate integral term with anti-windup
+  float integral;
+  state->integral += state->filteredError * dt;
+  if ( state->integral * KI > MAX_INTEGRAL ) {
+	  integral = MAX_INTEGRAL;
+  } else if ( state->integral * KI < -MAX_INTEGRAL ) {
+	  integral = -MAX_INTEGRAL;
+  } else {
+	  integral = state->integral * KI;
+  }
+  
+  // calculate total output
+  float totalOutput = proportional + integral;
+  
+  if ( dt != 0 ) {
+	  totalOutput += KD * ((state->filteredError - state->lastError) / dt);	  
+  }
+  if ( fabsf(totalOutput) >= MIN_RESOLUTION ) {
+	  state->currentFrequency = adjustClockFrequency(totalOutput);
+  }
+  state->lastError = state->filteredError;
+  state->accumulatedPhaseError = newPhaseError;
   
 }
 
@@ -49,7 +78,17 @@ float getCurrentFrequency(const ControlState *state) {
 
 unsigned long last_osc_feedback = 0;
 void wiwi_oscillator_feedback(float twophi_C) {  
-  // Not included in this release
+  // call the control loop api with new measurement
+  if ( last_osc_feedback == 0 ) {
+	  last_osc_feedback = millis();
+	  updateControlState(&controlState, twophi_C, 0);
+  } else {
+	  updateControlState(&controlState, twophi_C, (float) (millis() - last_osc_feedback) );
+	  last_osc_feedback = millis();
+  }
 
+	float currentFrequency = getCurrentFrequency(&controlState);
+	sprintf(print_buffer, "Current frequency: %f\r\n", currentFrequency);
+	Serial.print(print_buffer);
   
 }

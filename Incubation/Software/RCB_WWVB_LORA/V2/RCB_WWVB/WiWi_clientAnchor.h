@@ -15,6 +15,10 @@ void clientAnchor_handleDelayResp(packet * single_packet);
 void clientAnchor_handleDelayReq(packet * single_packet);
 void clientAnchor_handleTagResponse(packet * single_packet);
 
+void clientAnchor_handleFullWiWiData();
+
+
+
 void run_wiwi_network_client();
 
 

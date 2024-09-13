@@ -27,6 +27,11 @@ if "%1"=="full" (
 	call :compile_upload_fullrun
 )
 
+if "%1"=="urun" (
+    echo Starting compile, upload, and full run
+	call :upload_fullrun
+)
+
 :: Default case if no valid argument is provided
 if "%1"=="" (
     echo No argument provided. Please use "compile", "compilew", "compileu", "upload", or "full".
@@ -67,8 +72,8 @@ call :compile
 call :upload
 EXIT /B 0
 
-:compile_upload_fullrun
-call :compile_upload
+
+:fullrun
 :: Delete all log files so tera term log is fresh 
 del "C:\Julians\Projects\RCB WWVB\Logs\masterAnchor.txt"
 del "C:\Julians\Projects\RCB WWVB\Logs\clientAnchor0.txt"
@@ -76,6 +81,7 @@ start "" ttermpro /C=3 /L="C:\Julians\Projects\RCB WWVB\Logs\masterAnchor.txt" ^
 	/M="C:\Julians\Projects\RCB WWVB\Logs\master_wiwi.ttl"
 start "" ttermpro /C=5 /L="C:\Julians\Projects\RCB WWVB\Logs\clientAnchor0.txt" ^
 	/M="C:\Julians\Projects\RCB WWVB\Logs\clientAnchor0_wiwi.ttl"
+start "" python3 "C:\Julians\Projects\RCB WWVB\Logs\wiwi_live_monitor.py"
 	
 	
 
@@ -92,6 +98,19 @@ start "" notepad "C:\Julians\Projects\RCB WWVB\Logs\clientAnchor0.txt"
 :: Once you close tera term, open the log file in notepad
 notepad "C:\Julians\Projects\RCB WWVB\Logs\masterAnchor.txt"
 
+EXIT /B 0
+
+
+:upload_fullrun
+call :upload
+call :fullrun
+EXIT /B 0 
+
+
+
+:compile_upload_fullrun
+call :compile_upload
+call :fullrun
 EXIT /B 0
 
 

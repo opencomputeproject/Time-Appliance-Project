@@ -8,6 +8,7 @@
 #include <Arduino.h>
 #include <LinkedList.h> // Arduino Linkedlist library
 #include <math.h>
+#include "WiWi_control.h"
 
 #define ENABLE_WIWI_STACK 1 // DEBUG FLAG
 
@@ -160,7 +161,7 @@ extern packet packet_buffer[PACKET_BUFFER_SIZE];
 
 /*************** Network structures *************/
 
-#define MASTER_TAG_TIMEOUT 20000
+#define MASTER_TAG_TIMEOUT 50000
 #define MAX_ANCHORTAG_TIMESLOT 500
 
 // Master anchor data structures
@@ -219,8 +220,8 @@ bool masterAnchor_getTagHistory(uint8_t mac, uint8_t countFromNewest, uint8_t * 
 // the key for each set of four phases on client anchor is the seq number of request from master
 
 
-#define CLIENT_ANCHOR_WIWI_DATA_HISTORY 10 
-typedef struct t_clientAnchor_selfWiWiData {
+#define ANCHOR_WIWI_DATA_HISTORY 10 
+typedef struct __attribute__ ((packed)) t_Anchor_selfWiWiData {
 	bool valid;
 	bool complete; 
 	uint8_t seq_num_start; 
@@ -229,36 +230,48 @@ typedef struct t_clientAnchor_selfWiWiData {
 	phaseUnion phi_bb;
 	phaseUnion phi_ba; 	
 	uint32_t time_started; 
-	uint32_t time_completed;
-} t_clientAnchor_selfWiWiData;
+	uint32_t time_completed;	
+} t_Anchor_selfWiWiData;
 
-// used by client anchors
-extern t_clientAnchor_selfWiWiData client_wiwidata[CLIENT_ANCHOR_WIWI_DATA_HISTORY];
 
-void initClientAnchorWiWidata(t_clientAnchor_selfWiWiData * arr, int count);
+
+// used by client anchors in WiWi with master anchor 
+extern t_Anchor_selfWiWiData client_wiwidata[ANCHOR_WIWI_DATA_HISTORY];
+extern phaseUnion client_unwrapped_phi_c;
+extern phaseUnion client_unwrapped_phi_d;
+extern phaseUnion client_prev_phi_c;
+extern phaseUnion client_prev_phi_d;
+extern uint64_t num_wiwi_calculations;
+
+void printAnchorData(t_Anchor_selfWiWiData * arr,
+	int count);
+void initAnchorWiWidata(t_Anchor_selfWiWiData * arr, int count);
 
 // for any received delay request from master, there will be the received phase, seq_num, 
 // and the phase the master is giving about last time 
 // returns true if this info gives a new full set of wiwi data to compute wiwi
-int clientAnchor_newRcvdWiwi_dat(t_clientAnchor_selfWiWiData * arr, int count, 
+int Anchor_newRcvdWiwi_dat(t_Anchor_selfWiWiData * arr, int count, 
 	uint8_t seq_num, uint32_t rcvd_phase, uint32_t told_rx_phase,
-	uint32_t told_tx_phase);
+	uint32_t told_tx_phase, bool isMaster);
 
 // for every client anchor reply, there will be transmitted phase and sequence number 
 // returns true if this info gives a new full set of wiwi data to compute wiwi 
-void clientAnchor_newTxWiWi(t_clientAnchor_selfWiWiData * arr, 
+void Anchor_newTxWiWi(t_Anchor_selfWiWiData * arr, 
 	int count,
-	uint8_t seq_num, uint32_t sent_phase);
-
-uint32_t get_prev_rcvd_phase(t_clientAnchor_selfWiWiData * arr,
-	int count,
-	uint8_t seq_num);
-uint32_t get_prev_tx_phase(t_clientAnchor_selfWiWiData * arr,
-	int count,
-	uint8_t seq_num);
-int get_newest_wiwi_complete_index(t_clientAnchor_selfWiWiData * arr, int count);
+	uint8_t seq_num, uint32_t sent_phase, bool isMaster);
+	
 
 
+uint32_t get_prev_rcvd_phase(t_Anchor_selfWiWiData * arr,
+	int count,
+	uint8_t seq_num, bool isMaster);
+uint32_t get_prev_tx_phase(t_Anchor_selfWiWiData * arr,
+	int count,
+	uint8_t seq_num, bool isMaster);
+int get_newest_wiwi_complete_index(t_Anchor_selfWiWiData * arr, int count);
+
+int Anchor_startNewRcvdWiWiEntry(t_Anchor_selfWiWiData * arr, int count,uint8_t seq_num,
+	bool isMaster);
 
 
 
@@ -270,19 +283,21 @@ int get_newest_wiwi_complete_index(t_clientAnchor_selfWiWiData * arr, int count)
 
 ////////////////////// used by master anchor to manage anchors subscriptions
 
-
-
-
-
 // info specific to this anchor subscription
 typedef struct __attribute__ ((packed)) wiwi_anchor_info {
   uint8_t anchor_mac;
   bool valid;
   unsigned long last_response_seen; // millis
-  t_clientAnchor_selfWiWiData ancData[CLIENT_ANCHOR_WIWI_DATA_HISTORY];
+  t_Anchor_selfWiWiData ancData[ANCHOR_WIWI_DATA_HISTORY];
   uint32_t previous_tx_ts; 
   uint8_t sequenceNumber;
   uint8_t ackNumber;
+  int last_complete_index;
+  phaseUnion unwrapped_phi_c;
+  phaseUnion unwrapped_phi_d;
+  phaseUnion prev_phi_c;
+  phaseUnion prev_phi_d;  
+  uint64_t num_wiwi_calculations;
 } wiwi_anchor_info;
 
 // info from the client anchor for each tag its seen 
@@ -332,7 +347,7 @@ bool masterAnchor_getclientAnchorTagData(uint8_t ancMac, uint8_t tagMac,
 void masterAnchor_pushclientAnchorTagData(uint8_t ancMac, uint8_t tagMac,
 	t_wiwi_tag_data * tag_data);
 
-
+int masterAnchor_get_newest_wiwi_complete_index(wiwi_anchor_info * ancInfo);
 
 
 
@@ -358,11 +373,11 @@ bool schedule_is_my_turn();
 
 
 
+///////////////////// Used to compute items from full WiWI phi data
 
-
-
-
-
+void Anchor_wiwi_compute_unwrapped_phi_c_d(float phi_aa, float phi_ab, 
+	float phi_ba, float phi_bb, bool isMaster,
+	wiwi_anchor_info * ancInfo);
 
 
 

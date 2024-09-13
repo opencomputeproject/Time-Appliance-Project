@@ -103,8 +103,8 @@ void apply_freq_change(float del_freq_hz){
   sprintf(print_buffer, "Freq setting Status : 0x%x\r\n", i2c_status);
   Serial.print(print_buffer);
 
-  sprintf(print_buffer, "Current Frequency: %f\r\n", (del_freq_hz + frequency_offset));
-  Serial.print(print_buffer);
+  //sprintf(print_buffer, "Current Frequency: %f\r\n", (del_freq_hz + frequency_offset));
+  //Serial.print(print_buffer);
 
 }
 

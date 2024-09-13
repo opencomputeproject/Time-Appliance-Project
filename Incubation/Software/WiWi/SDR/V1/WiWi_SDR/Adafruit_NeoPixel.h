@@ -36,8 +36,6 @@
 #ifndef ADAFRUIT_NEOPIXEL_H
 #define ADAFRUIT_NEOPIXEL_H
 
-#include "WWVB_Arduino.h"
-
 #ifdef ARDUINO
 #if (ARDUINO >= 100)
 #include <Arduino.h>
@@ -54,6 +52,11 @@
 
 #ifdef TARGET_LPC1768
 #include <Arduino.h>
+#endif
+#if defined(TARGET_GIGA) || defined(TARGET_M4)
+//#include "mbed.h"
+//#include "pinDefinitions.h"
+// Julian change, use stm32 libraries instead
 #endif
 
 #if defined(ARDUINO_ARCH_RP2040)
@@ -400,7 +403,12 @@ protected:
   volatile uint8_t *port; ///< Output PORT register
   uint8_t pinMask;        ///< Output PORT bitmask
 #endif
-#if defined(ARDUINO_ARCH_STM32) || defined(ARDUINO_ARCH_ARDUINO_CORE_STM32) || defined(ARDUINO_ARCH_CH32)
+#if defined(ARDUINO_ARCH_STM32) || defined(ARDUINO_ARCH_ARDUINO_CORE_STM32)
+  GPIO_TypeDef *gpioPort; ///< Output GPIO PORT
+  uint32_t gpioPin;       ///< Output GPIO PIN
+#endif
+#if defined(TARGET_GIGA) || defined(TARGET_M4)
+  // mbed::DigitalInOut *gpio; // giga / make it closer to stm32
   GPIO_TypeDef *gpioPort; ///< Output GPIO PORT
   uint32_t gpioPin;       ///< Output GPIO PIN
 #endif
