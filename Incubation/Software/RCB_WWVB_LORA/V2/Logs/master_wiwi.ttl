@@ -12,7 +12,7 @@ pause 2
 sendln '0'
 
 ; Wait for 10 seconds 
-pause 60
+pause 120
 
 ; Send & to reboot it
 sendln '&'

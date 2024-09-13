@@ -5,7 +5,7 @@ import os
 
 # Define the source file path and the destination path
 source_path = 'C:\\path\\to\\your\\file.txt'
-source_path = 'C:\\Users\\julianstj\\Desktop\\WorkNotes\\Projects\\PTP\\WWVB_SDR\\ICE40\\Projects\\8bit_counter\\impl1\\8_bit_counter_impl1.bin'
+source_path = 'C:\\Julians\\Projects\\RCB WWVB\\8bit_counter\\impl1\\8_bit_counter_impl1.bin'
 destination_path = os.getcwd()  # Gets the current working directory
 
 # Use shutil.copy() to copy the file

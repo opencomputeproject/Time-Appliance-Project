@@ -39,7 +39,8 @@ float lowPassFilter(float currentValue, float previousValue, float alpha) {
 // Function to update the control state with a new phase error measurement
 void updateControlState(ControlState *state, float newPhaseError, float dt) {
   // apply low pass filter to the error signal
-  state->filteredError = lowPassFilter(newPhaseError, state->filteredError, ALPHA);
+  //state->filteredError = lowPassFilter(newPhaseError, state->filteredError, ALPHA);
+  state->filteredError = newPhaseError;
   sprintf(print_buffer, "Filtered error: %f\r\n", state->filteredError);
   Serial.print(print_buffer);
   

@@ -38,11 +38,13 @@ void dump_lora_iq_from_oldest() ;
 void dump_iq_buffer_straight();
 void dump_lora_iq_from_oldest_count(int count) ;
 void dump_lora_iq_from_oldest_start_count(int start, int count);
-void compute_phase_from_lora_iq(phaseUnion * phi);
+void compute_phase_from_lora_iq(phaseUnion * phi, bool rx);
 void send_packet(uint8_t * pkt_data, int pktlen, phaseUnion * phase, uint32_t * timestamp);
 bool is_receive_packet_available();
 bool receive_lora_packet(uint8_t * pkt_data, int * pktlen, phaseUnion * phase);
 
+
+void sdr_iq_agc_run();
 
 
 /******** Sanity tests **********/

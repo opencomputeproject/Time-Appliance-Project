@@ -36,8 +36,8 @@
 #define REG_RX_ANA_GAIN 0xC
 #define RX_LNA_GAIN_SHIFT 5
 #define RX_LNA_GAIN_MASK 0x7
-#define RX_LNA_BASEBAND_GAIN_SHIFT 2
-#define RX_LNA_BASEBAND_GAIN_MASK 0x7
+#define RX_LNA_BASEBAND_GAIN_SHIFT 1
+#define RX_LNA_BASEBAND_GAIN_MASK 0xF
 #define RX_LNA_IMPEDANCE_50 (0<<0)
 
 #define REG_RX_BW 0xD
@@ -679,6 +679,12 @@ int SX1257Class::set_rx_parameters(uint8_t lna_gain, uint8_t baseband_gain,
 
   writeRegister(REG_RX_PLL_BW, ((pll_bw & RX_PLL_BW_MASK) << RX_PLL_BW_SHIFT) ); // always disable temperature
 
+}
+
+int SX1257Class::set_rx_gain(uint8_t lna_gain, uint8_t baseband_gain)
+{
+	writeRegister(REG_RX_ANA_GAIN, ((lna_gain & RX_LNA_GAIN_MASK) << RX_LNA_GAIN_SHIFT) + 
+		((baseband_gain & RX_LNA_BASEBAND_GAIN_MASK) << RX_LNA_BASEBAND_GAIN_SHIFT) + RX_LNA_IMPEDANCE_50);
 }
 
 int SX1257Class::get_status(bool * rx_pll_lock, bool * tx_pll_lock) {

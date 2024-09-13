@@ -563,7 +563,7 @@ void setup() {
   SX1276_Lora.setantenna(1, 1, 0); // high frequency SMA SX1276->TX on standard transceiver
 
   // setup SDR RX
-  SX1257_SDR.set_rx_parameters(0x6, 0xf, 0x7, 0x0, 0x1);
+  SX1257_SDR.set_rx_parameters(0x6, 0xe, 0x7, 0x0, 0x1);
   SX1257_SDR.set_rx_mode(1, 1); // enable SDR RX path
   Serial.println("****SX1257 registers during init****");
   SX1257_SDR.dumpRegisters(Serial);
@@ -720,6 +720,8 @@ void wiwi_run() {
   run_wiwi_tx();
   
   run_wiwi_discipline();
+  
+  sdr_iq_agc_run();
 
 
 }

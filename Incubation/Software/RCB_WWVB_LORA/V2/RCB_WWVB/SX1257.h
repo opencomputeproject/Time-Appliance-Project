@@ -60,6 +60,8 @@ public:
   int set_rx_parameters(uint8_t lna_gain, uint8_t baseband_gain,
     uint8_t adc_bw, uint8_t analog_filter_bw, 
     uint8_t pll_bw);
+	
+  int set_rx_gain(uint8_t lna_gain, uint8_t baseband_gain);
 
   int get_status(bool * rx_pll_lock, bool * tx_pll_lock);
 

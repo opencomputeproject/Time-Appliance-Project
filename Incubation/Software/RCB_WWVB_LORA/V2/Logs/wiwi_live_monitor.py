@@ -4,7 +4,7 @@ import time
 import os
 
 # File to monitor
-log_file_path = "C:\Julians\Projects\RCB WWVB\Logs\masterAnchor.txt"
+log_file_path = "C:\\Julians\\Projects\\RCB WWVB\\Logs\\masterAnchor.txt"
 
 # Regular expression pattern to match the exact line
 pattern = re.compile(r"\*\*\*\*\*\*\*\*\*\*MasterAnchor wiwi_compute_phi_c_d unwrapped 2phi_C=([\d\.-]+)\s+2phi_D=([\d\.-]+)")
@@ -14,12 +14,14 @@ phi_C_values = []
 phi_D_values = []
 
 # Create figure for plotting
-fig, ax = plt.subplots()
-line1, = ax.plot([], [], label='2phi_C')
-line2, = ax.plot([], [], label='2phi_D')
-ax.set_xlabel('Data Points')
-ax.set_ylabel('Phase (degrees)')
-ax.legend()
+fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))  # Create two subplots (2 rows, 1 column)
+line1, = ax1.plot([], [], label='2phi_C')
+line2, = ax2.plot([], [], label='2phi_D')
+ax1.set_ylabel('2phi_C (degrees)')
+ax2.set_ylabel('2phi_D (degrees)')
+ax2.set_xlabel('Data Points')
+ax1.legend()
+ax2.legend()
 
 # Enable interactive mode in matplotlib to handle user input (drag, rescale, etc.)
 plt.ion()
@@ -65,13 +67,15 @@ with open(log_file_path, 'r') as log_file:
                 phi_C_values.append(phi_C)
                 phi_D_values.append(phi_D)
 
-                # Update the plot
+                # Update the plots for each subplot
                 line1.set_data(range(len(phi_C_values)), phi_C_values)
                 line2.set_data(range(len(phi_D_values)), phi_D_values)
 
                 # Autoscale both X and Y axes based on the new data
-                ax.relim()  # Recalculate the limits based on the new data
-                ax.autoscale_view(True, True, True)  # Autoscale X and Y axes
+                ax1.relim()  # Recalculate the limits based on the new data
+                ax1.autoscale_view(True, True, True)  # Autoscale X and Y axes
+                ax2.relim()
+                ax2.autoscale_view(True, True, True)
 
                 # Redraw the plot and handle user interaction
                 plt.draw()

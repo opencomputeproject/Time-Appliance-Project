@@ -3,7 +3,7 @@
 #include "stm32_sdr.h"
 
 
-
+static uint8_t cur_lna_gain, cur_base_gain;
 
 void print_spi_registers(char * name, SPI_HandleTypeDef * hspi)
 {
@@ -36,6 +36,7 @@ extern "C" {
   bool got_dio0_interrupt = 0;   
   SPI_HandleTypeDef * i_spi = 0;
   SPI_HandleTypeDef * q_spi = 0;
+  uint8_t lna_gain_at_dio0, base_gain_at_dio0;
 
   void enable_dio0_interrupt() { //TXDONE / RXDONE
     // Enable DIO0 from SX1276 as interrupt, TXDONE and RXDONE
@@ -127,6 +128,8 @@ extern "C" {
         //disable_iq_spi_dma();
         HAL_GPIO_WritePin(ICE_SPARE5_G, ICE_SPARE5_N, GPIO_PIN_RESET); // ICE40 stream disable
         got_dio0_interrupt = 1;
+		lna_gain_at_dio0 = cur_lna_gain;
+		base_gain_at_dio0 = cur_base_gain;
       }
   }
 }
@@ -298,6 +301,9 @@ void dump_lora_iq_from_oldest()
   get_lora_iq_pointers(&last_I, &last_Q);
   sprintf(print_buffer, "Dump IQ, last_I=%d, last_Q=%d\r\n", last_I, last_Q);
   Serial.print(print_buffer);
+  sprintf(print_buffer, "SX1257 gain settings, LNA=0x%x, baseband=0x%x, at interrupt LNA=0x%x base=0x%x\r\n",
+	cur_lna_gain, cur_base_gain, lna_gain_at_dio0, base_gain_at_dio0);
+  Serial.print(print_buffer); Serial.flush();
   Serial.println("*******Printing IQ from oldest *******");
   for ( int i = 0; i < BUFFER_SIZE; i++ ) {
     i_index = (last_I + 1 + i) % BUFFER_SIZE;
@@ -580,13 +586,15 @@ int find_phase_flattening(int end_index, float * calc_phase) {
 
 
 
-bool compute_phase_with_end_of_packet_index(float * val)
+bool compute_phase_with_end_of_packet_index(float * val, bool rx)
 {
   int end_index = 0;
   if ( val == 0 ) {
     return 0;
   }
-  //dump_lora_iq_from_oldest();
+  if ( rx ) {
+	//dump_lora_iq_from_oldest();
+  }
   end_index = find_index_end_of_packet();
   if ( end_index == -1 )
   {
@@ -663,7 +671,7 @@ bool compute_phase_with_end_of_packet_index(float * val)
 } 
 
 
-void compute_phase_from_lora_iq(phaseUnion * phi)
+void compute_phase_from_lora_iq(phaseUnion * phi, bool rx)
 {
   //Serial.println("Compute phase from LoRA IQ place holder!");
   if ( SX1276_Lora.getDio0Val() ) {
@@ -677,7 +685,7 @@ void compute_phase_from_lora_iq(phaseUnion * phi)
   }
   phi->value = 0; // initialize it
   //dump_lora_iq_from_oldest_start_count(BUFFER_SIZE-3000-1, 3000);
-  compute_phase_with_end_of_packet_index(&phi->value);
+  compute_phase_with_end_of_packet_index(&phi->value, rx);
 
   return;
 }
@@ -695,6 +703,8 @@ bool is_receive_packet_available() {
   return 0;
 }
 
+
+
 bool receive_lora_packet(uint8_t * pkt_data, int * pktlen, phaseUnion * phase)
 {
   int rssi = 0;
@@ -710,9 +720,9 @@ bool receive_lora_packet(uint8_t * pkt_data, int * pktlen, phaseUnion * phase)
   //dump_lora_iq_from_oldest();
   //dump_lora_iq_from_oldest_count(500);
   if ( phase != 0 ) {
-    compute_phase_from_lora_iq(phase);
+    compute_phase_from_lora_iq(phase,1);
   } else {
-    compute_phase_from_lora_iq(&dummyVal);
+    compute_phase_from_lora_iq(&dummyVal,1);
   }
   
   // should always happen
@@ -771,7 +781,9 @@ void send_packet(uint8_t * pkt_data, int pktlen, phaseUnion * phase, uint32_t * 
   SX1276_Lora.setantenna(1,1,1);
 
   // 5. SX1257 config -> change gain for TX, basically minimal gain
-  SX1257_SDR.set_rx_parameters(0x6, 0x1, 0x7, 0x1, 0x1);
+  SX1257_SDR.set_rx_parameters(0x6, 0x2, 0x7, 0x1, 0x1);
+  cur_lna_gain = 0x6;
+  cur_base_gain = 0x2;
 
   clear_lora_done(); // clear the interrupt flag
   ice40_start_stream(); // make sure this is started
@@ -814,9 +826,9 @@ void send_packet(uint8_t * pkt_data, int pktlen, phaseUnion * phase, uint32_t * 
   //dump_lora_iq_from_oldest_count(500);
   if ( phase == 0 ) {
     phaseUnion dummyVal;
-    compute_phase_from_lora_iq(&dummyVal);
+    compute_phase_from_lora_iq(&dummyVal,0);
   } else {
-    compute_phase_from_lora_iq(phase);
+    compute_phase_from_lora_iq(phase,0);
   }
   if ( timestamp != 0 ) {
     *timestamp = micros();
@@ -852,7 +864,10 @@ void switch_lora_to_rx()
   // 5. SX1257 config -> change gain for RX
   //SX1257_SDR.set_rx_parameters(0x6, 0x1, 0x7, 0x1, 0x1); // CABLED CONFIG, 0x6 / 0x3
   //SX1257_SDR.set_rx_parameters(0x1, 0xF, 0x7, 0x1, 0x1); // WIRELESS CONFIG, 0x1 / 0xF , MAX
-  SX1257_SDR.set_rx_parameters(0x6, 0xD, 0x7, 0x1, 0x1); // WIRELESS CONFIG WITH GOOD ANTENNA CLOSE TOGETHER ON DESK
+  SX1257_SDR.set_rx_parameters(0x6, 0x9, 0x7, 0x1, 0x1); // WIRELESS CONFIG WITH GOOD ANTENNA CLOSE TOGETHER ON DESK
+  
+  cur_lna_gain = 0x6;
+  cur_base_gain = 0x9;
 
   clear_lora_done(); // clear the interrupt flag
 
@@ -860,6 +875,88 @@ void switch_lora_to_rx()
 
   // put SX chip back into continous receive
   SX1276_Lora.receive();
+}
+
+
+
+
+void sdr_iq_drop_gain()
+{
+	//ice40_stop_stream(); // make sure stream is stopped
+	if ( cur_lna_gain != 0x6 ) { // 0x6 is minimum gain for lna
+		cur_lna_gain += 1;
+	} else if ( cur_base_gain != 0x0 ) { // 0x0 is minimum gain for baseband
+		cur_base_gain -= 1;		
+	}
+	SX1257_SDR.set_rx_gain(cur_lna_gain, cur_base_gain);	
+	//ice40_start_stream();
+}
+void sdr_iq_raise_gain()
+{
+	//ice40_stop_stream(); // make sure stream is stopped
+	if ( cur_lna_gain != 0x1 ) { // 0x1 is maximum gain for lna
+		cur_lna_gain -= 1;
+	} else if ( cur_base_gain != 0xF ) { // 0xF is max gain for baseband
+		cur_base_gain += 1;
+	}
+	SX1257_SDR.set_rx_gain(cur_lna_gain, cur_base_gain);	
+	//ice40_start_stream();
+}
+
+void sdr_iq_agc_run()
+{
+	static int last_I, last_Q, i_index, q_index;
+	static int16_t i_val, q_val;
+	static unsigned long last_agc_time = 0;
+	static int both_zero_count;
+	// simple AGC, a few cases
+	// check previous few samples 
+	// 1. if any of them are zero, drop the gain
+	// this seems to be behavior of the sx1257
+	// 2. if the "amplitude" (|I| + |Q|) is higher than 3500, lower it 
+	// 3. if the "amplitude" (|I| + |Q|) is lower than 1000 , raise it
+	
+	// limit how often AGC can run 
+	if ( micros() - last_agc_time < 10 ) {
+		return;
+	}
+
+	get_lora_iq_pointers(&last_I, &last_Q);
+	both_zero_count = 0;
+	
+	for ( int i = 0; i < 5; i++ ) 
+	{
+		q_index = (last_Q - i + BUFFER_SIZE) % BUFFER_SIZE; 		
+		i_index = (last_I - i + BUFFER_SIZE) % BUFFER_SIZE;		
+		i_val = sram1_data->I_data[i_index];
+		q_val = sram2_data->Q_data[q_index];
+		
+		if ( i_val == 0 && q_val == 0 ) {
+			both_zero_count++;
+			if ( both_zero_count >= 2 ) {
+				// inband method of signaling gain too high????
+				sdr_iq_drop_gain();
+				break;
+			}
+			//continue;
+		} 		
+		if ( i_val < 0 ) {
+			i_val *= -1;
+		}
+		if ( q_val < 0 ) {
+			q_val *= -1; // lazy absolute value
+		}
+		if (  ((q_val + i_val) < 1000) && (q_val != 0) && (i_val != 0) ) {
+			sdr_iq_raise_gain();
+			break;
+		}		
+		if ( (q_val + i_val) >= 3500 ) {
+			sdr_iq_drop_gain();
+			break;
+		}
+		
+	}	
+	last_agc_time = micros();	
 }
 
 

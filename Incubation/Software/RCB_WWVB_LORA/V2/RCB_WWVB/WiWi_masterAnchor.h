@@ -9,8 +9,8 @@
 
 
 
-#define MASTER_ANNOUNCE_INTERVAL 10000
-#define MASTER_ANNOUNCE_RESPONSE_GUARDBAND 500
+#define MASTER_ANNOUNCE_INTERVAL 20000
+#define MASTER_ANNOUNCE_RESPONSE_GUARDBAND 200
 
 void masterAnchor_handleSentAnnounce(packet * single_packet);
 void masterAnchor_handleAnchorSubscribe(packet * single_packet);
