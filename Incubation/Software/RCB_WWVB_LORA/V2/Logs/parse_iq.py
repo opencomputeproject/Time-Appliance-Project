@@ -75,8 +75,55 @@ def find_phase_flattening(I_values, Q_values, packet_end_index, slope_window_siz
             return i, phase, unwrapped_phase, smoothed_phase
     return None, phase, unwrapped_phase, smoothed_phase  # In case no flattening is detected
 
+
+
+
+# Simplified function to find the last local maximum using a double-sided window with a limit of 1000 points
+def find_last_local_maximum(I_values, Q_values, end_index, window_size=100, max_points=1000):
+    # Calculate the phase and unwrap it
+    phase = np.arctan2(Q_values, I_values)
+    unwrapped_phase = np.unwrap(phase)
+
+    half_window = window_size // 2
+    best_index = -1
+    best_value = -np.inf
+
+    # Limit to max_points, compute the starting index based on the max points you want to search
+    start_index = max(end_index - (max_points - 1), half_window)
+    
+    print(f"Starting local maximum search with end_index={end_index}, window_size={window_size}, max_points={max_points}")
+
+    # Start at end_index, go back by half_window, and check within the range around each sample
+    for i in range(end_index, start_index - 1, -1):
+        # Define the range to compare: half_window before and half_window after
+        start = max(i - half_window, 0)
+        end = min(i + half_window, len(unwrapped_phase) - 1)
+
+        print(f"\nChecking sample at index {i} (unwrapped phase: {unwrapped_phase[i]}) in range [{start}, {end}]")
+
+        # Check if the current sample is the local maximum within the range
+        is_local_maximum = True
+        for j in range(start, end + 1):
+            if unwrapped_phase[j] > unwrapped_phase[i]:
+                print(f"    Sample at index {j} (unwrapped phase: {unwrapped_phase[j]}) is greater than sample at index {i}")
+                is_local_maximum = False
+                break
+
+        # If it's a local maximum, update the best index and value
+        if is_local_maximum:
+            print(f"  Found local maximum at index {i}")
+            if unwrapped_phase[i] > best_value:
+                best_value = unwrapped_phase[i]
+                best_index = i
+                print(f"  Updated best local maximum to index {best_index} with value {best_value}")
+
+    print(f"\nFinal best local maximum found at index {best_index} with value {best_value}")
+    return best_index, phase, unwrapped_phase
+
+
+
 # Function to plot the results
-def plot_results(indices, I_values, Q_values, amplitude, phase, unwrapped_phase, smoothed_phase, packet_end_index=None, phase_flattening_index=None, dump_index=None):
+def plot_results(indices, I_values, Q_values, amplitude, phase, unwrapped_phase, packet_end_index=None, local_max_index=None, dump_index=None):
     plt.figure(figsize=(12, 16))  # Increased figure size to accommodate more subplots
 
     # Plot I values
@@ -110,8 +157,8 @@ def plot_results(indices, I_values, Q_values, amplitude, phase, unwrapped_phase,
     plt.plot(indices, phase, label='Wrapped Phase', color='orange')
     if packet_end_index is not None:
         plt.axvline(x=indices[packet_end_index], color='red', linestyle='--', label='Packet End')
-    if phase_flattening_index is not None:
-        plt.axvline(x=indices[phase_flattening_index], color='blue', linestyle='--', label='Phase Flattening')
+    if local_max_index is not None:
+        plt.axvline(x=indices[local_max_index], color='blue', linestyle='--', label='Local Maximum')
     plt.title(f'Wrapped Phase (Dump {dump_index})')
     plt.xlabel('Index')
     plt.ylabel('Phase (radians)')
@@ -122,21 +169,9 @@ def plot_results(indices, I_values, Q_values, amplitude, phase, unwrapped_phase,
     plt.plot(indices[:len(unwrapped_phase)], unwrapped_phase, label='Unwrapped Phase', color='purple')
     if packet_end_index is not None:
         plt.axvline(x=indices[packet_end_index], color='red', linestyle='--', label='Packet End')
-    if phase_flattening_index is not None:
-        plt.axvline(x=indices[phase_flattening_index], color='blue', linestyle='--', label='Phase Flattening')
+    if local_max_index is not None:
+        plt.axvline(x=indices[local_max_index], color='blue', linestyle='--', label='Local Maximum')
     plt.title(f'Unwrapped Phase (Dump {dump_index})')
-    plt.xlabel('Index')
-    plt.ylabel('Phase (radians)')
-    plt.legend()
-
-    # Plot smoothed phase
-    plt.subplot(6, 1, 6)
-    plt.plot(indices[:len(smoothed_phase)], smoothed_phase, label='Smoothed Phase', color='blue')
-    if packet_end_index is not None:
-        plt.axvline(x=indices[packet_end_index], color='red', linestyle='--', label='Packet End')
-    if phase_flattening_index is not None:
-        plt.axvline(x=indices[phase_flattening_index], color='blue', linestyle='--', label='Phase Flattening')
-    plt.title(f'Smoothed Phase (Dump {dump_index})')
     plt.xlabel('Index')
     plt.ylabel('Phase (radians)')
     plt.legend()
@@ -158,13 +193,12 @@ def main(file_path):
         # Step 1: Find the end of the packet based on amplitude drop
         packet_end_index, amplitude = find_packet_end(I_values, Q_values)
         
-        # Step 2: Find the phase flattening point using the smoothed phase
-        phase_flattening_index, phase, unwrapped_phase, smoothed_phase = find_phase_flattening(I_values, Q_values, packet_end_index if packet_end_index is not None else len(I_values) - 1)
+        # Step 2: Find the last local maximum using the simplified window search
+        local_max_index, phase, unwrapped_phase = find_last_local_maximum(I_values, Q_values, packet_end_index if packet_end_index is not None else len(I_values) - 1)
 
         # Step 3: Plot the results
-        plot_results(indices, I_values, Q_values, amplitude, phase, unwrapped_phase, smoothed_phase, packet_end_index, phase_flattening_index, dump_index)
+        plot_results(indices, I_values, Q_values, amplitude, phase, unwrapped_phase, packet_end_index, local_max_index, dump_index)
 
 if __name__ == '__main__':
-    file_path = 'masterAnchor.txt'  # Replace this with the actual path to your log file
-    #file_path = 'clientAnchor0.txt'
+    file_path = 'clientAnchor0.txt'  # Replace this with the actual path to your log file
     main(file_path)

@@ -50,7 +50,8 @@ EXIT /B %ERRORLEVEL%
 
 :compile
 :: COMPILE 
-arduino-cli compile -b arduino:mbed_giga:giga RCB_WWVB.ino --clean
+:: arduino-cli compile -b arduino:mbed_giga:giga RCB_WWVB.ino --clean
+arduino-cli compile -b arduino:mbed_giga:giga RCB_WWVB.ino
 EXIT /B 0
 
 :compile_wait

@@ -490,8 +490,9 @@ float unwrap_phase(float current_phase, float *cumulative_phase_correction, floa
 
 
 
-#define PHASE_BUFFER_SIZE 1000
+#define PHASE_BUFFER_SIZE 1500
 #define SLOPE_WINDOW_SIZE 15
+#define WINDOW_SIZE 100
 static float phase_buffer[PHASE_BUFFER_SIZE];  // Buffer to store unwrapped phases
 
 // Function to compute unwrapped phases and detect where the slope changes sign
@@ -576,7 +577,112 @@ int find_phase_flattening(int end_index, float * calc_phase) {
 
 
 
+// Function to compute unwrapped phases and detect local maxima
+int find_local_maximum(int end_index, float *calc_phase) {
+    int buffer_idx = 0;  // Index for storing in phase_buffer
+    float current_phase, previous_phase, unwrapped_phase;
+    float cumulative_phase_correction = 0.0f;  // To track the total phase correction over time
+    int half_window = WINDOW_SIZE / 2;
+    int local_max_index = -1;
+    float local_max_phase = -1.0f;
+    float best_value = -1e9;  // Small number for comparison
 
+    //sprintf(print_buffer, "\r\n========== Start of Phase Unwrapping and Local Maximum Detection ==========\r\n");
+    //Serial.print(print_buffer);
+
+    // Step 1: Compute the phase at the end_index (starting point)
+    previous_phase = compute_phase_from_index_start_earliest(end_index);
+    unwrapped_phase = previous_phase;
+
+    // Store the first unwrapped phase in the buffer
+    phase_buffer[buffer_idx++] = unwrapped_phase;
+    //sprintf(print_buffer, "Index=%d, Initial Phase=%f, Unwrapped Phase=%f\r\n", end_index, previous_phase, unwrapped_phase);
+    //Serial.print(print_buffer);
+
+    // Step 2: Walk backwards through the data from the packet end
+    for (int i = end_index - 1; i >= 0 && buffer_idx < PHASE_BUFFER_SIZE; i--) {
+        // Get the current phase at index i
+        current_phase = compute_phase_from_index_start_earliest(i);
+
+        // Step 3: Unwrap the phase by detecting phase jumps
+        float delta_phase = current_phase - previous_phase;
+        if (delta_phase > M_PI) {
+            cumulative_phase_correction -= 2 * M_PI;  // Phase wrapped forward
+        } else if (delta_phase < -M_PI) {
+            cumulative_phase_correction += 2 * M_PI;  // Phase wrapped backward
+        }
+
+        // Compute the unwrapped phase
+        unwrapped_phase = current_phase + cumulative_phase_correction;
+        phase_buffer[buffer_idx++] = unwrapped_phase;
+
+        // Debug print for unwrapped phase
+        //sprintf(print_buffer, "Index=%d, buffer_idx=%d, Phase=%f, Delta Phase=%f, Unwrapped Phase=%f\r\n", i, buffer_idx,
+		//	current_phase, delta_phase, unwrapped_phase);
+        //Serial.print(print_buffer);
+
+        // Ensure at least half_window samples are unwrapped before checking for local maxima
+        if (buffer_idx < WINDOW_SIZE) {
+            previous_phase = current_phase;
+            continue;  // Skip local maximum check until enough samples are unwrapped
+        }
+
+        // Step 4: Now use the buffer_idx for phase_buffer to compare local maxima
+        // Compare within the half_window range
+        int start = (buffer_idx - WINDOW_SIZE > 0) ? buffer_idx - WINDOW_SIZE : 0;
+        int end = (buffer_idx < PHASE_BUFFER_SIZE) ? buffer_idx  : PHASE_BUFFER_SIZE - 1;
+		int test_index = end - half_window; 
+
+        // Debug print for the comparison range
+        //sprintf(print_buffer, "  Checking range [%d, %d] in real data for index %d\r\n", start, end, test_index);
+        //Serial.print(print_buffer);
+
+        // Step 5: Check if current sample in phase_buffer is the local maximum
+        bool is_local_maximum = true;
+        for (int j = start; j <= end; j++) {
+            if (phase_buffer[j] > phase_buffer[test_index] && j != test_index) {
+                is_local_maximum = false;
+                break;
+            }
+        }
+
+        // If local maximum, update best value
+        if (is_local_maximum && phase_buffer[test_index] > best_value) {
+            best_value = phase_buffer[test_index];
+            local_max_index = i + half_window;  // Use the actual data index `i` here
+			 // + half_window because i is looping backwards 
+            local_max_phase = phase_buffer[test_index];
+
+            // Debug print for new local maximum
+            //sprintf(print_buffer, "  Found new local maximum at index %d, Phase=%f\r\n", local_max_index,
+			//	local_max_phase);
+            //Serial.print(print_buffer);
+			break;
+        }
+
+        // Update previous phase for next iteration
+        previous_phase = current_phase;
+    }
+
+    // Step 6: If a local maximum was found, compute the instant phase using compute_phase_from_index_start_earliest
+    if (local_max_index != -1) {
+        *calc_phase = compute_phase_from_index_start_earliest(local_max_index);  // Compute phase at local maximum
+
+        // Debug print for returning the local maximum
+        //sprintf(print_buffer, "**** Returning Local Maximum Phase=%f, Index=%d ****\r\n", *calc_phase, local_max_index);
+        //Serial.print(print_buffer);
+
+        return local_max_index;
+    }
+
+    // Debug print for no local maximum found
+    sprintf(print_buffer, "**** No Local Maximum Found ****\r\n");
+    Serial.print(print_buffer);
+	*calc_phase = 0;
+
+    // No local maximum found
+    return -1;
+}
 
 
 
@@ -613,11 +719,12 @@ bool compute_phase_with_end_of_packet_index(float * val, bool rx)
   
   
   
-	int phase_flat_point = 0;
+	int phase_point = 0;
 	float calc_phase = 0;
-	phase_flat_point = find_phase_flattening(end_index, &calc_phase);
-	sprintf(print_buffer, "Calculating phase, end_index = %d, flat_point=%d, calc_phase=%f\r\n",
-		end_index, phase_flat_point, calc_phase);
+	//phase_flat_point = find_phase_flattening(end_index, &calc_phase);
+	phase_point = find_local_maximum(end_index, &calc_phase);
+	sprintf(print_buffer, "Calculating phase, end_index = %d, phase_point=%d, calc_phase=%f\r\n",
+		end_index, phase_point, calc_phase);
 	Serial.print(print_buffer);
 	*val = calc_phase;
 	return 1;
