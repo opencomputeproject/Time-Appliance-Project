@@ -819,7 +819,7 @@ void Anchor_wiwi_compute_unwrapped_phi_c_d(float phi_aa, float phi_ab,
 		client_unwrapped_phi_c.value, client_unwrapped_phi_d.value);
 		Serial.print(print_buffer);
 		
-		//wiwi_oscillator_feedback(client_unwrapped_phi_c.value);
+		wiwi_oscillator_feedback(client_unwrapped_phi_c.value);
 	}
 	
 	Serial.println("Anchor_wiwi_compute_unwrapped_phi_c_d end!");

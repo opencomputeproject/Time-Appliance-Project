@@ -21,7 +21,7 @@ void masterAnchor_handleTagResponse(packet * single_packet);
 
 void masterAnchor_handleFullWiWiData();
 
-
+void init_masterAnchor();
 void run_masterAnchor();
 
 

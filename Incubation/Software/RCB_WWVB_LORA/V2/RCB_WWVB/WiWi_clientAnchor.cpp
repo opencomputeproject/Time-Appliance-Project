@@ -381,7 +381,6 @@ void run_wiwi_network_client()
 {
 	if ( firstRun ) {
 		firstRun = 0;
-		masterAnchor_InitTagSubs();
 		initSchedule();
 		initAnchorWiWidata(client_wiwidata, ANCHOR_WIWI_DATA_HISTORY);
 		client_unwrapped_phi_c.intval = 0;

@@ -491,42 +491,49 @@ unsigned long last_announce_time = 0;
 unsigned long last_clean_time = 0;
 unsigned long announceCount = 0;
 unsigned long last_potential_delay_time = 0;
-static bool firstRun = 1;
+
+
+void init_masterAnchor()
+{
+	masterAnchor_InitTagSubs();
+	masterAnchor_InitAnchorSubs();	
+}
+
+
 void run_masterAnchor()
 {
-	if ( firstRun ) {
-		Serial.println("First run of master anchor!");
-		firstRun = 0;
-		masterAnchor_InitTagSubs();
-		masterAnchor_InitAnchorSubs();	
-		Serial.println("Master firstrun done!");
-	}
-	
-	if ( millis() - last_clean_time > 1000 ) {
-		// cleanup functions 
-		masterAnchor_CleanupTagSubs();
-		masterAnchor_CleanupAnchorSubs();
-		last_clean_time = millis();
-	}
 
 	
-	// master anchor top level loop 
-	if ( (millis() - last_announce_time > MASTER_ANNOUNCE_INTERVAL) || announceCount==0 ) {
-		masterAnchor_announce();
-		last_announce_time = millis();
-		announceCount++;
-		waitingAfterAnnounce = 1;
-		return;
-	}
-	
-	if ( waitingAfterAnnounce ) {
-		if ( millis() - timeStartedAnnounceWaiting > MASTER_ANNOUNCE_RESPONSE_GUARDBAND ) {
-			Serial.println("Done waiting after announce");
-			waitingAfterAnnounce = 0;
-		} else {
-			return; // don't do anything, just sit in receiver mode and process incoming
+	if ( 0 ) {
+		// hacking out announce / dynamic client logic 
+		if ( millis() - last_clean_time > 1000 ) {
+			// cleanup functions 
+			masterAnchor_CleanupTagSubs();
+			masterAnchor_CleanupAnchorSubs();
+			last_clean_time = millis();
 		}
 	}
+	
+	// master anchor top level loop 
+	if ( 0 ) {
+		// hacking out announce logic 
+		if ( (millis() - last_announce_time > MASTER_ANNOUNCE_INTERVAL) || announceCount==0 ) {
+			masterAnchor_announce();
+			last_announce_time = millis();
+			announceCount++;
+			waitingAfterAnnounce = 1;
+			return;
+		}
+		if ( waitingAfterAnnounce ) {
+			if ( millis() - timeStartedAnnounceWaiting > MASTER_ANNOUNCE_RESPONSE_GUARDBAND ) {
+				Serial.println("Done waiting after announce");
+				waitingAfterAnnounce = 0;
+			} else {
+				return; // don't do anything, just sit in receiver mode and process incoming
+			}
+		}
+	}
+
 	// not in announce guardband 
 	if ( waitingAfterDelayReq ) {
 		// sent out delay request, check if got all responses or timeout

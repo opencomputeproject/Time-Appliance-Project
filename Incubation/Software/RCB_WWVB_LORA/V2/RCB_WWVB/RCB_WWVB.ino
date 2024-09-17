@@ -44,6 +44,11 @@ void processSetCommand(String variable, String value) {
   // Check for specific variables
   // Implement your logic for handling specific variables here
   // Example:
+  /*
+  sprintf(print_buffer, "processSetCommand, variable = %s, value = %s\r\n", 
+	variable.c_str(), value.c_str());
+	Serial.print(print_buffer);
+	*/
   if (variable == "KP") {
     float floatValue = value.toFloat();
     //Serial.printf("Setting KP to %f\r\n",floatValue);
@@ -69,7 +74,22 @@ void processSetCommand(String variable, String value) {
     //Serial.printf ("Setting Max rate of change (MROC) to %f\r\n", floatValue);
     // Your logic for handling KI here
     //MAX_RATE_OF_CHANGE = floatValue;
-  } 
+  } else if ( variable == "wiwimac" ) {
+	  uint8_t macval = ( (uint8_t)value.toInt() ) ;
+	  wiwi_mac_addr = macval;
+	  sprintf(print_buffer, "Setting WiWi mac from manual command to 0x%x\r\n", wiwi_mac_addr);
+	  Serial.print(print_buffer);
+  } else if ( variable == "add_clientAnchor" ) {
+	  uint8_t macval = ( (uint8_t)value.toInt() ) ;
+	  masterAnchor_startAnchorSub(macval);
+	  sprintf(print_buffer, "Master anchor, adding client anchor 0x%x\r\n", macval);
+	  Serial.print(print_buffer);
+  } else if ( variable == "add_wiwiTag" ) {
+	  uint8_t macval = ( (uint8_t)value.toInt() ) ;
+	  masterAnchor_startTagSub(macval);
+	  sprintf(print_buffer, "Master anchor, adding tag 0x%x\r\n", macval);
+	  Serial.print(print_buffer);
+  }
 
 }
 
@@ -145,13 +165,17 @@ void processSingleCharCommand(char command) {
 		Serial.println("Starting as wiwi master anchor!");
       } else if ( command == '!') {
         wiwi_network_mode = WIWI_MODE_SLAVE_ANCHOR;
-        HAL_RNG_GenerateRandomNumber(&hrng, &randval);
-        wiwi_mac_addr = (randval % 100) + 1; // between 1 and 100
+		if ( wiwi_mac_addr == 0 ) {
+			HAL_RNG_GenerateRandomNumber(&hrng, &randval);
+			wiwi_mac_addr = (randval % 100) + 1; // between 1 and 100
+		}
 		Serial.println("Starting as wiwi client anchor!");
       } else {
         wiwi_network_mode = WIWI_MODE_TAG;
-        HAL_RNG_GenerateRandomNumber(&hrng, &randval);
-        wiwi_mac_addr = (randval % 155) + 101; // between 101 and 255
+		if ( wiwi_mac_addr == 0 ) {
+			HAL_RNG_GenerateRandomNumber(&hrng, &randval);
+			wiwi_mac_addr = (randval % 155) + 101; // between 101 and 255
+		}
 		Serial.println("Starting as Wiwi tag!");
       }
       switch_lora_to_rx();
@@ -356,6 +380,8 @@ void handle_user_data() {
         if (bufferIndex > 0) {
           buffer[bufferIndex] = '\0'; // Null-terminate the string
           String commandString(buffer);
+		  sprintf(print_buffer, "Parsing command string %s\r\n", buffer);
+		  //Serial.print(print_buffer);
           
           // Parse SET command
           int spaceIndex = commandString.indexOf(' ');
@@ -365,6 +391,7 @@ void handle_user_data() {
             processSetCommand(currentVariable, currentValue);
           }          
           inSetCommand = false;
+		  //Serial.println("Not in set command!");
           bufferIndex = 0; // Clear the buffer for the next command
         }
       } else {
@@ -374,11 +401,13 @@ void handle_user_data() {
           // Buffer overflow, reset the buffer
           bufferIndex = 0;
           inSetCommand = false;
+		  //Serial.println("Not in set command buffer overflow!");
         }
       }
     } else {
       // If not inSetCommand, process single character command immediately
       if (incomingChar == 'S') {
+		//Serial.println("In set command!");
         inSetCommand = true;
         currentVariable = "";
         currentValue = "";
@@ -577,6 +606,8 @@ void setup() {
   switch_lora_to_rx();
 
   WWVB_RF_Init();
+  
+  init_masterAnchor(); // just initializing data structures
 
 
   
