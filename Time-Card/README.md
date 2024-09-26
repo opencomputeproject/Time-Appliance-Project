@@ -40,6 +40,9 @@ List Of Images | Description
 
 Time Server is a critical part of a PTP enabled network. It provides accurate time via GNSS while maintaining accuracy in case of GNSS failure via a high stability (and holdover) oscillator such as an atomic clock. Existing products in the market are often closed sourced and are far from having sufficient features. The Time Card project presents an open source solution via a PCIe card called Time Card which is called Open Time Server.
 
+*GNSS provided a high accuracy time source by connecting satellites. This program uses input and output delays to see how far away a receiver is from the approapite time.
+*After a time discrepancy is found the program can signal to the CPU to slowly speed up or slow down the tick rate to adjust the programs clock to match the GNSS accurate time.
+
 ## Getting a Time Card
 
 Here are 4 options to get your hands on this Time Card.
