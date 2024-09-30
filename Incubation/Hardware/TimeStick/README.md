@@ -20,6 +20,7 @@ wget https://raw.githubusercontent.com/opencomputeproject/Time-Appliance-Project
 wget https://raw.githubusercontent.com/opencomputeproject/Time-Appliance-Project/refs/heads/master/Incubation/Hardware/TimeStick/DRV/ax88179a_772d.h
 wget https://raw.githubusercontent.com/opencomputeproject/Time-Appliance-Project/refs/heads/master/Incubation/Hardware/TimeStick/DRV/ax88179a_ieee.c
 wget https://raw.githubusercontent.com/opencomputeproject/Time-Appliance-Project/refs/heads/master/Incubation/Hardware/TimeStick/DRV/ax88279_programmer.c
+https://raw.githubusercontent.com/opencomputeproject/Time-Appliance-Project/refs/heads/master/Incubation/Hardware/TimeStick/DRV/ax88179a_programmer.c
 wget https://raw.githubusercontent.com/opencomputeproject/Time-Appliance-Project/refs/heads/master/Incubation/Hardware/TimeStick/DRV/ax_ioctl.h
 wget https://raw.githubusercontent.com/opencomputeproject/Time-Appliance-Project/refs/heads/master/Incubation/Hardware/TimeStick/DRV/ax_main.c
 wget https://raw.githubusercontent.com/opencomputeproject/Time-Appliance-Project/refs/heads/master/Incubation/Hardware/TimeStick/DRV/ax_main.h
