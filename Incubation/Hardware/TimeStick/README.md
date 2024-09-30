@@ -28,7 +28,7 @@ wget https://raw.githubusercontent.com/opencomputeproject/Time-Appliance-Project
 wget https://raw.githubusercontent.com/opencomputeproject/Time-Appliance-Project/refs/heads/master/Incubation/Hardware/TimeStick/DRV/ax_ptp.c
 wget https://raw.githubusercontent.com/opencomputeproject/Time-Appliance-Project/refs/heads/master/Incubation/Hardware/TimeStick/DRV/ax_ptp.h
 wget https://raw.githubusercontent.com/opencomputeproject/Time-Appliance-Project/refs/heads/master/Incubation/Hardware/TimeStick/DRV/axcmd.c
-make
+sudo make install
 ```
 Step 2: You need to remove cdc_ncm before installing the AX88179A module.
 Please follow the steps below to remove cdc_ncm and install the AX88179A module.
@@ -36,6 +36,7 @@ Please follow the steps below to remove cdc_ncm and install the AX88179A module.
 ```
 sudo rmmod cdc_mbim
 sudo rmmod cdc_ncm
+sudo rmmod ax88179_178a
 ```
 
 Step 3: Insert the new module
