@@ -40,5 +40,5 @@ sudo rmmod cdc_ncm
 
 Step 3: Insert the new module
 ```
-sudo insmod ax88179a.ko
+sudo modprobe ax_usb_nic
 ```
