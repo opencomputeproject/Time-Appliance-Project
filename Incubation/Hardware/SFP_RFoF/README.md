@@ -62,5 +62,3 @@ The design incorporates filters and attenuators to ensure the signal integrity o
 - Dan Sobel
 - Howard Trinh
 
-## License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
