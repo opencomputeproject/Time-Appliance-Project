@@ -1,6 +1,6 @@
 # PCIe RF-over-Fiber Test Platform
 
-This repository contains the hardware design and documentation for a PCIe form factor RF-over-Fiber test platform. The board features three SFP ports designed for specialized RF-over-Fiber (RoF) applications, utilizing linear SFP transceivers provided by Precisionot. The platform enables testing of various frequency bands, including GNSS, WiFi, and IoT over fiber, making it ideal for RF communications over long distances using optical fiber.
+This repository contains the hardware design and documentation for a PCIe form factor RF-over-Fiber test platform. The board features three SFP ports designed for specialized RF-over-Fiber (RoF) applications, utilizing linear SFP transceivers provided by Precision Optical Technologies. The platform enables testing of various frequency bands, including GNSS, WiFi, and IoT over fiber, making it ideal for RF communications over long distances using optical fiber.
 
 ## Key Features
 
@@ -25,7 +25,7 @@ RF over Fiber (RoF) is a technology that enables radio frequency (RF) signals to
 
 Small Form-factor Pluggable (SFP) transceivers are commonly used in data communications to convert electrical signals to optical signals (and vice versa) for transmission over fiber. For RF over Fiber applications, specially designed linear SFPs are used to pass RF signals from Electrical to Optical (E->O) and Optical to Electrical (O->E) with minimal distortion. 
 
-The SFPs used in this design, provided by Precisionot, are customized for RF over fiber applications such as:
+The SFPs used in this design, provided by Precision Optical Technologies, are customized for RF over fiber applications such as:
 - **WiFi over Fiber**: Transmitting WiFi signals from RF to optical, suitable for extending coverage in large areas.
 - **GNSS over Fiber**: Transmitting GNSS signals, enabling precise location tracking in distributed systems.
 - **IoT over Fiber**: Supporting Sub-GHz IoT communications over long distances, useful for large-scale IoT deployments.
