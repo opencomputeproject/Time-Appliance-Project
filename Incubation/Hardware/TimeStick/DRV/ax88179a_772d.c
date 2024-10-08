@@ -298,8 +298,8 @@ const struct ethtool_ops ax88179a_ethtool_ops = {
 	.get_wol	= ax_get_wol,
 	.set_wol	= ax_set_wol,
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 6, 0)
-	.get_eee	= ax88179a_get_eee,
-	.set_eee	= ax88179a_set_eee,
+//	.get_eee	= ax88179a_get_eee,
+//	.set_eee	= ax88179a_set_eee,
 #endif
 	.get_coalesce	= ax88179a_get_coalesce,
 	.set_coalesce	= ax88179a_set_coalesce,
