@@ -1,0 +1,48 @@
+Altium Designer Pick and Place Locations
+C:\NetTimeLogic\Hardware\PMOD\PMOD_USB_RCB_M2\Project Outputs for Pmod_Usb_Rcb_M2\Generate Files\Pick Place\Pick Place for Pmod_Usb_Rcb_M2.txt
+
+========================================================================================================================
+File Design Information:
+
+Date:       09.10.24
+Time:       09:07
+Revision:   8b1bf91b9ecf598605df6fae53cbb9a4b0959b24
+Variant:    No variations
+Units used: mil
+
+Designator Comment             Layer    Footprint                     Center-X(mil) Center-Y(mil) Rotation Description                                                                                         
+C12        C0603C104K4RACTU    TopLayer FP-C0603C-CF-MFG              1082.677      1106.299      0        "Cap Ceramic 0.1uF 16V X7R 10% SMD 0603 125°C Paper T/R"                                            
+B3         74LVC1G3157GW-Q10H  TopLayer SOT65P210X110-6N              1106.299      1181.102      0        "74LVC1G3157-Q100 - 2-channel analog multiplexer/demultiplexer@en-us"                               
+X1         DS04-254-2-01BK-SMT TopLayer DS04254201BKSMTTR             1913.386      1173.228      270      "Switch DIP OFF ON SPST 1 Flat Slide 0.025A 24VDC Gull Wing 2.54mm SMD Tube"                        
+C11        C0603C104K4RACTU    TopLayer FP-C0603C-CF-MFG              889.764       1106.299      180      "Cap Ceramic 0.1uF 16V X7R 10% SMD 0603 125°C Paper T/R"                                            
+B2         74LVC1G3157GW-Q10H  TopLayer SOT65P210X110-6N              877.953       1181.102      0        "74LVC1G3157-Q100 - 2-channel analog multiplexer/demultiplexer@en-us"                               
+J6         SM05B-SRSS-TB       TopLayer SM05BSRSSTBLFSN               1484.252      1135.335      180      "Board Connector, 5 Contact(s), 1 Row(s), Male, Right Angle, Surface Mount Terminal"                
+J5         1909763-1           TopLayer FP-1909763-1-MFG              1266.240      90.551        270      "RF COAX Connector, UMCC PLUG, 50 OHM, PCB; Co; Connector Type: UMCC Coaxial; Body Style: Straight" 
+C10        C0603C105K4RACTU    TopLayer CAPC1608X90X35LL15T15         346.457       1149.606      90       "Cap Ceramic 1uF 16V X7R 10% SMD 0603 125°C Paper T/R"                                              
+C9         C0603C105K4RACTU    TopLayer CAPC1608X90X35LL15T15         539.370       1055.118      90       "Cap Ceramic 1uF 16V X7R 10% SMD 0603 125°C Paper T/R"                                              
+C8         C0603C104K4RACTU    TopLayer FP-C0603C-CF-MFG              1295.276      964.567       270      "Cap Ceramic 0.1uF 16V X7R 10% SMD 0603 125°C Paper T/R"                                            
+C7         C0603C104K4RACTU    TopLayer FP-C0603C-CF-MFG              1240.158      964.567       270      "Cap Ceramic 0.1uF 16V X7R 10% SMD 0603 125°C Paper T/R"                                            
+SW1        431183015816        TopLayer WS-TASV_L5W5H1.5_4311x30158x6 681.102       1122.047      90       "Switch Tactile Spst-no 0.02A 15V"                                                                  
+R3         RC0603FR-074K7L     TopLayer RESC1608X55X25LL10T15         708.661       952.756       0        "Res Thick Film 0603 4.7K Ohm 1% 1/10W ±100ppm/°C Molded SMD Paper T/R"                             
+R8         RC0603FR-07270RL    TopLayer RESC1608X55X25LL10T15         874.016       59.055        0        "SMD Chip Resistor, 270 Ohm, ± 1%, 100 mW, 0603 [1608 Metric], Thick Film, General Purpose"         
+R7         RC0603FR-07270RL    TopLayer RESC1608X55X25LL10T15         874.016       114.173       0        "SMD Chip Resistor, 270 Ohm, ± 1%, 100 mW, 0603 [1608 Metric], Thick Film, General Purpose"         
+TP1        150060VS75003       TopLayer WL-SMCW_0603_150060xx75003    976.378       59.055        0        "Led, Bright Green, 100Mcd, 572Nm Rohs Compliant: Yes"                                              
+TP2        150060VS75003       TopLayer WL-SMCW_0603_150060xx75003    976.378       114.173       0        "Led, Bright Green, 100Mcd, 572Nm Rohs Compliant: Yes"                                              
+MP1        9774010243R         TopLayer 9774010243                    2606.299      625.000       0        "WA-SMSI SMT Steel Spacer with internal Thread, OD 4.35mm, M2 x 1mm"                                
+U1         TLV73333PQDBVRQ1    TopLayer FP-DBV0005A-MFG               443.031       1119.104      270      "Automotive 300-mA, low-IQ, low-dropout voltage regulator with enable 5-SOT-23 -40 to 125"          
+R2         RC0603FR-075K1L     TopLayer RESC1608X55X25LL10T15         307.087       1055.118      180      "SMD Chip Resistor, 5.1 kOhm, ± 1%, 100 mW, 0603 [1608 Metric], Thick Film, General Purpose"        
+R1         RC0603FR-075K1L     TopLayer RESC1608X55X25LL10T15         354.331       732.283       90       "SMD Chip Resistor, 5.1 kOhm, ± 1%, 100 mW, 0603 [1608 Metric], Thick Film, General Purpose"        
+J4         2199119-3           TopLayer FP-2199119-3-MFG              987.205       625.000       90       "Conn Card Edge SKT 67 POS 0.5mm Solder RA SMD Embossed T/R"                                        
+J3         SQW-104-01-F-D-VS   TopLayer SAMTEC-SQW-104-01-X-D-VS      240.157       442.913       90       "Headers & Wire Housings Cost Effective Rugged PCB Sockets, 2.00mm pitch"                           
+J2         SSM-106-L-DV        TopLayer SAMTEC_SSM-106-L-DV           555.118       358.268       270      "Header Surface Mount (2.54mm) 2x6"                                                                 
+FB1        MI0805K400R-10      TopLayer FP-MI0805-MFG                 413.386       818.898       270      "Ferrite Chip, 1 Function(s), 1.5A, 2 Pin(s)"                                                       
+D1         PRTR5V0U2F,115      TopLayer FP-SOT886-MFG                 409.449       992.126       0        "TVS DIODE 5.5VWM SOT886"                                                                           
+C6         C0603C104K4RACTU    TopLayer FP-C0603C-CF-MFG              1295.276      267.716       90       "Cap Ceramic 0.1uF 16V X7R 10% SMD 0603 125°C Paper T/R"                                            
+C5         C0603C104K4RACTU    TopLayer FP-C0603C-CF-MFG              1240.158      267.716       90       "Cap Ceramic 0.1uF 16V X7R 10% SMD 0603 125°C Paper T/R"                                            
+C4         C0603C104K4RACTU    TopLayer FP-C0603C-CF-MFG              531.496       956.693       0        "Cap Ceramic 0.1uF 16V X7R 10% SMD 0603 125°C Paper T/R"                                            
+C3         C0603C104K4RACTU    TopLayer FP-C0603C-CF-MFG              476.378       791.339       270      "Cap Ceramic 0.1uF 16V X7R 10% SMD 0603 125°C Paper T/R"                                            
+C2         C0603C475M9PACTU    TopLayer CAPC1608X90X35LL15T15         448.819       720.472       0        "Cap Ceramic 4.7uF 6.3V X5R 20% SMD 0603 85C Paper T/R"                                             
+C1         C0603C103K5RACTU    TopLayer FP-C0603C-CF-MFG              429.134       933.071       180      "CAP CER 10000PF 50V X7R 0603"                                                                      
+B1         FT232RNQ-REEL       TopLayer QFN50P500X500X90-33N-D        635.827       805.118       180      "UART Interface IC USB Full Speed to Serial UART IC, Includes Oscillator and EEPROM, QFN-32"        
+1          NetTimeLogic_Logo   TopLayer NetTimeLogic_Logo_25mm        -1031.496     -1055.906     0        "NetTimeLogic Cooper Logos 15mm,  25mm, 35mm, 50 mm"                                                
+J1         USB4105-GF-A        TopLayer FP-USB4105-GF-A-MFG           206.693       826.772       270      "Conn USB 2.0 Type C RCP 24 POS 0.3mm/0.5mm Solder RA SMD 24 Terminal 1 Port T/R"                   

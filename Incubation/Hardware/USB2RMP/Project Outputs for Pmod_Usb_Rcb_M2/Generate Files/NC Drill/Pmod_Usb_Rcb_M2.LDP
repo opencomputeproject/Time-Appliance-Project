@@ -1,0 +1,3 @@
+Layer Pairs Export File for PCB: C:\NetTimeLogic\Hardware\PMOD\PMOD_USB_RCB_M2\Pmod_Usb_Rcb_M2.PcbDoc
+LayersSetName=Top_Bot_Thru_Holes|DrillFile=pmod_usb_rcb_m2-roundholes.txt|DrillLayers=gtl,gbl
+LayersSetName=Top_Bot_Slot_Holes|DrillFile=pmod_usb_rcb_m2-slotholes.txt|DrillLayers=gtl,gbl

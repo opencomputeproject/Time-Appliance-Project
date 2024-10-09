@@ -1,0 +1,249 @@
+*************************************************************
+FileName = Pmod_Usb_Rcb_M2.GBR
+AutoAperture = True
+*************************************************************
+Generating : Top Paste
+      File : Pmod_Usb_Rcb_M2.GTP
+
+    Adding Layer      : Top Paste
+
+    Adding Layer      : Top Layer
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D13
+    D14
+    D15
+    D16
+    D17
+    D18
+    D19
+    D20
+    D21
+    D22
+    D23
+    D24
+    D25
+    D26
+    D27
+    D28
+    D29
+    D30
+    D31
+    D32
+    D33
+    D34
+    D35
+    D36
+    D37
+    D38
+*************************************************************
+
+*************************************************************
+Generating : Bottom Solder
+      File : Pmod_Usb_Rcb_M2.GBS
+
+    Adding Layer      : Bottom Solder
+
+    Adding Layer      : Bottom Layer
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D50
+    D51
+    D53
+    D54
+    D55
+    D56
+    D61
+*************************************************************
+
+*************************************************************
+Generating : Top Overlay
+      File : Pmod_Usb_Rcb_M2.GTO
+
+    Adding Layer      : Top Overlay
+
+
+Used DCodes :
+    D10
+    D11
+    D12
+*************************************************************
+
+*************************************************************
+Generating : Bottom Layer
+      File : Pmod_Usb_Rcb_M2.GBL
+
+    Adding Layer      : Bottom Layer
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D50
+    D51
+    D53
+    D54
+    D55
+    D56
+    D57
+    D58
+    D60
+*************************************************************
+
+*************************************************************
+Generating : Bottom Paste
+      File : Pmod_Usb_Rcb_M2.GBP
+
+    Adding Layer      : Bottom Paste
+
+    Adding Layer      : Bottom Layer
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+*************************************************************
+
+*************************************************************
+Generating : Bottom Overlay
+      File : Pmod_Usb_Rcb_M2.GBO
+
+    Adding Layer      : Bottom Overlay
+
+
+Used DCodes :
+    D10
+*************************************************************
+
+*************************************************************
+Generating : Fab Notes
+      File : Pmod_Usb_Rcb_M2.GM5
+
+    Adding Layer      : Fab Notes
+
+
+Used DCodes :
+    D11
+*************************************************************
+
+*************************************************************
+Generating : Top Layer
+      File : Pmod_Usb_Rcb_M2.GTL
+
+    Adding Layer      : Top Layer
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D13
+    D14
+    D15
+    D16
+    D17
+    D18
+    D19
+    D20
+    D21
+    D22
+    D23
+    D24
+    D25
+    D26
+    D27
+    D28
+    D29
+    D30
+    D31
+    D32
+    D33
+    D34
+    D35
+    D36
+    D37
+    D38
+    D50
+    D51
+    D53
+    D54
+    D55
+    D56
+    D57
+    D58
+    D59
+    D60
+*************************************************************
+
+*************************************************************
+Generating : Top Solder
+      File : Pmod_Usb_Rcb_M2.GTS
+
+    Adding Layer      : Top Solder
+
+    Adding Layer      : Top Layer
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D15
+    D16
+    D17
+    D18
+    D22
+    D23
+    D24
+    D27
+    D29
+    D30
+    D32
+    D33
+    D34
+    D36
+    D39
+    D40
+    D41
+    D42
+    D43
+    D44
+    D45
+    D46
+    D47
+    D48
+    D49
+    D50
+    D51
+    D52
+    D53
+    D54
+    D55
+    D56
+*************************************************************
+
+*************************************************************
+Generating : Dimensions
+      File : Pmod_Usb_Rcb_M2.GM1
+
+    Adding Layer      : Dimensions
+
+
+Used DCodes :
+    D58
+    D62
+*************************************************************
+
+*************************************************************
+Generating : Profile
+      File : Pmod_Usb_Rcb_M2.GM
+
+
+Used DCodes :
+    D63
+*************************************************************
+

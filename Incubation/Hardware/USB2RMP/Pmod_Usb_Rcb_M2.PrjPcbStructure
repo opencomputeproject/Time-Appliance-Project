@@ -1,0 +1,3 @@
+Record=TopLevelDocument|FileName=Connectors.SchDoc|SheetNumber=2
+Record=NoMainPathDocument|SourceDocument=Connectors.SchDoc|FileName=Mechanical.SchDoc|SheetNumber=3
+Record=NoMainPathDocument|SourceDocument=Connectors.SchDoc|FileName=Power_and_USB.SchDoc|SheetNumber=1

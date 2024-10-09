@@ -1,0 +1,21 @@
+----------------------------------------------------------------------------------------------------------------------------------
+NCDrill File Report For: Pmod_Usb_Rcb_M2.PcbDoc   09.10.2024  09:07:07
+----------------------------------------------------------------------------------------------------------------------------------
+
+Layer Pair : Top Layer to Bottom Layer
+ASCII RoundHoles File : Pmod_Usb_Rcb_M2-RoundHoles.TXT
+ASCII SlotHoles File : Pmod_Usb_Rcb_M2-SlotHoles.TXT
+
+Tool       Hole Size               Hole Tolerance               Hole Type       Hole Count   Plated         Tool Travel
+----------------------------------------------------------------------------------------------------------------------------------
+T1      12mil (0.3mm)                                             Round             57        PTH        7.79inch (197.87mm)
+T2      24mil (0.599mm)                                           Slot              4         PTH        1.50inch (38.17mm)
+T3      122mil (3.099mm)                                          Round             4         PTH        5.78inch (146.90mm)
+T4      26mil (0.65mm)                                            Round             2         NPTH       0.23inch (5.78mm)
+T5      43mil (1.1mm)                                             Round             1         NPTH       0.00inch (0.00mm)
+T6      63mil (1.6mm)                                             Round             1         NPTH       0.00inch (0.00mm)
+T7      118mil (3mm)                                              Round             1         NPTH       0.00inch (0.00mm)
+----------------------------------------------------------------------------------------------------------------------------------
+Totals                                                                              70
+
+Total Processing Time (hh:mm:ss) : 00:00:00
