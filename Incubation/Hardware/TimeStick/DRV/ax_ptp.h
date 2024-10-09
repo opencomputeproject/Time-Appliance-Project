@@ -197,6 +197,19 @@ struct _ax_ptp_info {
 	u32	sec_l;
 	u16	sec_h;
 } __packed;
+
+static inline void ax_ptp_179a_transform(struct _ax_ptp_info *dst,
+					 struct _179a_ptp_info *src)
+{
+	dst->reserved	 = src->reserved;
+	dst->status	 = src->status;
+	dst->msg_type	 = src->msg_type;
+	dst->sequence_id = (u16)src->sequence_id;
+	dst->nsec	 = src->nsec;
+	dst->sec_l	 = src->sec_l;
+	dst->sec_h	 = src->sec_h;
+}
+
 #define AX_PTP_HW_QUEUE_SIZE	5
 #define AX_PTP_QUEUE_SIZE	AX_PTP_HW_QUEUE_SIZE
 #define AX_PTP_INFO_SIZE	sizeof(struct _ax_ptp_info)

@@ -500,12 +500,9 @@ static struct _ax_ptp_info *ax_ptp_info_transform(struct ax_device *axdev,
 	{
 		struct _179a_ptp_info *_179a_ptp = (typeof(_179a_ptp))data;
 
-		for (i = 0; i < AX_PTP_HW_QUEUE_SIZE; i++) {
-			memcpy(&temp[i], &_179a_ptp[i], 2);
-			temp[i].sequence_id &= 0xFF;
-			memcpy(&temp[i].nsec, &_179a_ptp[i].nsec, 10);
-		}
-		memcpy(data, temp, AX_PTP_INFO_SIZE);
+		for (i = 0; i < AX_PTP_HW_QUEUE_SIZE; i++)
+			ax_ptp_179a_transform(&temp[i], &_179a_ptp[i]);
+		memcpy(data, temp, AX_PTP_INFO_SIZE * AX_PTP_HW_QUEUE_SIZE);
 		break;
 	}
 	};
