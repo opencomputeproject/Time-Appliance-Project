@@ -30,3 +30,4 @@ Time-Card/DRV/*.ko
 Time-Card/DRV/*.mod.c
 Time-Card/DRV/*.order
 Time-Card/DRV/*.symvers
+*.pyc

@@ -1,0 +1,13 @@
+; TTL Script to send a command once every second
+
+; Start of the loop
+:loop
+
+
+sendln 'dpll-read-reg 0xcf50 0x0'
+
+; Wait for 1 second (1000 milliseconds)
+pause 1
+
+; Go back to the start of the loop
+goto loop
