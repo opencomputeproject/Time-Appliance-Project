@@ -2,7 +2,8 @@
 #include "WWVB_Arduino.h"
 #include "SX1276_LORA.h"
 #include "clockmatrix.h"
-
+#include "at86rf215iq.h"
+#include "fpga.h"
 
 
 RNG_HandleTypeDef hrng;
@@ -38,6 +39,8 @@ void setup() {
 
   __HAL_RCC_DMA1_CLK_ENABLE();
   __HAL_RCC_DMA2_CLK_ENABLE();
+
+  __HAL_RCC_QSPI_CLK_ENABLE();          // Enable QSPI clock
 
   __HAL_RCC_MDMA_CLK_ENABLE();
   __HAL_RCC_C1_MDMA_CLK_ENABLE();
@@ -107,6 +110,12 @@ void setup() {
 
 
   init_clockmatrix();
+
+  init_sx1276_cli();
+
+  init_at86_cli(&SX1276_Lora._spi);
+
+  init_fpga_cli();
 
   // DPLL DEBUG HACK
   //wwvb_gpio_pinmode_pullup(PLL_SDA, OUTPUT);

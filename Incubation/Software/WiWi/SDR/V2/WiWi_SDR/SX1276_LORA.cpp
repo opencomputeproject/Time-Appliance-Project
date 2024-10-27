@@ -957,3 +957,95 @@ ISR_PREFIX void LoRaClass::onDio0Rise()
   LoRa.handleDio0Rise();
 }
 */
+
+
+
+
+/**************** CLI functions **************/
+
+
+void onSX1276Write(EmbeddedCli *cli, char *args, void *context)
+{
+  uint8_t addr = 0;
+  uint8_t writeval = 0;
+  if (embeddedCliGetTokenCount(args) == 0) {
+    Serial.println("SX1276 write no arguments!");
+    return;
+  } else if ( embeddedCliGetTokenCount(args) != 2 ) {
+    Serial.println("SX1276 write needs 2 arguments!");
+    return;
+  } 
+
+  if ( !try_parse_hex_uint8t( embeddedCliGetToken(args, 1), &addr ) ) {
+    Serial.println("Failed to parse first argument for uint8_t");
+    return;
+  }
+  if ( !try_parse_hex_uint8t( embeddedCliGetToken(args, 2), &writeval ) ) {
+    Serial.println("Failed to parse second argument for uint8_t");
+    return;
+  }
+
+  // parsed everything , now do the write
+  SX1276_Lora.writeRegister(addr, writeval);
+  Serial.println("SX1276 Register write done");
+}
+
+void onSX1276Read(EmbeddedCli *cli, char *args, void *context)
+{
+  uint8_t addr = 0;
+  uint8_t read_val = 0;
+  if (embeddedCliGetTokenCount(args) == 0) {
+    Serial.println("DPLL read no arguments!");
+    return;
+  } else if ( embeddedCliGetTokenCount(args) != 1 ) {
+    Serial.println("DPLL read needs 1 argument!");
+    return;
+  } 
+
+  if ( !try_parse_hex_uint8t( embeddedCliGetToken(args, 1), &addr ) ) {
+    Serial.println("Failed to parse first argument for uint16_t");
+    return;
+  }
+
+  read_val = SX1276_Lora.readRegister(addr);
+
+
+  sprintf(print_buffer, "SX1276 addr=0x%x, read back 0x%x\r\n", 
+    addr, read_val);
+  Serial.print(print_buffer);
+
+}
+
+
+
+void init_sx1276_cli()
+{
+
+
+  SX1276_Lora.init(); 
+  Serial.println("Beginning SX1276 LORA");
+  if ( !SX1276_Lora.begin(900e6) ) {
+    Serial.println("LoRA SX1276 init failed!");
+  } else {
+    Serial.println("LoRA SX1276 init successful!");
+    //SX1276_Lora.dumpRegisters(Serial);
+  }
+
+  // expose sx1276 CLI
+  
+  embeddedCliAddBinding(cli, {
+          "sx1276-write-reg",
+          "Write a SX1276 register, pass address (8-bit) / value (8-bit) ex: sx1276-write-reg 0x6 0x6c",
+          true,
+          nullptr,
+          onSX1276Write
+  });
+
+  embeddedCliAddBinding(cli, {
+          "sx1276-read-reg",
+          "Read a SX1276 register, pass address (8-bit)  ex: sx1276-read-reg 0x6",
+          true,
+          nullptr,
+          onSX1276Read
+  });
+}

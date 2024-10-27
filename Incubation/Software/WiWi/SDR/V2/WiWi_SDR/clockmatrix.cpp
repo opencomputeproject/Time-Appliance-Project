@@ -22,26 +22,28 @@ bool dpll_read_reg(uint16_t baseaddr, uint16_t offset, uint8_t * val)
   baseaddr_lower = (uint8_t)(full_addr & 0xff);
   baseaddr_upper = (uint8_t)((full_addr >> 8) & 0xff);
 
-  if ( cur_dpll_base_addr != baseaddr_upper ) {
+  if ( cur_dpll_base_addr != baseaddr_upper || 1 ) {
     // write base address, DPLL slave addr -> 0xfc -> baseaddr_lower -> baseaddr_upper -> 0x10 -> 0x20
     cm_i2c.beginTransmission(dpll_addr);
     cm_i2c.write(0xfc);
     cm_i2c.write(baseaddr_lower);
-    cm_i2c.write(baseaddr_lower);
+    cm_i2c.write(baseaddr_upper);
     cm_i2c.write(0x10);
     cm_i2c.write(0x20);
     if ( cm_i2c.endTransmission() != 0x0 ) {
       Serial.println("Failed to write baseaddr to DPLL in DPLL write!");
       return 0;
     }
-    Serial.println("DPLL read , set base address successfully");
+    //Serial.println("DPLL read , set base address successfully");
     cur_dpll_base_addr = baseaddr_upper;
+    delayMicroseconds(5);
   }
   // read register
   // DPLL slave addr -> baseaddr_lower -> DPLL slave addr request -> value
   cm_i2c.beginTransmission(dpll_addr);
   cm_i2c.write(baseaddr_lower);
   cm_i2c.endTransmission(false);
+  delayMicroseconds(5);
 
   num_read = cm_i2c.requestFrom(dpll_addr,1);
   if ( num_read == 0 ) {
@@ -67,18 +69,19 @@ bool dpll_write_reg(uint16_t baseaddr, uint16_t offset, uint8_t val)
   baseaddr_lower = (uint8_t)(full_addr & 0xff);
   baseaddr_upper = (uint8_t)((full_addr >> 8) & 0xff);
 
-  if ( cur_dpll_base_addr != baseaddr_upper ) {
+  if ( cur_dpll_base_addr != baseaddr_upper || 1 ) {
     // write base address, DPLL slave addr -> 0xfc -> baseaddr_lower -> baseaddr_upper -> 0x10 -> 0x20
     cm_i2c.beginTransmission(dpll_addr);
     cm_i2c.write(0xfc);
     cm_i2c.write(baseaddr_lower);
-    cm_i2c.write(baseaddr_lower);
+    cm_i2c.write(baseaddr_upper);
     cm_i2c.write(0x10);
     cm_i2c.write(0x20);
     if ( cm_i2c.endTransmission() != 0x0 ) {
       Serial.println("Failed to write baseaddr to DPLL in DPLL write!");
       return 0;
     } 
+    delayMicroseconds(5);
     cur_dpll_base_addr = baseaddr_upper;
   }
   // write register

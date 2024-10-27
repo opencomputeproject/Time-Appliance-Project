@@ -102,7 +102,7 @@ public:
 
   void dumpRegisters(Stream& out);
 
-private:
+//private:
   void explicitHeaderMode();
   void implicitHeaderMode();
 
@@ -121,8 +121,9 @@ private:
 
   static void onDio0Rise();
 
-private:
+
   SPI_HandleTypeDef _spi;
+private:
   int _ss;
   int _reset;
   int _dio0;
@@ -134,5 +135,10 @@ private:
   void (*_onTxDone)();
 };
 extern LoRaClass SX1276_Lora;
+
+
+/************ CLI functions ************/
+void init_sx1276_cli();
+
 
 #endif
