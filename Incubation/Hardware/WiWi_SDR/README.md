@@ -8,20 +8,22 @@ This hardware design integrates multiple high-performance components for precise
 - **Role**: Acts as the primary controller for the entire board. 
 - **Features**: Dual-core ARM Cortex-M7 and Cortex-M4 for handling control tasks and communication with external components.
 - **Interfaces**: Communicates with the SDR, LoRa transceiver, and other modules to manage configuration and control.
+  - Exposes 100M Ethernet over RJ45 to run PTP for time synchronization, or Data Transfer to Network nodes. 1PPS from PTP goes to the DPLL.
+  - Exposes 480Mb/s High speed USB over USB-A connector, to connect to a host PC and run as a normal SDR 
 
 ### 2. 8A34001 DPLL (Source of Time and Frequency Signals)
 - **Role**: Provides precise time and frequency signals, ensuring synchronization across the entire system.
 - **Features**: Digitally controlled phase-locked loop (DPLL) for stable clock generation.
 - **Purpose**: Controls and synchronizes the time and frequency of all components, including the STM32, FPGA, oscillators, and SDR radios.
 
-### 3. LIFCL-17-7BG256 Crosslink-NX FPGA (SDR Interface and Parallel Processor)
+### 3. LFE5U-25F-6BG256I ECP5 FPGA (SDR Interface and Parallel Processor)
 - **Role**: Acts as the bridge between the STM32 microcontroller and the SDR interface, while also performing real-time IQ data processing.
 - **Features**:
   - Real-time signal processing for IQ data captured from the AT86RF215IQ dual-channel SDR.
   - Handles complex DSP tasks required for channel estimation and two-way phase transfer.
 - **Interfaces**: Manages data flow between the STM32, the SDR radios, and other components for efficient processing.
 
-### 4. SiT551 Oscillator (High Stability Oscillator)
+### 4. SiT5501 Oscillator (High Stability Oscillator)
 - **Role**: Provides a stable reference clock for the entire system.
 - **Features**: High stability and precision, used as the reference frequency for the 8A34001 DPLL and other time-critical components.
 
