@@ -44,3 +44,44 @@ Step 3: Insert the new module
 ```
 sudo insmod ax_usb_nic.ko
 ```
+
+
+Known Issues with the driver
+
+Since the exisiting ax88179_178a driver does not support the hardware timestamping and shows up by default by the kernel, you need to remove it or blacklist it.
+You should also remove the ax_usb_nic module (if loaded) and loaded it again in order to get the right functionality from the module.
+```
+sudo rmmod ax88179_178a
+sudo rmmod ax_usb_nic
+sudo modprobe ax_usb_nic
+```
+This is how it should look like when the right module is installed
+```
+$ ethtool -T eth1
+Time stamping parameters for eth1:
+Capabilities:
+	hardware-transmit
+	software-transmit
+	hardware-receive
+	software-receive
+	software-system-clock
+	hardware-raw-clock
+PTP Hardware Clock: 1
+Hardware Transmit Timestamp Modes:
+	off
+	on
+	onestep-sync
+	onestep-p2p
+Hardware Receive Filter Modes:
+	none
+	ptpv1-l4-event
+	ptpv1-l4-sync
+	ptpv1-l4-delay-req
+	ptpv2-l4-event
+	ptpv2-l4-sync
+	ptpv2-l4-delay-req
+	ptpv2-l2-event
+	ptpv2-l2-sync
+	ptpv2-l2-delay-req
+```
+
