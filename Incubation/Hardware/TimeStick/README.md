@@ -42,5 +42,5 @@ sudo rmmod ax88179_178a
 
 Step 3: Insert the new module
 ```
-sudo modprobe ax_usb_nic
+sudo insmod ax_usb_nic.ko
 ```
