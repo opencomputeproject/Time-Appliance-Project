@@ -273,6 +273,77 @@ void onDpllEepromRead(EmbeddedCli *cli, char *args, void *context)
 
 
 
+
+static Node dpll_write_reg_node = { .name = "dpll-write-reg", 
+  .type = MY_FILE, 
+  .cliBinding = {
+    "dpll-write-reg",
+    "Write a DPLL register, pass base address (16-bit) / offset (16-bit) / value (8-bit) ex: dpll-write-reg 0xc03c 0x101 0x0",
+    true,
+    nullptr,
+    onDpllWrite
+  } 
+};
+
+static Node dpll_read_reg_node = { .name = "dpll-read-reg", 
+  .type = MY_FILE, 
+  .cliBinding = {
+    "dpll-read-reg",
+    "Read a DPLL register, pass base address (16-bit) / offset (16-bit)  ex: dpll-read-reg 0xc03c 0x101",
+    true,
+    nullptr,
+    onDpllRead
+  }
+};
+
+static Node dpll_eeprom_write_node = { .name = "dpll-eeprom-write", 
+  .type = MY_FILE, 
+  .cliBinding = {
+    "dpll-eeprom-write",
+    "Write to DPLL EEPROM, pass EEPROM address (17-bit) / list of values up to 128 count (8-bit)  ex: dpll-read-reg 0x1234 0x10 0x10 0x20 0x30....",
+    true,
+    nullptr,
+    onDpllEepromWrite
+  }
+};
+
+
+
+void dpll_dir_operation(EmbeddedCli *cli, char *args, void *context);
+
+static Node * dpll_files[] = { &dpll_write_reg_node, &dpll_read_reg_node, &dpll_eeprom_write_node };
+
+static Node dpll_dir = {
+    .name = "dpll",
+    .type = MY_DIRECTORY,
+    .cliBinding = {"dpll",
+          "DPLL mode",
+          true,
+          nullptr,
+          dpll_dir_operation},
+    .parent = 0,
+    .children = dpll_files,
+    .num_children = sizeof(dpll_files) / sizeof(dpll_files[0])
+};
+
+void dpll_dir_operation(EmbeddedCli *cli, char *args, void *context) {
+  change_to_node(&dpll_dir);
+}
+
+// Initialize function to set the parent pointers if needed
+void dpll_fs_init() {
+  for (int i = 0; i < dpll_dir.num_children; i++) {
+    dpll_files[i]->parent = &dpll_dir;
+  }
+  add_root_filesystem(&dpll_dir);
+}
+
+
+
+
+
+
+
 void init_clockmatrix()
 {
   Serial.println("Init clock matrix");
@@ -292,27 +363,6 @@ void init_clockmatrix()
 
 
   // expose DPLL CLI
-  
-  embeddedCliAddBinding(cli, {
-          "dpll-write-reg",
-          "Write a DPLL register, pass base address (16-bit) / offset (16-bit) / value (8-bit) ex: dpll-write-reg 0xc03c 0x101 0x0",
-          true,
-          nullptr,
-          onDpllWrite
-  });
+  dpll_fs_init();
 
-  embeddedCliAddBinding(cli, {
-          "dpll-read-reg",
-          "Read a DPLL register, pass base address (16-bit) / offset (16-bit)  ex: dpll-read-reg 0xc03c 0x101",
-          true,
-          nullptr,
-          onDpllRead
-  });
-  embeddedCliAddBinding(cli, {
-          "dpll-eeprom-write",
-          "Write to DPLL EEPROM, pass EEPROM address (17-bit) / list of values up to 128 count (8-bit)  ex: dpll-read-reg 0x1234 0x10 0x10 0x20 0x30....",
-          true,
-          nullptr,
-          onDpllEepromWrite
-  });
 }

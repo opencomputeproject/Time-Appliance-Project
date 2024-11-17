@@ -14,6 +14,7 @@
 #include <stm32h7xx_hal_spi.h>
 #include <stm32h7xx_hal_gpio_ex.h>
 #include <stm32h7xx_hal_cortex.h>
+#include "menu_cli.h"
 
 #define LORA_DEFAULT_SPI_FREQUENCY 8E6 
 #define LORA_DEFAULT_SS_PIN        SX1276_NSS
@@ -137,8 +138,30 @@ private:
 extern LoRaClass SX1276_Lora;
 
 
-/************ CLI functions ************/
-void init_sx1276_cli();
 
+
+/************ CLI functions ************/
+extern rtos::EventFlags sx1276_io_flag;
+
+
+typedef struct LoRA_TX_Entry {
+  uint32_t id;
+  char data[50];  
+  int datalen;
+} LoRA_TX_Entry;
+
+typedef struct LoRA_RX_Entry {
+  uint32_t id;
+  char data[50];
+  int datalen;
+} LoRA_RX_Entry;
+
+// placeholder for TX metadata , same as Linux ethernet
+typedef struct LoRA_TX_Complete_Entry {
+  uint32_t id;
+} LoRA_TX_Complete_Entry;
+
+
+void init_sx1276_cli();
 
 #endif

@@ -3,6 +3,7 @@
 #define CLOCKMATRIX_H
 
 #include "SoftWire_stm.h"
+#include "menu_cli.h"
 
 extern SoftWire cm_i2c;
 

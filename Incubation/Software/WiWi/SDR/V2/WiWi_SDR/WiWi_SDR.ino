@@ -4,6 +4,8 @@
 #include "clockmatrix.h"
 #include "at86rf215iq.h"
 #include "fpga.h"
+#include "menu_cli.h"
+#include "esp32.h"
 
 
 RNG_HandleTypeDef hrng;
@@ -69,6 +71,11 @@ void setup() {
   __HAL_RCC_C1_TIM1_CLK_ENABLE();
   __HAL_RCC_C2_TIM1_CLK_ENABLE();
 
+  // uart4 for esp32
+  __HAL_RCC_UART4_CLK_ENABLE();
+  __HAL_RCC_C1_UART4_CLK_ENABLE();
+  __HAL_RCC_C2_UART4_CLK_ENABLE();
+
   Serial.begin(9600);
   while ( !Serial ) {
     delay(1);
@@ -106,7 +113,8 @@ void setup() {
 
   Serial.println("Early init done!");
 
-  init_cli();
+  //init_cli();
+  init_menu_cli();
 
 
   init_clockmatrix();
@@ -117,9 +125,16 @@ void setup() {
 
   init_fpga_cli();
 
+  init_esp32_cli();
+
+
   // DPLL DEBUG HACK
   //wwvb_gpio_pinmode_pullup(PLL_SDA, OUTPUT);
   //wwvb_gpio_pinmode_pullup(PLL_SCL, OUTPUT);
+
+  // a bit of a hack, call this after everything else is initialized
+  // makes sure the root directory on start up has everything properly
+  addMenuCLI_current_directory();
 }
 
 // the loop function runs over and over again forever

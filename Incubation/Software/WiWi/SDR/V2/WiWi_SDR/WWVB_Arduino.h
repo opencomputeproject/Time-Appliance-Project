@@ -50,6 +50,8 @@ enum WWVB_Pin_Name {
   AT86_IRQ,
   AT86_RST,
 
+  ESP32_RST,
+
   QSPI_FPGA_SCLK,
   QSPI_FPGA_MOSI,
   QSPI_FPGA_WP,
@@ -121,6 +123,10 @@ extern WWVB_Pin WWVB_Pins[];
 
 #define AT86_RST_N GPIO_PIN_11
 #define AT86_RST_G GPIOH
+
+/******* ESP32 specific pins *******/
+#define ESP32_RST_N GPIO_PIN_0
+#define ESP32_RST_G GPIOD
 
 
 /***** CrosslinkNX FPGA pins ******/
@@ -199,13 +205,13 @@ void wwvb_m4_print_bool(char * name, bool val);
 #define SX1257_Q_TX_DMA_STREAM_IRQ DMA2_Stream4_IRQn
 #define SX1257_Q_TX_DMA_STREAM_HANDLER DMA2_Stream4_IRQHandler
 
-#define HRTIMER_PPSOUT_DMA_STREAM DMA2_Stream3
-#define HRTIMER_PPSOUT_DMA_STREAM_IRQ DMA2_Stream3_IRQn
-#define HRTIMER_PPSOUT_DMA_STREAM_HANDLER DMA2_Stream3_IRQHandler
+#define ESP_UART_TX_DMA_STREAM DMA2_Stream3
+#define ESP_UART_TX_DMA_STREAM_IRQ DMA2_Stream3_IRQn
+#define ESP_UART_TX_DMA_STREAM_HANDLER DMA2_Stream3_IRQHandler
 
-#define HRTIMER_PPSIN_DMA_STREAM DMA2_Stream2
-#define HRTIMER_PPSIN_DMA_STREAM_IRQ DMA2_Stream2_IRQn
-#define HRTIMER_PPSIN_DMA_STREAM_HANDLER DMA2_Stream2_IRQHandler
+#define ESP_UART_RX_DMA_STREAM DMA2_Stream2
+#define ESP_UART_RX_DMA_STREAM_IRQ DMA2_Stream2_IRQn
+#define ESP_UART_RX_DMA_STREAM_HANDLER DMA2_Stream2_IRQHandler
 
 /* Use of CMSIS compiler intrinsics for register exclusive access */
 /* Atomic 32-bit register access macro to set one or several bits */
@@ -293,20 +299,5 @@ int bitDifference(uint32_t value);
 uint32_t htonl(uint32_t hostlong);
 
 
-
-#include "embedded_cli.h"
-
-extern EmbeddedCli *cli;
-
-
-
-void init_cli();
-
-void cli_loop();
-
-// some utility functions for handling common user values
-bool try_parse_hex_uint16t(const char* tok, uint16_t * val);
-bool try_parse_hex_uint8t(const char* tok, uint8_t * val);
-bool try_parse_hex_uint32t(const char* tok, uint32_t * val);
 
 #endif

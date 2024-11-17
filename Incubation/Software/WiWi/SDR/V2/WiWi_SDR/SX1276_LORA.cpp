@@ -156,9 +156,18 @@ int LoRaClass::setantenna(bool sma, bool hf, bool tx) {
 }
 
 
+
+// a bit hacky, but config parameters used by begin
+long config_sbw = 125e3;
+int codingratedenom = 1;
+int spreadingfactor = 7;
+int preamblelen = 8;
+long config_freq = 900e6;
+
 int LoRaClass::begin(long frequency)
 {
   Serial.println("SX1276 begin start");
+  config_freq = frequency;
   // setup pins
   wwvb_gpio_pinmode(_ss, OUTPUT);
   // set SS high
@@ -206,10 +215,10 @@ int LoRaClass::begin(long frequency)
 
   writeRegister(REG_IRQ_MASK, 0xA7); // mask everything except RxDone and ValidHeader and TxDone
   setTxPower(17,PA_OUTPUT_PA_BOOST_PIN); // V2 board , HF output uses boost pin!
-  setCodingRate4(1);
-  setSignalBandwidth(125E3);
-  setSpreadingFactor(7);
-  setPreambleLength(8);
+  setCodingRate4(codingratedenom);
+  setSignalBandwidth(config_sbw);
+  setSpreadingFactor(spreadingfactor);
+  setPreambleLength(preamblelen);
   enableLowDataRateOptimize();
   //disableLowDataRateOptimize();
   //setGain(0); // AGC mode
@@ -995,10 +1004,10 @@ void onSX1276Read(EmbeddedCli *cli, char *args, void *context)
   uint8_t addr = 0;
   uint8_t read_val = 0;
   if (embeddedCliGetTokenCount(args) == 0) {
-    Serial.println("DPLL read no arguments!");
+    Serial.println("SX1276 read no arguments!");
     return;
   } else if ( embeddedCliGetTokenCount(args) != 1 ) {
-    Serial.println("DPLL read needs 1 argument!");
+    Serial.println("SX1276 read needs 1 argument!");
     return;
   } 
 
@@ -1016,6 +1025,295 @@ void onSX1276Read(EmbeddedCli *cli, char *args, void *context)
 
 }
 
+void onSX1276SetConfig(EmbeddedCli *cli, char *args, void *context)
+{
+  if ( embeddedCliGetTokenCount(args) != 5 ) {
+    //Serial.println("SX1276 set config needs 5 arguments!");
+    sprintf(print_buffer, "SX1276 Config:\r\n");
+    sprintf(print_buffer, "%sFrequency:%ld\r\n", print_buffer, config_freq);
+    sprintf(print_buffer, "%sBandwidth:%ld\r\n", print_buffer, config_sbw);
+    sprintf(print_buffer, "%sCoding rate:%d\r\n", print_buffer, codingratedenom);
+    sprintf(print_buffer, "%sSpreading factor:%ld\r\n", print_buffer, spreadingfactor);
+    sprintf(print_buffer, "%sPreamble length:%ld\r\n", print_buffer, preamblelen);
+    Serial.print(print_buffer);
+
+    return;
+  } 
+  uint32_t freq=0;
+  uint32_t bw=0;
+  uint8_t codingrate=0;
+  uint8_t sf=0;
+  uint8_t prelen=0;
+
+
+  if ( !try_parse_hex_uint32t( embeddedCliGetToken(args, 1), &freq ) ) {
+    Serial.println("Failed to parse first argument for uint32_t");
+    return;
+  }
+  if ( !try_parse_hex_uint32t( embeddedCliGetToken(args, 2), &bw ) ) {
+    Serial.println("Failed to parse second argument for uint32_t");
+    return;
+  }
+  if ( !try_parse_hex_uint8t( embeddedCliGetToken(args, 3), &codingrate ) ) {
+    Serial.println("Failed to parse third argument for uint8_t");
+    return;
+  }
+  if ( !try_parse_hex_uint8t( embeddedCliGetToken(args, 4), &sf ) ) {
+    Serial.println("Failed to parse fourth argument for uint8_t");
+    return;
+  }
+  if ( !try_parse_hex_uint8t( embeddedCliGetToken(args, 5), &prelen ) ) {
+    Serial.println("Failed to parse fifth argument for uint8_t");
+    return;
+  }
+
+  // set the global variables 
+  config_sbw = bw;
+  codingratedenom = codingrate;
+  spreadingfactor = sf;
+  preamblelen = prelen;
+  config_freq = ((long)freq) * 1000;
+
+  // basically re-init the transceiver , argument is in KHz, convert to Hz as expected by API
+  SX1276_Lora.begin( config_freq );
+}
+
+void onSX1276SetFreq(EmbeddedCli *cli, char *args, void *context)
+{
+  if ( embeddedCliGetTokenCount(args) != 1 ) {
+    //Serial.println("SX1276 set Frequency needs 1 argument1!");
+    sprintf(print_buffer, "SX1276 Frequency: %ld Hz\r\n", config_freq); Serial.print(print_buffer);
+    return;
+  } 
+  uint32_t val = 0;
+  if ( !try_parse_hex_uint32t( embeddedCliGetToken(args, 1), &val ) ) {
+    Serial.println("Failed to parse first argument for uint32_t");
+    return;
+  }
+  config_freq = ((long) val)*1000;
+  SX1276_Lora.begin( config_freq );
+}
+
+void onSX1276SetPreambleLen(EmbeddedCli *cli, char *args, void *context)
+{
+  if ( embeddedCliGetTokenCount(args) != 1 ) {
+    //Serial.println("SX1276 set Preamble Len needs 1 argument1!");
+    sprintf(print_buffer, "SX1276 Preamble length: %d Hz\r\n", preamblelen); Serial.print(print_buffer);
+    return;
+  } 
+  uint32_t val = 0;
+  if ( !try_parse_hex_uint32t( embeddedCliGetToken(args, 1), &val ) ) {
+    Serial.println("Failed to parse first argument for uint32_t");
+    return;
+  }
+  preamblelen = (uint32_t) val;
+  SX1276_Lora.begin( config_freq );
+}
+
+void onSX1276SetCodeRate(EmbeddedCli *cli, char *args, void *context)
+{
+  if ( embeddedCliGetTokenCount(args) != 1 ) {
+    //Serial.println("SX1276 set Code rate needs 1 argument1!");
+    sprintf(print_buffer, "SX1276 Code rate: %d\r\n", codingratedenom); Serial.print(print_buffer);
+    return;
+  } 
+  uint32_t val = 0;
+  if ( !try_parse_hex_uint32t( embeddedCliGetToken(args, 1), &val ) ) {
+    Serial.println("Failed to parse first argument for uint32_t");
+    return;
+  }
+  codingratedenom = (uint32_t) val;
+  SX1276_Lora.begin( config_freq );
+}
+
+void onSX1276SetBW(EmbeddedCli *cli, char *args, void *context)
+{
+  if ( embeddedCliGetTokenCount(args) != 1 ) {
+    //Serial.println("SX1276 set BW needs 1 argument1!");
+    sprintf(print_buffer, "SX1276 Bandwidth: %ld\r\n", config_sbw); Serial.print(print_buffer);
+    return;
+  } 
+  uint32_t val = 0;
+  if ( !try_parse_hex_uint32t( embeddedCliGetToken(args, 1), &val ) ) {
+    Serial.println("Failed to parse first argument for uint32_t");
+    return;
+  }
+  config_sbw = (long)val;
+  SX1276_Lora.begin( config_freq );
+}
+
+void onSX1276SetSF(EmbeddedCli *cli, char *args, void *context)
+{
+  if ( embeddedCliGetTokenCount(args) != 1 ) {
+    //Serial.println("SX1276 set SF needs 1 argument1!");
+    sprintf(print_buffer, "SX1276 Spreading Factor: %d\r\n", spreadingfactor); Serial.print(print_buffer);
+    return;
+  } 
+  uint32_t val = 0;
+  if ( !try_parse_hex_uint32t( embeddedCliGetToken(args, 1), &val ) ) {
+    Serial.println("Failed to parse first argument for uint32_t");
+    return;
+  }
+  spreadingfactor = (uint8_t) val;
+  SX1276_Lora.begin( config_freq );
+}
+
+
+
+static Node sx1276_set_freq_node = { .name = "freq", 
+  .type = MY_FILE, 
+  .cliBinding = {
+    "freq",
+    "Config SX1276 LoRA Frequency (In KHz), pass nothing to print. ex: freq 900000",
+    true,
+    nullptr,
+    onSX1276SetFreq
+  }
+};
+
+static Node sx1276_set_prelen_node = { .name = "preamblelen", 
+  .type = MY_FILE, 
+  .cliBinding = {
+    "preamblelen",
+    "Config SX1276 LoRA Preamble length, pass nothing to print. ex: preamblelen 8",
+    true,
+    nullptr,
+    onSX1276SetPreambleLen
+  }
+};
+
+
+static Node sx1276_set_coderate_node = { .name = "coderate", 
+  .type = MY_FILE, 
+  .cliBinding = {
+    "coderate",
+    "Config SX1276 LoRA coderate, pass nothing to print. ex: coderate 1",
+    true,
+    nullptr,
+    onSX1276SetCodeRate
+  }
+};
+
+static Node sx1276_set_bw_node = { .name = "bw", 
+  .type = MY_FILE, 
+  .cliBinding = {
+    "bw",
+    "Config SX1276 LoRA Bandwidth, pass nothing to print. ex: bw 125000",
+    true,
+    nullptr,
+    onSX1276SetBW
+  }
+};
+
+static Node sx1276_set_sf_node = { .name = "sf", 
+  .type = MY_FILE, 
+  .cliBinding = {
+    "sf",
+    "Config SX1276 LoRA SF, pass nothing to print. ex: sf 7",
+    true,
+    nullptr,
+    onSX1276SetSF
+  }
+};
+
+static Node sx1276_config_node = { .name = "config", 
+  .type = MY_FILE, 
+  .cliBinding = {
+    "config",
+    "Config SX1276 LoRA, pass frequency(KHz) / bandwidth / codingrate / SF / Preamble Length, pass nothing to print.  ex: config 900000 125000 1 7 8",
+    true,
+    nullptr,
+    onSX1276SetConfig
+  }
+};
+
+static Node sx1276_write_reg_node = { .name = "sx1276-write-reg", 
+  .type = MY_FILE, 
+  .cliBinding = {
+    "sx1276-write-reg",
+    "Write a SX1276 register, pass address (8-bit) / value (8-bit) ex: sx1276-write-reg 0x6 0x6c",
+    true,
+    nullptr,
+    onSX1276Write
+  }
+};
+
+static Node sx1276_read_reg_node = { .name = "sx1276-read-reg", 
+  .type = MY_FILE, 
+  .cliBinding = {
+    "sx1276-read-reg",
+    "Read a SX1276 register, pass address (8-bit)  ex: sx1276-read-reg 0x6",
+    true,
+    nullptr,
+    onSX1276Read
+  }
+};
+
+void sx1276_dir_operation(EmbeddedCli *cli, char *args, void *context); // forward declaration
+
+static Node * sx1276_files[] = { &sx1276_write_reg_node, &sx1276_read_reg_node, &sx1276_config_node,
+  &sx1276_set_freq_node,
+  &sx1276_set_prelen_node,
+  &sx1276_set_coderate_node,
+  &sx1276_set_bw_node,
+  &sx1276_set_sf_node };
+
+static Node sx1276_dir = {
+    .name = "sx1276",
+    .type = MY_DIRECTORY,
+    .cliBinding = {"sx1276",
+          "SX1276 mode",
+          true,
+          nullptr,
+          sx1276_dir_operation},
+    .parent = 0,
+    .children = sx1276_files,
+    .num_children = sizeof(sx1276_files) / sizeof(sx1276_files[0])
+};
+
+void sx1276_dir_operation(EmbeddedCli *cli, char *args, void *context) {
+  change_to_node(&sx1276_dir);
+}
+
+// Initialize function to set the parent pointers if needed
+void sx1276_fs_init() {
+  for (int i = 0; i < sx1276_dir.num_children; i++) {
+    sx1276_files[i]->parent = &sx1276_dir;
+  }
+  add_root_filesystem(&sx1276_dir);
+}
+
+
+
+
+// Want to create a hardware abstraction layer for software
+// this thread handles the raw I/O to the transceiver
+// putting packet contents into fifos 
+rtos::EventFlags sx1276_io_flag;
+
+// Create queues for read and write FIFOs
+rtos::Queue<LoRA_TX_Entry, 15> to_send_fifo; // tx queue
+rtos::Queue<LoRA_TX_Entry, 15> send_complete_fifo; // tx completion queue
+rtos::Queue<LoRA_RX_Entry, 15> rcvd_fifo; // rx queue
+
+void sx1276_io_thread()
+{
+  // TX path
+
+
+  // RX path
+
+
+}
+
+int sx1276_get_rcvd_fifo_num()
+{
+  
+}
+
+
+
+
 
 
 void init_sx1276_cli()
@@ -1032,20 +1330,5 @@ void init_sx1276_cli()
   }
 
   // expose sx1276 CLI
-  
-  embeddedCliAddBinding(cli, {
-          "sx1276-write-reg",
-          "Write a SX1276 register, pass address (8-bit) / value (8-bit) ex: sx1276-write-reg 0x6 0x6c",
-          true,
-          nullptr,
-          onSX1276Write
-  });
-
-  embeddedCliAddBinding(cli, {
-          "sx1276-read-reg",
-          "Read a SX1276 register, pass address (8-bit)  ex: sx1276-read-reg 0x6",
-          true,
-          nullptr,
-          onSX1276Read
-  });
+  sx1276_fs_init();
 }
