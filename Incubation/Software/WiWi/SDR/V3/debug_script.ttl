@@ -1,0 +1,24 @@
+; Tera Term Script: Repeat Command and Wait for Prompt
+; Sends 'byteWrite 0x0 0xf0', waits for '>', and repeats every second.
+
+timeout = 5
+sendln 'cd ..'
+wait '>' 
+
+sendln 'my_qspi'
+wait '>' 
+
+
+; Main loop
+:loop
+; Send the command
+sendln 'byteWrite 0x0 0xf0'
+
+; Wait for the prompt ('>')
+wait '>' ; Wait up to 5 seconds for the prompt
+
+; Sleep for 1 second
+pause 1
+
+; Loop back
+goto loop
