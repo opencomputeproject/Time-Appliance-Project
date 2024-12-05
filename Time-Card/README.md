@@ -206,17 +206,17 @@ Using a Calnex Sentinel device are comparing various things. Here we are compari
 Hereby we would like to thank these individuals who helped with the initiative, archirecture, design, software development, hardware issue maintanance and upgrades.
 Individual | Main Contribution
 ---------------- | -------------
-Mike Lambeta     | Layout and Schematic Design
-Oleg Obleukhov   | Open Time Server Software
-Jonathan Lemon   | Inital Linux Driver
-Thomas Schaub    | FPGA Design and Code
+[Mike Lambeta](https://github.com/AlphaBetaPhi)     | Layout and Schematic Design
+[Oleg Obleukhov](https://github.com/leoleovich)   | Open Time Server Software
+[Jonathan Lemon](https://github.com/jlemon)   | Inital Linux Driver
+[Thomas Schaub](https://github.com/thschaub)    | FPGA Design and Code
 Joyce Hsu        | Logo Design
-Armando Pinales  | RCB Boards
-Julian St.James  | Hardware Upgrade
-Vadim Fedorenko  | Driver Upgrade
-Spencer Burns    | PCIe Bracket Design
+[Armando Pinales](https://github.com/armando-jp)  | RCB Boards
+[Julian St.James](https://github.com/julianstj1)  | Hardware Upgrade
+[Vadim Fedorenko](https://github.com/vvfedorenko)  | Driver Upgrade
+[Spencer Burns](https://github.com/spencerburns)    | PCIe Bracket Design
 Collin Richardson| Placement Optimization
-Nhan Hoang       | PCIe Bracket Upgrade
+[Nhan Hoang](https://github.com/nhanhoang83)       | PCIe Bracket Upgrade
 [Ahmad Byagowi](https://github.com/ahmadexp)    | Initial Idea and Architecture
 
 # License
