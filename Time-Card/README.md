@@ -217,7 +217,7 @@ Vadim Fedorenko  | Driver Upgrade
 Spencer Burns    | PCIe Bracket Design
 Collin Richardson| Placement Optimization
 Nhan Hoang       | PCIe Bracket Upgrade
-Ahmad Byagowi    | Initial Idea and Architecture
+[Ahmad Byagowi](https://github.com/ahmadexp)    | Initial Idea and Architecture
 
 # License
 Contributions to this Specification are made under the terms and conditions set forth in Open Web Foundation Contributor License Agreement (“OWF CLA 1.0”) (“Contribution License”) by: 
