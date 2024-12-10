@@ -594,6 +594,7 @@ at86rf215_radio_state_cmd_en at86rf215_radio_get_state(at86rf215_rf_channel_en c
 }
 
 
+
 /*************************** End cariboulite code 
 *
 *
@@ -601,12 +602,58 @@ at86rf215_radio_state_cmd_en at86rf215_radio_get_state(at86rf215_rf_channel_en c
 *
 ***************************/
 
+// read-modify-write at86 registers
+void rmw_at86_reg(uint16_t regaddr, 
+  uint8_t set_mask, uint8_t clear_mask)
+{
+  uint8_t val = at86rf215_read_byte(regaddr);
+  val &= ~(clear_mask);
+  val |= set_mask;
+  at86rf215_write_byte(regaddr, val);
+}
+
+
+void at86rf215_radio_set_freeze_agc(at86rf215_rf_channel_en ch)
+{
+  rmw_at86_reg(AT86RF215_REG_ADDR(ch, AGCC), (1<<2), 0);
+}
+void at86rf215_radio_release_freeze_agc(at86rf215_rf_channel_en ch)
+{
+  rmw_at86_reg(AT86RF215_REG_ADDR(ch, AGCC), 0, 1<<2);
+}
+void at86rf215_radio_reset_agc(at86rf215_rf_channel_en ch)
+{
+  rmw_at86_reg(AT86RF215_REG_ADDR(ch, AGCC), 1<<3, 0);
+}
+void at86rf215_radio_enable_agc(at86rf215_rf_channel_en ch)
+{
+  rmw_at86_reg(AT86RF215_REG_ADDR(ch, AGCC), 1<<0, 0);
+}
+void at86rf215_radio_disable_agc(at86rf215_rf_channel_en ch)
+{
+  rmw_at86_reg(AT86RF215_REG_ADDR(ch, AGCC), 0, 1<<0);
+}
+
+// set gain only works if AGC EN=0
+void at86rf215_radio_set_rxgain(at86rf215_rf_channel_en ch, 
+  at86rf215_radio_agc_relative_atten_en gcw)
+{
+  rmw_at86_reg(AT86RF215_REG_ADDR(ch, AGCS), (uint8_t)gcw, 0x1f);
+}
+
+at86rf215_radio_agc_relative_atten_en at86rf215_radio_get_rxgain(at86rf215_rf_channel_en ch)
+{
+  uint16_t regaddr = AT86RF215_REG_ADDR(ch, AGCS);
+  return (at86rf215_radio_agc_relative_atten_en) (at86rf215_read_byte(regaddr) & (0x1f));
+}
 
 
 
 
 
 
+
+/************ Higher level code ************/
 
 SPI_HandleTypeDef * at86_spi;
 void at86_init(SPI_HandleTypeDef * spi)
@@ -660,7 +707,7 @@ void at86_init(SPI_HandleTypeDef * spi)
     .inverter_sign_if = 0,
     .shift_if_freq = 0,
     .bw = at86rf215_radio_rx_bw_BW2000KHZ_IF2000KHZ,
-    .fcut = at86rf215_radio_rx_f_cut_half_fs,
+    .fcut = at86rf215_radio_rx_f_cut_0_25_half_fs,
     .fs = at86rf215_radio_rx_sample_rate_4000khz
   };
   at86rf215_radio_set_rx_bandwidth_sampling(at86rf215_rf_channel_900mhz, &rx_bw_cfg);
@@ -669,12 +716,12 @@ void at86_init(SPI_HandleTypeDef * spi)
   // Bullet 2c -> Set the AGC registers RFn_AGCC and RFn_AGCS
   at86rf215_radio_agc_ctrl_st agc_cfg = {
     .agc_measure_source_not_filtered = 1,
-    .avg = at86rf215_radio_agc_averaging_8,
+    .avg = at86rf215_radio_agc_averaging_64,
     .reset_cmd = 0,
     .freeze_cmd = 0,
     .enable_cmd = 1,
     .att = at86rf215_radio_agc_relative_atten_21_db,
-    .gain_control_word = 0x1f // not sure about this one
+    .gain_control_word = 23 // not sure about this one
   };
   at86rf215_radio_setup_agc(at86rf215_rf_channel_900mhz, &agc_cfg);
   at86rf215_radio_setup_agc(at86rf215_rf_channel_2400mhz, &agc_cfg);
@@ -712,6 +759,18 @@ void at86_init(SPI_HandleTypeDef * spi)
   };
 
   at86rf215_setup_iq_if(&iq_cfg);
+
+
+  /***** Setup energy detection, RSSI estimation *******/
+  at86rf215_radio_energy_detection_st ed_cfg;
+  
+  ed_cfg.mode = at86rf215_radio_energy_detection_mode_continous;
+  ed_cfg.energy_detection_value = 0; // not used
+  ed_cfg.average_duration_us = 8;
+
+  at86rf215_radio_setup_energy_detection(at86rf215_rf_channel_900mhz, &ed_cfg);
+  at86rf215_radio_setup_energy_detection(at86rf215_rf_channel_2400mhz, &ed_cfg);
+    
 
   // Bullet 5. Enable radio receiver by writing RX to command
   at86rf215_radio_set_state(at86rf215_rf_channel_900mhz, at86rf215_radio_state_cmd_rx);
@@ -801,6 +860,55 @@ bool at86rf215_read_buffer(uint16_t startaddr, uint8_t * vals, int count)
 }
 
 
+
+
+
+bool at86rf215_start_tx(at86rf215_rf_channel_en chan)
+{
+  // page 178 of datasheet
+
+  uint8_t regval =0;
+  uint16_t regaddr = 0;
+
+  // Bullet 0: Put in TRXOFF state
+  regaddr = AT86RF215_REG_ADDR(chan, CMD);
+  at86rf215_write_byte(regaddr, CMD_RF_TRXOFF);
+
+  // Bullet 1: Enable IQ radio mode
+  // IGIFC1.CHPM=1 , [6:4]
+  rmw_at86_reg(REG_RF_IQIFC1, (1<<4), 0x7 << 4);
+
+  // Bullet 2. Configure transmitter frontend
+  //    Sub-bullet 1: Set transmitter analog front-end subregisters
+  //          TXCUTC.LPFCUT and TXCUTC.PARAMP
+  rmw_at86_reg( AT86RF215_REG_ADDR(chan, TXCUTC) , 1<<6, 0xff);
+
+  //    Sub-bullet 2: Set transmitter digital front-end subregisters
+  //          TXDFE.SR and TXDFE.RCUT
+  rmw_at86_reg( AT86RF215_REG_ADDR(chan, TXDFE) , 0x4<<5 + 0x1 + 1<<4, 0xff);
+
+  // Bullet 3. Config channel parameters and transmit power
+  //    Sub-bullet 1: Channel config on page 62
+  //    Sub-bullet 2: Power amplifier on page 45
+  // skipping channel config, leave it from initialization
+  rmw_at86_reg( AT86RF215_REG_ADDR(chan, TXCUTC) , 0xb, 0xff);
+  rmw_at86_reg( AT86RF215_REG_ADDR(chan, PAC) , (0x3 << 5) + (0x1F), 0xff); // max power
+
+  // Bullet 5 (bullet 4 optional): Switch to TXPREP
+  regaddr = AT86RF215_REG_ADDR(chan, CMD);
+  at86rf215_write_byte(regaddr, CMD_RF_TXPREP);
+  delay(10);
+
+  // Bullet 6: Start actual transmission 
+  rmw_at86_reg( REG_RF_IQIFC0 ,0 , 0xfe);
+
+  delay(10);
+  regaddr = AT86RF215_REG_ADDR(chan, CMD);
+  at86rf215_write_byte(regaddr, CMD_RF_TX);
+ 
+}
+
+
 /*************** Top level init and CLI 
 *
 *
@@ -863,16 +971,259 @@ void onAT86Read(EmbeddedCli *cli, char *args, void *context)
 
 }
 
+void onAT86Loopback(EmbeddedCli *cli, char *args, void *context)
+{
+  if (embeddedCliGetTokenCount(args) == 0) {
+    Serial.println("AT86 Loopback control no arguments!");
+    return;
+  } else if ( embeddedCliGetTokenCount(args) != 1 ) {
+    Serial.println("AT86 Loopback control needs 1 argument!");
+    return;
+  } 
+  int val = 0;
+  uint8_t regval = 0;
+  val = atoi(embeddedCliGetToken(args, 1));
+  if ( val != 0 ) val = 1;
+
+  regval = at86rf215_read_byte(REG_RF_IQIFC0);
+  if ( val ) {
+    Serial.println("Enabling AT86RF215IQ IQ loopback");
+    regval |= 1 << 7; // bit 7 , loopback TX data to RX
+  } else {
+    Serial.println("Disabling AT86RF215IQ IQ loopback");
+    regval &= ~(1<<7);
+  }
+  at86rf215_write_byte(REG_RF_IQIFC0, regval);
+}
+
+
+void onAT86_AGC_Reset(EmbeddedCli *cli, char *args, void *context)
+{
+  if (embeddedCliGetTokenCount(args) == 0)
+  {
+    Serial.println("AT86 AGC Reset no arguments!");
+    return;
+  }
+  int channel = atoi(embeddedCliGetToken(args, 1));
+  if ( channel == 0 ) {
+	Serial.println("Resetting SubGHz AGC");
+	at86rf215_radio_reset_agc( at86rf215_rf_channel_900mhz );
+  } else {
+	Serial.println("Resetting 2.4GHz AGC");
+	at86rf215_radio_reset_agc( at86rf215_rf_channel_2400mhz );
+  }
+}
+void onAT86_AGC_Set_Freeze(EmbeddedCli *cli, char *args, void *context)
+{
+  if (embeddedCliGetTokenCount(args) == 0)
+  {
+    Serial.println("AT86 AGC Set Freeze no arguments!");
+    return;
+  }
+  int channel = atoi(embeddedCliGetToken(args, 1));
+  if ( channel == 0 ) {
+	Serial.println("Freezing SubGHz AGC");
+	at86rf215_radio_set_freeze_agc( at86rf215_rf_channel_900mhz );
+  } else {
+	Serial.println("Freezing 2.4GHz AGC");
+	at86rf215_radio_set_freeze_agc( at86rf215_rf_channel_2400mhz );
+  }
+}
+void onAT86_AGC_Unfreeze(EmbeddedCli *cli, char *args, void *context)
+{
+  if (embeddedCliGetTokenCount(args) == 0)
+  {
+    Serial.println("AT86 AGC Unfreeze no arguments!");
+    return;
+  }
+  int channel = atoi(embeddedCliGetToken(args, 1));
+  if ( channel == 0 ) {
+	Serial.println("UnFreezing SubGHz AGC");
+	at86rf215_radio_release_freeze_agc( at86rf215_rf_channel_900mhz );
+  } else {
+	Serial.println("UnFreezing 2.4GHz AGC");
+	at86rf215_radio_release_freeze_agc( at86rf215_rf_channel_2400mhz );
+  }
+}
+void onAT86_AGC_Enable(EmbeddedCli *cli, char *args, void *context)
+{
+  if (embeddedCliGetTokenCount(args) == 0)
+  {
+    Serial.println("AT86 AGC Enable no arguments!");
+    return;
+  }
+  int channel = atoi(embeddedCliGetToken(args, 1));
+  if ( channel == 0 ) {
+	Serial.println("Enabling SubGHz AGC");
+	at86rf215_radio_enable_agc( at86rf215_rf_channel_900mhz );
+  } else {
+	Serial.println("Enabling 2.4GHz AGC");
+	at86rf215_radio_enable_agc( at86rf215_rf_channel_2400mhz );
+  }
+}
+void onAT86_AGC_Disable(EmbeddedCli *cli, char *args, void *context)
+{
+  if (embeddedCliGetTokenCount(args) == 0)
+  {
+    Serial.println("AT86 AGC Disable no arguments!");
+    return;
+  }
+  int channel = atoi(embeddedCliGetToken(args, 1));
+  if ( channel == 0 ) {
+	Serial.println("Disabling SubGHz AGC");
+	at86rf215_radio_disable_agc( at86rf215_rf_channel_900mhz );
+  } else {
+	Serial.println("Disabling 2.4GHz AGC");
+	at86rf215_radio_disable_agc( at86rf215_rf_channel_2400mhz );
+  }
+}
+
+void onAT86_RXGain(EmbeddedCli *cli, char *args, void *context)
+{
+	uint8_t val;
+	int channel = 0;
+  if (embeddedCliGetTokenCount(args) == 0)
+  {
+    // print both channel gains
+	val = (uint8_t) at86rf215_radio_get_rxgain(at86rf215_rf_channel_900mhz);
+	sprintf(print_buffer, "SubGHz RX Gain = %d\r\n", val); 
+	Serial.print(print_buffer);
+	val = (uint8_t) at86rf215_radio_get_rxgain(at86rf215_rf_channel_2400mhz);
+	sprintf(print_buffer, "2.4GHz RX Gain = %d\r\n", val); 
+	Serial.print(print_buffer);
+	return;
+  }
+  else if (embeddedCliGetTokenCount(args) == 1) {
+	  // got passed the channel, print that channel gain
+	channel = atoi(embeddedCliGetToken(args, 1));
+	if ( channel == 0 ) {
+		val = (uint8_t) at86rf215_radio_get_rxgain(at86rf215_rf_channel_900mhz);
+		sprintf(print_buffer, "SubGHz RX Gain = %d\r\n", val); 
+		Serial.print(print_buffer);
+	} else {
+		val = (uint8_t) at86rf215_radio_get_rxgain(at86rf215_rf_channel_2400mhz);
+		sprintf(print_buffer, "2.4GHz RX Gain = %d\r\n", val); 
+		Serial.print(print_buffer);
+	}
+  } else if ( embeddedCliGetTokenCount(args) == 2 ) {
+	 // got passed the channel and gain value, write it 
+	channel = atoi(embeddedCliGetToken(args, 1));
+	val = (uint8_t) atoi(embeddedCliGetToken(args, 2));
+	if ( channel == 0 ) {
+		sprintf(print_buffer, "Setting SubGHz RX Gain = %d\r\n", val);
+		Serial.print(print_buffer);
+		at86rf215_radio_set_rxgain(at86rf215_rf_channel_900mhz, 
+			(at86rf215_radio_agc_relative_atten_en) val);			
+	} else {
+		sprintf(print_buffer, "Setting 2.4GHz RX Gain = %d\r\n", val);
+		Serial.print(print_buffer);
+		at86rf215_radio_set_rxgain(at86rf215_rf_channel_2400mhz, 
+			(at86rf215_radio_agc_relative_atten_en) val);
+	}
+  }
+}
 
 
 
 
 
+void onAT86_EnableFixedTX(EmbeddedCli *cli, char *args, void *context)
+{
+  // 1 argument, channel
+  if (embeddedCliGetTokenCount(args) == 0) {
+    Serial.println("AT86 Enabled Fixed TX no arguments!");
+    return;
+  } 
+  int channel = 0;
+  channel = atoi(embeddedCliGetToken(args, 1));
+
+  if ( channel == 0 ) {
+    Serial.println("Enabling SubGhz TX DAC output from fixed value");
+    at86rf215_radio_set_tx_dac_input_iq(at86rf215_rf_channel_900mhz, 1, 0xff, 1, 0xff );
+  } else {
+    Serial.println("Enabling 2.4GHz TX DAC output from fixed value");
+    at86rf215_radio_set_tx_dac_input_iq(at86rf215_rf_channel_2400mhz, 1, 0xff, 1, 0xff );
+  }
+}
+
+void onAT86_DisableFixedTX(EmbeddedCli *cli, char *args, void *context)
+{
+  // 1 argument, channel
+  if (embeddedCliGetTokenCount(args) == 0) {
+    Serial.println("AT86 Enabled Fixed TX no arguments!");
+    return;
+  } 
+  int channel = 0;
+  channel = atoi(embeddedCliGetToken(args, 1));
+
+  if ( channel == 0 ) {
+    Serial.println("Disabling SubGhz TX DAC output from fixed value");
+    at86rf215_radio_set_tx_dac_input_iq(at86rf215_rf_channel_900mhz, 0, 0xff, 0, 0xff );
+  } else {
+    Serial.println("Disabling 2.4GHz TX DAC output from fixed value");
+    at86rf215_radio_set_tx_dac_input_iq(at86rf215_rf_channel_2400mhz, 0, 0xff, 0, 0xff );
+  }
+}
+void onAT86_EnableTX(EmbeddedCli *cli, char *args, void *context)
+{
+  // 1 argument, channel
+  if (embeddedCliGetTokenCount(args) == 0) {
+    Serial.println("AT86 Enable TX no arguments!");
+    return;
+  } 
+  int channel = 0;
+  channel = atoi(embeddedCliGetToken(args, 1));
+
+  if ( channel == 0 ) {
+    Serial.println("Enabling SubGhz TX");
+    at86rf215_radio_set_tx_dac_input_iq(at86rf215_rf_channel_900mhz, 0, 0xff, 0, 0xff );
+    at86rf215_start_tx(at86rf215_rf_channel_900mhz);
+  } else {
+    Serial.println("Enabling 2.4GHz TX");
+    at86rf215_radio_set_tx_dac_input_iq(at86rf215_rf_channel_2400mhz, 0, 0xff, 0, 0xff );
+    at86rf215_start_tx(at86rf215_rf_channel_2400mhz);
+  }
+}
+
+
+
+static Node at86_txdac_set_node = { .name = "", 
+  .type = MY_FILE, 
+  .cliBinding = {
+    "txdac_enable",
+    "Enable internal fixed TXDAC value for I and Q for a given channel",
+    true,
+    nullptr,
+    onAT86_EnableFixedTX
+  }
+};
+
+static Node at86_txdac_disable_node = { .name = "", 
+  .type = MY_FILE, 
+  .cliBinding = {
+    "txdac_disable",
+    "Disable internal fixed TXDAC value for I and Q for a given channel",
+    true,
+    nullptr,
+    onAT86_DisableFixedTX
+  }
+};
+
+static Node at86_start_tx_node = { .name = "", 
+  .type = MY_FILE, 
+  .cliBinding = {
+    "tx_start",
+    "Start TX",
+    true,
+    nullptr,
+    onAT86_EnableTX
+  }
+};
 
 static Node at86_write_reg_node = { .name = "at86-write-reg", 
   .type = MY_FILE, 
   .cliBinding = {
-    "at86-write-reg",
+    "write-reg",
     "Write a AT86RF215IQ register, pass address (13-bit) / value (8-bit) ex: at86-write-reg 0x6 0x6c",
     true,
     nullptr,
@@ -883,7 +1234,7 @@ static Node at86_write_reg_node = { .name = "at86-write-reg",
 static Node at86_read_reg_node = { .name = "at86-read-reg", 
   .type = MY_FILE, 
   .cliBinding = {
-    "at86-read-reg",
+    "read-reg",
     "Read a AT86RF215IQ register, pass address (13-bit)  ex: at86-read-reg 0x6",
     true,
     nullptr,
@@ -891,9 +1242,92 @@ static Node at86_read_reg_node = { .name = "at86-read-reg",
   }
 };
 
+static Node at86_extloopback_node = { .name = "", 
+  .type = MY_FILE, 
+  .cliBinding = {
+    "iq_loopback",
+    "Control IQ loopback, TX IQ to RX IQ",
+    true,
+    nullptr,
+    onAT86Loopback
+  }
+};
+
+static Node at86_agc_reset_node = { .name = "", 
+  .type = MY_FILE, 
+  .cliBinding = {
+    "agc_reset",
+    "Resets AGC of a given channel",
+    true,
+    nullptr,
+    onAT86_AGC_Reset
+  }
+};
+
+static Node at86_agc_freeze_node = { .name = "", 
+  .type = MY_FILE, 
+  .cliBinding = {
+    "agc_freeze",
+    "Freezes the AGC of a given channel",
+    true,
+    nullptr,
+    onAT86_AGC_Set_Freeze
+  }
+};
+
+static Node at86_agc_unfreeze_node = { .name = "", 
+  .type = MY_FILE, 
+  .cliBinding = {
+    "agc_unfreeze",
+    "UnFreezes the AGC of a given channel",
+    true,
+    nullptr,
+    onAT86_AGC_Unfreeze
+  }
+};
+
+static Node at86_agc_enable_node = { .name = "", 
+  .type = MY_FILE, 
+  .cliBinding = {
+    "agc_enable",
+    "Enables the AGC of a given channel",
+    true,
+    nullptr,
+    onAT86_AGC_Enable
+  }
+};
+
+static Node at86_agc_disable_node = { .name = "", 
+  .type = MY_FILE, 
+  .cliBinding = {
+    "agc_disable",
+    "Disables the AGC of a given channel",
+    true,
+    nullptr,
+    onAT86_AGC_Disable
+  }
+};
+
+static Node at86_rxgain_node = { .name = "", 
+  .type = MY_FILE, 
+  .cliBinding = {
+    "rxgain",
+    "No Args = print RX gains, 1 arg = prints 1 chan gain, 2 args = set 1 chan gain",
+    true,
+    nullptr,
+    onAT86_RXGain
+  }
+};
+
+
 void at86_dir_operation(EmbeddedCli *cli, char *args, void *context); // forward declaration
 
-static Node * at86_files[] = { &at86_write_reg_node, &at86_read_reg_node };
+static Node * at86_files[] = { &at86_write_reg_node, &at86_read_reg_node, 
+	&at86_extloopback_node, &at86_agc_reset_node, &at86_agc_freeze_node,
+	&at86_agc_unfreeze_node, &at86_agc_enable_node, &at86_agc_disable_node, 
+	&at86_rxgain_node, &at86_txdac_set_node, &at86_txdac_disable_node,
+  &at86_start_tx_node
+   };
 
 static Node at86_dir = {
     .name = "at86",

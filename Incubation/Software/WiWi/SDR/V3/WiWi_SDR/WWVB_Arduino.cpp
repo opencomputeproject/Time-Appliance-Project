@@ -4,7 +4,7 @@
 
 sram1_data_struct * sram1_data = (sram1_data_struct *)0x30000000;
 sram2_data_struct * sram2_data = (sram2_data_struct *)0x30020000;
-sram3_data_struct * sram3_data = (sram3_data_struct *)0x30040000;
+//sram3_data_struct * sram3_data = (sram3_data_struct *)0x30040000;
 
 volatile uint8_t spi1_rx_data = 0;
 volatile uint8_t spi2_rx_data = 0;
@@ -50,6 +50,26 @@ WWVB_Pin WWVB_Pins[] = {
   PIN_STRUCT(FPGA_PROGRAMN),
   PIN_STRUCT(FPGA_INITN),
   PIN_STRUCT(FPGA_DONE),
+  PIN_STRUCT(STM_FPGA_SPARE1),
+  PIN_STRUCT(STM_FPGA_SPARE2),
+  PIN_STRUCT(STM_FPGA_SPARE3),
+  PIN_STRUCT(STM_FPGA_SPARE4),
+  PIN_STRUCT(STM_FPGA_SPARE5),
+  PIN_STRUCT(STM_FPGA_SPARE6),
+  PIN_STRUCT(FPGA_SDA),
+  PIN_STRUCT(FPGA_SCL),
+  PIN_STRUCT(SPI1_SCK),
+  PIN_STRUCT(SPI1_MOSI),
+  PIN_STRUCT(SPI1_MISO),
+  PIN_STRUCT(SPI2_SCK),
+  PIN_STRUCT(SPI2_MOSI),
+  PIN_STRUCT(SPI2_MISO),
+  PIN_STRUCT(SPI3_SCK),
+  PIN_STRUCT(SPI3_MOSI),
+  PIN_STRUCT(SPI3_MISO),
+  PIN_STRUCT(SPI4_SCK),
+  PIN_STRUCT(SPI4_MOSI),
+  PIN_STRUCT(SPI4_MISO),
 
 
 

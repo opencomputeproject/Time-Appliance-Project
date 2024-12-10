@@ -8,6 +8,10 @@
 QSPI_HandleTypeDef hqspi;
 
 
+// Constants for QSPI flash memory
+#define PAGE_SIZE 256        // Maximum bytes per QSPI page write
+#define SECTOR_SIZE 4096     // QSPI sector size for erases
+
 
 // JEDEC Commands for QSPI Flash
 #define READ_CMD             0x03    // Standard Read command
@@ -134,9 +138,30 @@ void QSPI_Erase(uint32_t address) {
   QSPI_WaitForWriteCompletion();
 }
 
+void QSPI_FullChipErase() {
 
+  QSPI_WriteEnable();
 
-void QSPI_Write(uint8_t *pData, uint32_t address, uint32_t size) {
+   // Configure the Write Enable (WREN) command
+  s_command.InstructionMode = QSPI_INSTRUCTION_1_LINE; // Command sent on 1 line
+  s_command.Instruction = 0x60; // WREN command (refer to datasheet)
+  s_command.AddressMode = QSPI_ADDRESS_NONE; // No address phase
+  s_command.DataMode = QSPI_DATA_NONE; // No data phase
+  s_command.DummyCycles = 0; // No dummy cycles
+  s_command.DdrMode = QSPI_DDR_MODE_DISABLE;
+  s_command.SIOOMode = QSPI_SIOO_INST_EVERY_CMD;
+
+  // Send the WREN command
+  if (HAL_QSPI_Command(&hqspi, &s_command, HAL_QSPI_TIMEOUT_DEFAULT_VALUE) != HAL_OK) {
+    Serial.println("QSPI WriteEnable failed on command!");
+    return;
+  }
+
+  QSPI_WaitForWriteCompletion();
+
+}
+
+int QSPI_Write(uint8_t *pData, uint32_t address, uint32_t size) {
 
   QSPI_WriteEnable();
 
@@ -154,15 +179,70 @@ void QSPI_Write(uint8_t *pData, uint32_t address, uint32_t size) {
   // Execute the command
   if (HAL_QSPI_Command(&hqspi, &s_command, HAL_QSPI_TIMEOUT_DEFAULT_VALUE) != HAL_OK) {
     Serial.println("QSPI Write failed on command!");
-    return;
+    return -1;
   }
 
   // Transmit the data
   if (HAL_QSPI_Transmit(&hqspi, pData, HAL_QSPI_TIMEOUT_DEFAULT_VALUE) != HAL_OK) {
     Serial.println("QSPI write failed on transmit!");
-    return;
+    return -1;
   }
+  QSPI_WaitForWriteCompletion();
+  //delay(2); // data sheet page program 1.2ms max, putting 2 here
+  return 0;
 }
+
+
+int QSPI_Write_PageSafe(uint8_t *pData, uint32_t address, uint32_t size) {
+
+  /*
+  // very lazy code
+  for ( int i = 0; i < size; i++ ) {
+    QSPI_Write(pData+i, address+i, 1);
+  }
+  return 0;
+  */
+
+
+    uint32_t current_address = address;  // Start address for the write operation
+    uint32_t bytes_left = size;          // Total bytes left to write
+
+    while (bytes_left > 0) {
+        // Calculate the offset within the current page
+        uint32_t page_offset = current_address % PAGE_SIZE;
+
+        // Calculate the space available in the current page
+        // For example:
+        // - If current_address = 0x12FE, page_offset = 254, space_in_page = 256 - 254 = 2
+        // - If current_address = 0x1300, page_offset = 0, space_in_page = 256
+        uint32_t space_in_page = PAGE_SIZE - page_offset;
+
+        // Determine how many bytes to write in this iteration:
+        // - We can write up to `bytes_left` (remaining data) or `space_in_page` (space in the current page), whichever is smaller
+        uint32_t bytes_to_write = (bytes_left < space_in_page) ? bytes_left : space_in_page;
+
+        // Perform the write operation using the raw QSPI_Write API
+        int status = QSPI_Write(pData, current_address, bytes_to_write);
+        if (status != 0) {
+            return status;  // Return an error code if the write operation fails
+        }
+
+        // Update the current address for the next write iteration
+        // - Move forward by `bytes_to_write`
+        current_address += bytes_to_write;
+
+        // Advance the pointer to the remaining data in the buffer
+        // - Skip the bytes that were just written
+        pData += bytes_to_write;
+
+        // Update the number of bytes left to write
+        // - Subtract the number of bytes just written
+        bytes_left -= bytes_to_write;
+    }
+
+    return 0;  // Success
+}
+
 
 void QSPI_ReadChipID(void) {
     uint8_t chip_id[3]; // JEDEC ID is typically 3 bytes: Manufacturer, Memory Type, Capacity
@@ -193,6 +273,18 @@ void QSPI_ReadChipID(void) {
     sprintf(print_buffer, "JEDEC ID: Manufacturer: 0x%02X, Memory Type: 0x%02X, Capacity: 0x%02X\r\n",
            chip_id[0], chip_id[1], chip_id[2]);
     Serial.print(print_buffer);
+}
+
+void QSPI_Disable()
+{
+  // disconnect all the pins for QSPI interface
+  wwvb_gpio_pinmode(QSPI_FPGA_SCLK, INPUT);
+  wwvb_gpio_pinmode(QSPI_FPGA_CS, INPUT);
+  wwvb_gpio_pinmode(QSPI_FPGA_MOSI, INPUT);
+  wwvb_gpio_pinmode(QSPI_FPGA_MISO, INPUT);
+  wwvb_gpio_pinmode(QSPI_FPGA_WP, INPUT);
+  wwvb_gpio_pinmode(QSPI_FPGA_RESET, INPUT);
+  __HAL_RCC_QSPI_FORCE_RESET();
 }
 
 void QSPI_MspInit()
@@ -250,7 +342,7 @@ int MX_QSPI_Init()
 {
   // Initialize the QSPI interface
   hqspi.Instance = QUADSPI;
-  hqspi.Init.ClockPrescaler     = 10;        // Set prescaler for QSPI clock
+  hqspi.Init.ClockPrescaler     = 20;        // Set prescaler for QSPI clock
   hqspi.Init.FifoThreshold      = 1;
   hqspi.Init.SampleShifting     = QSPI_SAMPLE_SHIFTING_NONE; // Is this right????
   hqspi.Init.FlashSize          = 23;       // Size of the flash memory (e.g., 128MB -> 23)
@@ -270,6 +362,7 @@ int BSP_QSPI_Init()
   QSPI_MspInit();
 
   MX_QSPI_Init();
+  return 0;
 
 }
 
@@ -279,7 +372,11 @@ void onQspiReadID(EmbeddedCli *cli, char *args, void *context)
   QSPI_ReadChipID();
 }
 
-
+void onQspiChipErase(EmbeddedCli *cli, char *args, void *context)
+{
+  Serial.println("Doing full chip erase on QSPI flash!");
+  QSPI_FullChipErase();
+}
 
 void onQspiErase(EmbeddedCli *cli, char *args, void *context)
 {
@@ -305,209 +402,128 @@ void onQspiErase(EmbeddedCli *cli, char *args, void *context)
 }
 
 
-/****** Xmodem compatible flash ******/
-// Command requires total number of bytes to flash
-// then uses Xmodem
-
-
-#define SOH 0x01  // Start of 128-byte block
-#define STX 0x02  // Start of 1024-byte block
-#define EOT 0x04  // End of Transmission
-#define ACK 0x06  // Acknowledge
-#define NAK 0x15  // Negative Acknowledge
-#define C   0x43  // Request CRC mode
-
-
-uint8_t block_buffer[1024];  // Buffer for the largest possible block
-
-
-// Constants for QSPI flash memory
-#define PAGE_SIZE 256        // Maximum bytes per QSPI page write
-#define SECTOR_SIZE 4096     // QSPI sector size for erases
 
 // Current state for QSPI operations
 uint32_t flash_address = 0;  // Current write address in QSPI flash
+int num_bytes_receiving = 0;
 
-void processBlock(const uint8_t *data, uint16_t valid_bytes) {
-    // Erase the sector if the current address is at a sector boundary
-    if (flash_address % SECTOR_SIZE == 0) {
-        Serial.print("Erasing sector at address: 0x");
-        Serial.println(flash_address, HEX);
-        QSPI_Erase(flash_address);
+uint8_t debug_first_bytes[16];
+int first_byte_count = 0;
+
+uint8_t debug_last_bytes[128];
+int block_counter = 0;
+
+int dataSize_not128 = 0;
+int block_counter_not128 = 0;
+
+int non_128_counter = 0;
+
+static bool process_block(void *blk_id, size_t idSize, byte *data, size_t dataSize) {
+
+  /*** Debug code, can't print during xmodem transfer, need to store debug stuff ***/
+    if ( dataSize != 128 ) {
+      dataSize_not128 = dataSize;
+      block_counter_not128 = block_counter;
+      non_128_counter++;
     }
 
-    // Split the data into chunks of 256 bytes for QSPI_Write
-    uint32_t bytes_to_write = valid_bytes;
-    const uint8_t *current_data = data;
-
-    while (bytes_to_write > 0) {
-        // Write up to PAGE_SIZE (256 bytes) at a time
-        uint32_t writable_bytes = (bytes_to_write > PAGE_SIZE) ? PAGE_SIZE : bytes_to_write;
-
-        Serial.print("Writing ");
-        Serial.print(writable_bytes);
-        Serial.print(" bytes to address: 0x");
-        Serial.println(flash_address, HEX);
-
-        QSPI_Write((uint8_t *)current_data, flash_address, writable_bytes);
-
-        // Update state
-        flash_address += writable_bytes;
-        current_data += writable_bytes;
-        bytes_to_write -= writable_bytes;
+    block_counter++;
+    if ( first_byte_count == 0 ) {
+      memset(debug_first_bytes, 0, 16);
+      for ( int i = 0; i < 16; i++ ) {
+        debug_first_bytes[i] = data[i];
+      }
+      first_byte_count = 16;
     }
-}
-
-// Compute CRC-16 for XMODEM
-uint16_t computeCRC(const uint8_t *data, uint16_t length) {
-  uint16_t crc = 0;
-  for (uint16_t i = 0; i < length; i++) {
-    crc ^= (uint16_t)data[i] << 8;
-    for (uint8_t j = 0; j < 8; j++) {
-      if (crc & 0x8000) {
-        crc = (crc << 1) ^ 0x1021; // Polynomial for XMODEM CRC
-      } else {
-        crc <<= 1;
+    // to get last bytes, when near the end of packet, start copying data 
+    if ( num_bytes_receiving <= 1024 ) {
+      memset(debug_last_bytes, 0, 128);
+      for ( int i = 0; i < dataSize; i++ ) {
+        debug_last_bytes[i] = data[i];
       }
     }
+    /*
+    if ( dataSize != 128 && non_128_counter > 2 ) {
+      return false;
+    }
+    */
+    /************** BUG IN THE XMODEM ARDUINO LIBRARY
+    If 0x1A is near the end of the packet, it will be dropped by library 
+    This shows up like 127 bytes or some less than 128 byte data buffer
+    while still expecting quite a bit of data
+
+    This is mostly fine, but this edge case corrupted my raw binary data transfer
+
+    Workaround implemented here 
+    data always has the full data including 0x1A, so just write that directly
+    ***************/
+
+    int my_dataSize = 0;
+    if ( num_bytes_receiving >= 128 ) { // I'm expecting more than 128 bytes
+      my_dataSize = 128;
+    } else {
+      my_dataSize = num_bytes_receiving;
+    }
+    // First write the bytes that the library passed
+    QSPI_Write_PageSafe((uint8_t *)data, flash_address, my_dataSize);
+
+    // Update state
+    flash_address += (uint32_t) my_dataSize;
+    num_bytes_receiving -= (int)my_dataSize;
+    if ( num_bytes_receiving > 0 ) 
+    {
+      return true;
+    }
+    return false;
+}
+
+void start_xmodem_flash(int total_bytes)
+{
+  XModem xmodem_qspi;
+  sprintf(print_buffer, "Xmodem transfer to QSPI flash expecting %d bytes!\r\n", total_bytes);
+  Serial.print(print_buffer);
+  flash_address = 0; // reset this global variable
+  dataSize_not128 = 0;
+  block_counter_not128 = 0;
+  block_counter = 0; 
+  non_128_counter = 0;
+  num_bytes_receiving = total_bytes;
+  Serial.println("Erasing flash!");
+  QSPI_FullChipErase(); // erase whole flash
+  Serial.println("Ready to start xmodem!");
+  xmodem_qspi.begin(Serial, XModem::ProtocolType::XMODEM);
+  xmodem_qspi.setRecieveBlockHandler(process_block);
+  while ( xmodem_qspi.receive() ) {}
+
+  Serial.println("Done with Qspi Xmodem flash!"); 
+  sprintf(print_buffer,"Data size not 128 = %d, block = %d\r\n", dataSize_not128, block_counter_not128); 
+  Serial.print(print_buffer);
+  sprintf(print_buffer,"Flash address at end = 0x%08X\r\n", flash_address);
+  Serial.print(print_buffer);
+  Serial.println("First bytes:");
+  for ( int i = 0; i < 16; i++ ) {
+    sprintf(print_buffer, "%02X ", debug_first_bytes[i]);
+    Serial.print(print_buffer);
   }
-  return crc;
-}
-
-
-// Function to read a byte with a timeout
-int readByteWithTimeout(unsigned long timeout_ms) {
-  unsigned long start_time = millis();
-  while (Serial.available() == 0) {
-    if (millis() - start_time >= timeout_ms) {
-        return -1;  // Timeout occurred
-    }
+  Serial.println("");
+  Serial.println("Last bytes:");
+  for ( int i = 0; i < 128; i++ ) {
+    sprintf(print_buffer, "%02X ", debug_last_bytes[i]);
+    Serial.print(print_buffer);
+    if ((i + 1) % 16 == 0) {
+      Serial.println("");
+    }    
   }
-  return Serial.read();
+  Serial.println("");
+
+
 }
 
-
-// XMODEM receiver function
-void receiveXmodem(uint32_t total_bytes) {
-    uint32_t bytes_received = 0;  // Total bytes received
-    unsigned long start_time = millis();
-    int header = -1;  // Store the first valid header
-
-    // Send initial 'C' for CRC mode and wait for the first header
-    while (true) {
-        if (millis() - start_time > 30000) {
-            Serial.println("Timeout waiting for sender.");
-            return;
-        }
-
-        Serial.write(C); // Request CRC mode
-
-        // Check if the sender has started sending
-        if (Serial.available() > 0) {
-            header = Serial.read();
-            if (header == SOH || header == STX || header == EOT) {
-                Serial.println("Sender responded, starting transfer...");
-                break;  // Exit the readiness loop with a valid header
-            }
-        }
-
-        delay(100);
-    }
-
-    // Main transfer loop
-    while (bytes_received < total_bytes) {
-        // Use the first valid header from the initial loop, or read a new one
-        if (header == -1) {
-            header = readByteWithTimeout(1000);
-            if (header == -1) {
-                Serial.println("Timeout waiting for header");
-                continue;
-            }
-        }
-
-        int block_size = 0;
-        if (header == SOH) {
-            block_size = 128;
-        } else if (header == STX) {
-            block_size = 1024;
-        } else if (header == EOT) {
-            // End of transmission
-            Serial.write(ACK);
-            Serial.println("File transfer complete.");
-            break;
-        } else {
-            // Unexpected header, send NAK
-            Serial.println("Unexpected header");
-            Serial.write(NAK);
-            header = -1;  // Reset header for the next loop
-            continue;
-        }
-
-        // Read block number and its complement
-        int block_num = readByteWithTimeout(1000);
-        int block_num_complement = readByteWithTimeout(1000);
-        if (block_num == -1 || block_num_complement == -1 || (block_num + block_num_complement) != 0xFF) {
-            Serial.println("Invalid block number");
-            Serial.write(NAK);
-            header = -1;  // Reset header for the next loop
-            continue;
-        }
-
-        // Read the data block
-        for (int i = 0; i < block_size; i++) {
-            int byte = readByteWithTimeout(1000);
-            if (byte == -1) {
-                Serial.println("Timeout waiting for block data");
-                Serial.write(NAK);
-                header = -1;  // Reset header for the next loop
-                break;
-            }
-            block_buffer[i] = (uint8_t)byte;
-        }
-
-        // Read the CRC (2 bytes)
-        int crc_high = readByteWithTimeout(1000);
-        int crc_low = readByteWithTimeout(1000);
-        if (crc_high == -1 || crc_low == -1) {
-            Serial.println("Timeout waiting for CRC");
-            Serial.write(NAK);
-            header = -1;  // Reset header for the next loop
-            continue;
-        }
-        uint16_t received_crc = (crc_high << 8) | crc_low;
-
-        // Compute CRC for the received block
-        uint16_t computed_crc = computeCRC(block_buffer, block_size);
-
-        if (computed_crc == received_crc) {
-            // Data is valid, process the block
-            uint16_t valid_bytes = block_size;
-
-            // Adjust for the last block
-            if (bytes_received + valid_bytes > total_bytes) {
-                valid_bytes = total_bytes - bytes_received;
-            }
-
-            processBlock(block_buffer, valid_bytes);
-            bytes_received += valid_bytes;
-
-            Serial.write(ACK);  // Acknowledge successful block
-        } else {
-            Serial.println("CRC mismatch");
-            Serial.write(NAK);  // Request retransmission
-        }
-
-        // Reset header for the next loop
-        header = -1;
-    }
-}
 
 
 void onQspiXmodemFlash(EmbeddedCli *cli, char *args, void *context)
 {
   int total_bytes = 0;
-  int bytes_so_far = 0;
-  int flash_addr = 0;
   if (embeddedCliGetTokenCount(args) == 0) {
     Serial.println("Qspi fast flash no arguments!");
     return;
@@ -521,11 +537,7 @@ void onQspiXmodemFlash(EmbeddedCli *cli, char *args, void *context)
     Serial.println("Xmodem flash didn't receive number of bytes!");
     return;
   }
-  sprintf(print_buffer, "Xmodem transfer to QSPI flash expecting %d bytes!r\n", total_bytes);
-  flash_address = 0; // reset this global variable
-  receiveXmodem(total_bytes);
-
-  Serial.println("Done with Qspi Xmodem flash!");  
+  start_xmodem_flash(total_bytes);
 
 }
 
@@ -594,14 +606,15 @@ void onQspiWriteByte(EmbeddedCli *cli, char *args, void *context)
 void onQspiReadByte(EmbeddedCli *cli, char *args, void *context)
 {
   uint32_t addr = 0;
+  int byte_count = 0;
   uint8_t value = 0;
   int retval = 0;
 
   if (embeddedCliGetTokenCount(args) == 0) {
     Serial.println("Qspi Read byte no arguments!");
     return;
-  } else if ( embeddedCliGetTokenCount(args) != 1 ) {
-    Serial.println("Qspi Read byte needs 1 argument!");
+  } else if ( embeddedCliGetTokenCount(args) != 1 && embeddedCliGetTokenCount(args) != 2  ) {
+    Serial.println("Qspi Read byte needs 1 or 2 argument!");
     return;
   } 
 
@@ -609,11 +622,41 @@ void onQspiReadByte(EmbeddedCli *cli, char *args, void *context)
     Serial.println("Failed to parse first argument for uint32_t");
     return;
   }
-  Serial.println("QSPI Read byte start!");
-  QSPI_Read(&value, addr, 1);
+  if ( embeddedCliGetTokenCount(args) == 2 ) {
+    // multiple dump
+    byte_count = atoi( embeddedCliGetToken(args, 2) );
+    for ( int i = 0; i < byte_count; i++ ) {
+      if ( i % 16 == 0 ) {
+        sprintf(print_buffer,"\r\n%08X:  ", addr + i);
+        Serial.print(print_buffer);
+      }
+      QSPI_Read(&value, addr+i, 1);
+      sprintf(print_buffer, "%02X ", value);
+      Serial.print(print_buffer);      
+    }
+    Serial.println("");
+    
+    
+  } else {
+    Serial.println("QSPI Read byte start!");
+    QSPI_Read(&value, addr, 1);
 
-  sprintf(print_buffer, "Qspi Read Byte, 0x%lx = 0x%x, retval = 0x%x\r\n", addr, value, retval);
-  Serial.print(print_buffer);
+    sprintf(print_buffer, "Qspi Read Byte, 0x%lx = 0x%x, retval = 0x%x\r\n", addr, value, retval);
+    Serial.print(print_buffer);
+  }
+
+}
+
+void onQspiDisable(EmbeddedCli *cli, char *args, void *context)
+{
+  Serial.println("Disabling QSPI interface!");
+  QSPI_Disable();
+}
+
+void onQspiEnable(EmbeddedCli *cli, char *args, void *context)
+{
+  Serial.println("Reinitializing QSPI interface!");
+  BSP_QSPI_Init();
 }
 
 static Node qspi_readID_node = { .name = "", 
@@ -653,10 +696,21 @@ static Node qspi_read_byte_node = { .name = "",
   .type = MY_FILE, 
   .cliBinding = {
     "byteRead",
-    "Read a byte",
+    "Read a byte at an address, or read X number of bytes starting at an address",
     true,
     nullptr,
     onQspiReadByte
+  }
+};
+
+static Node qspi_chip_erase_node = { .name = "", 
+  .type = MY_FILE, 
+  .cliBinding = {
+    "chipErase",
+    "Erase the entire SPI flash",
+    true,
+    nullptr,
+    onQspiChipErase
   }
 };
 
@@ -671,6 +725,28 @@ static Node qspi_xmodem_flash_node = { .name = "",
   }
 };
 
+static Node qspi_disable_node = { .name = "", 
+  .type = MY_FILE, 
+  .cliBinding = {
+    "disable",
+    "Disable the QSPI interface",
+    true,
+    nullptr,
+    onQspiDisable
+  }
+};
+
+static Node qspi_enable_node = { .name = "", 
+  .type = MY_FILE, 
+  .cliBinding = {
+    "enable",
+    "Re-initialize and enable the QSPI interface",
+    true,
+    nullptr,
+    onQspiEnable
+  }
+};
+
 /***************** Boiler plate CLI stuff ************/
 
 
@@ -679,13 +755,13 @@ void my_qspi_dir_operation(EmbeddedCli *cli, char *args, void *context); // forw
 
 
 static Node * my_qspi_files[] = { &qspi_erase_node, &qspi_write_byte_node, &qspi_read_byte_node,
-  &qspi_readID_node };
+  &qspi_readID_node, &qspi_xmodem_flash_node, &qspi_disable_node, &qspi_enable_node, &qspi_chip_erase_node };
 
 static Node my_qspi_dir = {
-    .name = "my_qspi",
+    .name = "qspi",
     .type = MY_DIRECTORY,
-    .cliBinding = {"my_qspi",
-          "my_qspi mode",
+    .cliBinding = {"qspi",
+          "qspi mode",
           true,
           nullptr,
           my_qspi_dir_operation},

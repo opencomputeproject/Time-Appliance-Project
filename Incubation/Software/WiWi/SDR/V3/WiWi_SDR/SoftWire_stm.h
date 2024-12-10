@@ -21,7 +21,7 @@ class SoftWire : public Stream {
       readMode = 1,
     };
 
-    static const uint8_t defaultDelay_us = 10;
+    static const uint8_t defaultDelay_us = 1;
     static const uint16_t defaultTimeout_ms = 200;
 
     static void sdaLow(const SoftWire *p);

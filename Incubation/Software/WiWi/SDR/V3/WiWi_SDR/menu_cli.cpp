@@ -501,6 +501,13 @@ void onMenuCLI_ls(EmbeddedCli *cli, char *args, void *context)
   list_directory(current);
 }
 
+void onMenuCLI_reboot(EmbeddedCli *cli, char *args, void *context)
+{
+  Serial.println("User command, restarting STM32!\r\n");
+  delay(200);
+  HAL_NVIC_SystemReset();
+}
+
 void addMenuCLI_standard_commands()
 {
   embeddedCliAddBinding(cli, {
@@ -518,6 +525,14 @@ void addMenuCLI_standard_commands()
     nullptr,
     onMenuCLI_ls
   });
+
+  embeddedCliAddBinding(cli, {
+    "reboot",
+    "Reboots the STM32",
+    true,
+    nullptr,
+    onMenuCLI_reboot
+  });
 }
 
 void addMenuCLI_current_directory() {
@@ -531,7 +546,7 @@ void init_menu_cli()
   current = &root;
 
   init_cli();
-  initialize_filesystem();
+  //initialize_filesystem();
   addMenuCLI_standard_commands();
   //addMenuCLI_current_directory();
 }

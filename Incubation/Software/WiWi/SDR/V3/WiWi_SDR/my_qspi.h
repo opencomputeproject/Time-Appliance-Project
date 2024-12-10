@@ -4,6 +4,7 @@
 #include "menu_cli.h"
 #include <Arduino.h>
 #include "WWVB_Arduino.h"
+#include "XModem.h"
 
 #include "QSPIFBlockDevice.h"
 #include "MBRBlockDevice.h"
@@ -22,6 +23,11 @@ typedef struct {
 #define MY_QSPI_PAGE_SIZE                   0x100     /* 2 * 262144 pages of 256 bytes */
 
 void init_my_qspi();
+
+void QSPI_Disable(); // qspi disable
+int BSP_QSPI_Init(); // basically QSPI init
+
+void start_xmodem_flash(int total_bytes);
 
 /************ Top level init and CLI ***********/
 

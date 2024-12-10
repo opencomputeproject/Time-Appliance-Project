@@ -8,6 +8,8 @@
 #include "esp32.h"
 #include "my_ethernet.h"
 #include "my_qspi.h"
+#include "spi_iq.h"
+
 
 RNG_HandleTypeDef hrng;
 void setup() {
@@ -22,10 +24,11 @@ void setup() {
   __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
+  __HAL_RCC_GPIOE_CLK_ENABLE();
   __HAL_RCC_GPIOF_CLK_ENABLE();
   __HAL_RCC_GPIOG_CLK_ENABLE();
-  __HAL_RCC_GPIOI_CLK_ENABLE();
   __HAL_RCC_GPIOH_CLK_ENABLE();
+  __HAL_RCC_GPIOI_CLK_ENABLE();  
   __HAL_RCC_GPIOJ_CLK_ENABLE(); // lots of GPIO on J
   __HAL_RCC_GPIOK_CLK_ENABLE(); // change K if using other GPIOs, but LED are all K
   
@@ -35,10 +38,11 @@ void setup() {
   // SPI5 for SX1276
   __HAL_RCC_SPI5_CLK_ENABLE();
 
-  // SPI1 / 2 / 6 for SX1257
+  // SPI1 / 2 / 3 / 4 for IQ data
   __HAL_RCC_SPI1_CLK_ENABLE();
   __HAL_RCC_SPI2_CLK_ENABLE();
-  __HAL_RCC_SPI6_CLK_ENABLE();
+  __HAL_RCC_SPI3_CLK_ENABLE();
+  __HAL_RCC_SPI4_CLK_ENABLE();
 
   __HAL_RCC_DMA1_CLK_ENABLE();
   __HAL_RCC_DMA2_CLK_ENABLE();
@@ -60,6 +64,7 @@ void setup() {
 
   __HAL_RCC_D2SRAM3_CLK_ENABLE();
   __HAL_RCC_C1_D2SRAM3_CLK_ENABLE();
+
 
   __HAL_RCC_RNG_CLK_ENABLE(); // enable hardware RNG
 
@@ -129,11 +134,19 @@ void setup() {
 
   init_at86_cli(&SX1276_Lora._spi);
 
-  init_fpga_cli();
+
 
   init_esp32_cli();
 
-  init_my_qspi_cli();
+  init_my_qspi_cli(); // init QSPI first
+
+  init_fpga_cli();
+
+
+  init_spi_iq();
+
+  init_ethernet_cli();
+
 
 
   // DPLL DEBUG HACK
@@ -148,18 +161,6 @@ void setup() {
 // the loop function runs over and over again forever
 void loop() {
   rtos::ThisThread::sleep_for(1000);
-  // This works, probed on board, acknowledged!
-  //cm_i2c.llStart((0x58<<1)+1);
-  //cm_i2c.llStart((0x58<<1));
-  //cm_i2c.llWrite(0x50);
-  //cm_i2c.llWrite(0x0);
-  //cm_i2c.stop();
-  /*
-  Serial.println("Loop debug i2c");
-  cm_i2c.beginTransmission(0x58);
-  cm_i2c.write(0x50);
-  cm_i2c.write(0x0);
-  cm_i2c.endTransmission() ;
-  */
+
   
 }

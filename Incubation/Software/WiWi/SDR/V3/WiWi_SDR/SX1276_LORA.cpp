@@ -1329,6 +1329,15 @@ void init_sx1276_cli()
     //SX1276_Lora.dumpRegisters(Serial);
   }
 
+  // setup default antenna selection paths
+  wwvb_gpio_pinmode(LORA_LF_TXRX_SEL, OUTPUT);
+  wwvb_gpio_pinmode(LORA_HF_TXRX_SEL, OUTPUT);
+  wwvb_gpio_pinmode(LORA_LF_HF_SEL, OUTPUT);
+
+  wwvb_digital_write(LORA_LF_TXRX_SEL,1); // RF1 for RX , ctrl=1
+  wwvb_digital_write(LORA_HF_TXRX_SEL,0); // RF2 for RX , ctrl=0
+  wwvb_digital_write(LORA_LF_HF_SEL,0); // RF2 for HF , ctrl=0
+
   // expose sx1276 CLI
   sx1276_fs_init();
 }

@@ -63,6 +63,28 @@ enum WWVB_Pin_Name {
   FPGA_PROGRAMN,
   FPGA_INITN,
   FPGA_DONE,
+  STM_FPGA_SPARE1,
+  STM_FPGA_SPARE2,
+  STM_FPGA_SPARE3,
+  STM_FPGA_SPARE4,
+  STM_FPGA_SPARE5,
+  STM_FPGA_SPARE6,
+  FPGA_SDA,
+  FPGA_SCL,
+  
+  SPI1_SCK,
+  SPI1_MOSI,
+  SPI1_MISO,
+  SPI2_SCK,
+  SPI2_MOSI,
+  SPI2_MISO,
+  SPI3_SCK,
+  SPI3_MOSI,
+  SPI3_MISO,
+  SPI4_SCK,
+  SPI4_MOSI,
+  SPI4_MISO,
+  
 
   NUM_PINS
 };
@@ -139,7 +161,7 @@ extern WWVB_Pin WWVB_Pins[];
 #define ESP32_RST_G GPIOD
 
 
-/***** CrosslinkNX FPGA pins ******/
+/***** ECP5 FPGA pins ******/
 #define QSPI_FPGA_SCLK_N GPIO_PIN_10
 #define QSPI_FPGA_SCLK_G GPIOF
 
@@ -167,6 +189,66 @@ extern WWVB_Pin WWVB_Pins[];
 #define FPGA_DONE_N GPIO_PIN_3
 #define FPGA_DONE_G GPIOC
 
+#define STM_FPGA_SPARE1_N GPIO_PIN_2
+#define STM_FPGA_SPARE1_G GPIOK
+
+#define STM_FPGA_SPARE2_N GPIO_PIN_15
+#define STM_FPGA_SPARE2_G GPIOH
+
+#define STM_FPGA_SPARE3_N GPIO_PIN_14
+#define STM_FPGA_SPARE3_G GPIOH
+
+#define STM_FPGA_SPARE4_N GPIO_PIN_2
+#define STM_FPGA_SPARE4_G GPIOG
+
+#define STM_FPGA_SPARE5_N GPIO_PIN_6
+#define STM_FPGA_SPARE5_G GPIOH
+
+#define STM_FPGA_SPARE6_N GPIO_PIN_7
+#define STM_FPGA_SPARE6_G GPIOH
+
+#define FPGA_SDA_N GPIO_PIN_7
+#define FPGA_SDA_G GPIOI
+
+#define FPGA_SCL_N GPIO_PIN_2
+#define FPGA_SCL_G GPIOI
+
+#define SPI1_SCK_N GPIO_PIN_3
+#define SPI1_SCK_G GPIOB
+
+#define SPI1_MISO_N GPIO_PIN_6
+#define SPI1_MISO_G GPIOA
+
+#define SPI1_MOSI_N GPIO_PIN_7
+#define SPI1_MOSI_G GPIOD
+
+#define SPI2_SCK_N GPIO_PIN_1
+#define SPI2_SCK_G GPIOI
+
+#define SPI2_MISO_N GPIO_PIN_15
+#define SPI2_MISO_G GPIOB
+
+#define SPI2_MOSI_N GPIO_PIN_3
+#define SPI2_MOSI_G GPIOI
+
+#define SPI3_SCK_N GPIO_PIN_10
+#define SPI3_SCK_G GPIOC
+
+#define SPI3_MISO_N GPIO_PIN_11
+#define SPI3_MISO_G GPIOC
+
+#define SPI3_MOSI_N GPIO_PIN_6
+#define SPI3_MOSI_G GPIOD
+
+#define SPI4_SCK_N GPIO_PIN_2
+#define SPI4_SCK_G GPIOE
+
+#define SPI4_MISO_N GPIO_PIN_5
+#define SPI4_MISO_G GPIOE
+
+#define SPI4_MOSI_N GPIO_PIN_6
+#define SPI4_MOSI_G GPIOE
+
 
 #define PIN_STRUCT(pin) \
   { pin##_N, pin##_G }
@@ -181,36 +263,10 @@ void wwvb_gpio_pinmode_pullup(int pin, int dir);
 void wwvb_m4_print_val(char * name, uint32_t val);
 void wwvb_m4_print_bool(char * name, bool val);
 
-#define SX1257_I_RX_DMA_STREAM DMA2_Stream7
-#define SX1257_I_RX_DMA_STREAM_IRQ DMA2_Stream7_IRQn
-#define SX1257_I_RX_DMA_STREAM_HANDLER DMA2_Stream7_IRQHandler
-#define SX1257_I_RX_DMA_MDMA_TRIG MDMA_REQUEST_DMA2_Stream7_TC
-#define SX1257_I_RX_DMA_TC_INT_CLEAR_REG (DMA2->HIFCR)
-#define SX1257_I_RX_DMA_TC_INT_CLEAR_VAL (DMA_FLAG_TCIF3_7)
-#define SX1257_I_DFSDM_CHANNEL DFSDM1_Channel0
-#define SX1257_I_DFSDM_FILTER DFSDM1_Filter0
-#define SX1257_I_MDMA_PINGPONG_0 MDMA_Channel0
-#define SX1257_I_MDMA_PINGPONG_1 MDMA_Channel1
-
-
-#define SX1257_I_TX_DMA_STREAM DMA2_Stream6
-#define SX1257_I_TX_DMA_STREAM_IRQ DMA2_Stream6_IRQn
-#define SX1257_I_TX_DMA_STREAM_HANDLER DMA2_Stream6_IRQHandler
-
-#define SX1257_Q_RX_DMA_STREAM DMA2_Stream5
-#define SX1257_Q_RX_DMA_STREAM_IRQ DMA2_Stream5_IRQn
-#define SX1257_Q_RX_DMA_STREAM_HANDLER DMA2_Stream5_IRQHandler
-#define SX1257_Q_RX_DMA_MDMA_TRIG MDMA_REQUEST_DMA2_Stream5_TC
-#define SX1257_Q_RX_DMA_TC_INT_CLEAR_REG (DMA2->HIFCR)
-#define SX1257_Q_RX_DMA_TC_INT_CLEAR_VAL (DMA_FLAG_TCIF1_5)
-#define SX1257_Q_DFSDM_CHANNEL DFSDM1_Channel1
-#define SX1257_Q_DFSDM_FILTER DFSDM1_Filter1
-#define SX1257_Q_MDMA_PINGPONG_0 MDMA_Channel2
-#define SX1257_Q_MDMA_PINGPONG_1 MDMA_Channel3
-
-#define SX1257_Q_TX_DMA_STREAM DMA2_Stream4
-#define SX1257_Q_TX_DMA_STREAM_IRQ DMA2_Stream4_IRQn
-#define SX1257_Q_TX_DMA_STREAM_HANDLER DMA2_Stream4_IRQHandler
+#define SUBG_I_RX_DMA_STREAM DMA2_Stream7
+#define SUBG_Q_RX_DMA_STREAM DMA2_Stream6
+#define WIFI_I_RX_DMA_STREAM DMA2_Stream5
+#define WIFI_Q_RX_DMA_STREAM DMA2_Stream4
 
 #define ESP_UART_TX_DMA_STREAM DMA2_Stream3
 #define ESP_UART_TX_DMA_STREAM_IRQ DMA2_Stream3_IRQn
@@ -250,26 +306,26 @@ void wwvb_m4_print_bool(char * name, bool val);
 
 
 
-//#define BUFFER_SIZE (131072/2) // 131072 = max size for sram1 in bytes
-#define BUFFER_SIZE 10000
+#define SRAM_SIZE 131072 // 131072 = max size for sram1 in bytes 
+#define BUFFER_SIZE (SRAM_SIZE/4)  // each data entry is 2 bytes, and split between I and Q
+//#define BUFFER_SIZE 10000
 //#define FILTERED_BUFFER_SIZE BUFFER_SIZE/4
 
 typedef volatile struct sram1_data_struct_name {
-  int16_t I_data[BUFFER_SIZE]; // int16_t from FPGA
+  int16_t subg_I_data[BUFFER_SIZE]; // int16_t from FPGA
+  int16_t subg_Q_data[BUFFER_SIZE];
 } sram1_data_struct;
 
 typedef volatile struct sram2_data_struct_name {
-  int16_t Q_data[BUFFER_SIZE];
+  int16_t wifi_I_data[BUFFER_SIZE]; // int16_t from FPGA
+  int16_t wifi_Q_data[BUFFER_SIZE];
 } sram2_data_struct;
 
-typedef volatile struct sram3_data_struct_name {
-  uint32_t dummy_hrtimer_dma_val;
-  uint32_t dummy_hrtimera_dma_val;
-} sram3_data_struct;
 
 extern sram1_data_struct * sram1_data;
 extern sram2_data_struct * sram2_data;
-extern sram3_data_struct * sram3_data;
+// sram3 used by ethernet
+
 
 #define DMA_PAUSED 0
 #define DMA_RUNNING 1

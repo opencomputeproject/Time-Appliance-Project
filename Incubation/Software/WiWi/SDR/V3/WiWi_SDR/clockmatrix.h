@@ -4,11 +4,13 @@
 
 #include "SoftWire_stm.h"
 #include "menu_cli.h"
+#include "XModem.h"
 
 
-
-
-extern SoftWire cm_i2c;
+//#define INTERNAL_DPLL_FIRMWARE
+#ifdef INTERNAL_DPLL_FIRMWARE
+#include "dpllFirmware.h"
+#endif
 
 bool dpll_read_reg(uint16_t baseaddr, uint16_t offset, uint8_t * val);
 bool dpll_write_reg(uint16_t baseaddr, uint16_t offset, uint8_t val);
