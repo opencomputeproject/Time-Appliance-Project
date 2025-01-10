@@ -1,0 +1,190 @@
+diff --git a/drivers/net/ethernet/intel/igc/igc.h b/drivers/net/ethernet/intel/igc/igc.h
+index 85cc16396..e3843c4b0 100644
+--- a/drivers/net/ethernet/intel/igc/igc.h
++++ b/drivers/net/ethernet/intel/igc/igc.h
+@@ -278,6 +278,12 @@ struct igc_adapter {
+ 		struct timespec64 start;
+ 		struct timespec64 period;
+ 	} perout[IGC_N_PEROUT];
++
++	unsigned int ts0_pin;
++	unsigned int ts0_flags;
++	unsigned int ts1_pin;
++	unsigned int ts1_flags;
++	
+ };
+ 
+ void igc_up(struct igc_adapter *adapter);
+diff --git a/drivers/net/ethernet/intel/igc/igc_defines.h b/drivers/net/ethernet/intel/igc/igc_defines.h
+index a18af5c87..e83119155 100644
+--- a/drivers/net/ethernet/intel/igc/igc_defines.h
++++ b/drivers/net/ethernet/intel/igc/igc_defines.h
+@@ -10,6 +10,10 @@
+ 
+ #define IGC_CTRL_EXT_SDP2_DIR	0x00000400 /* SDP2 Data direction */
+ #define IGC_CTRL_EXT_SDP3_DIR	0x00000800 /* SDP3 Data direction */
++#define IGC_CTRL_EXT_SDP2_VAL   0x00000040 /* SDP2 Data value */
++#define IGC_CTRL_EXT_SDP3_VAL   0x00000080 /* SDP3 Data value */
++
++
+ #define IGC_CTRL_EXT_DRV_LOAD	0x10000000 /* Drv loaded bit for FW */
+ 
+ /* Definitions for power management and wakeup registers */
+@@ -141,6 +145,9 @@
+ #define IGC_CTRL_SDP0_DIR	0x00400000  /* SDP0 Data direction */
+ #define IGC_CTRL_SDP1_DIR	0x00800000  /* SDP1 Data direction */
+ 
++#define IGC_CTRL_SDP0_VAL	0x00040000 /* SDP0 Data value */
++#define IGC_CTRL_SDP1_VAL	0x00080000 /* SDP0 Data value */
++
+ /* As per the EAS the maximum supported size is 9.5KB (9728 bytes) */
+ #define MAX_JUMBO_FRAME_SIZE	0x2600
+ 
+diff --git a/drivers/net/ethernet/intel/igc/igc_main.c b/drivers/net/ethernet/intel/igc/igc_main.c
+index da1018d83..523e32b2e 100644
+--- a/drivers/net/ethernet/intel/igc/igc_main.c
++++ b/drivers/net/ethernet/intel/igc/igc_main.c
+@@ -5304,6 +5304,9 @@ static void igc_tsync_interrupt(struct igc_adapter *adapter)
+ 	u32 tsauxc, sec, nsec, tsicr;
+ 	struct ptp_clock_event event;
+ 	struct timespec64 ts;
++	static const u32 igc_sdp_val[IGC_N_SDP] = {
++		IGC_CTRL_SDP0_VAL, IGC_CTRL_SDP1_VAL, IGC_CTRL_EXT_SDP2_VAL, IGC_CTRL_EXT_SDP3_VAL,
++	};
+ 
+ 	tsicr = rd32(IGC_TSICR);
+ 
+@@ -5344,16 +5347,64 @@ static void igc_tsync_interrupt(struct igc_adapter *adapter)
+ 		spin_unlock(&adapter->tmreg_lock);
+ 	}
+ 
++	// Add workaround, check which SDP is used for EXTTS
++	// and check the level
++	bool skip_event = 0;
+ 	if (tsicr & IGC_TSICR_AUTT0) {
++		// for single edge cases, workaround is to read pin level
++		unsigned int pin = adapter->ts0_pin;
++		unsigned int pin_val = 0;
++		if ( (adapter->ts0_flags & PTP_RISING_EDGE) && 
++			(!(adapter->ts0_flags & PTP_FALLING_EDGE) ) ) {
++			// rising edge only case 
++			if ( pin < 2 ) {
++				pin_val = rd32(IGC_CTRL) & igc_sdp_val[pin];
++				dev_info(&adapter->pdev->dev, "TS0 int ctrl, pin %d, pinval = 0x%x\n",
++						pin, pin_val);
++			}
++			else {
++				pin_val = rd32(IGC_CTRL_EXT) & igc_sdp_val[pin];
++				dev_info(&adapter->pdev->dev, "TS0 int ctrl_ext, pin %d, pinval = 0x%x\n",
++						pin, pin_val);
++			}
++			if ( pin_val ) skip_event = 1; // rising edge, pin should be high
++						       // this is found through experiment
++						       // the data value is lagging apparently
++						       // so it will read 0 right after rising edge
++						       // maybe race condition? but seems to work
++		} 
++		if ( (adapter->ts0_flags & PTP_FALLING_EDGE) && 
++			(!(adapter->ts0_flags & PTP_RISING_EDGE) ) ) {
++			// falling edge only case
++			if ( pin < 2 ) pin_val = rd32(IGC_CTRL) & igc_sdp_val[pin];
++			else pin_val = rd32(IGC_CTRL_EXT) & igc_sdp_val[pin];
++			if ( !pin_val ) skip_event =1; // falling edge, pin should be low
++		} 
+ 		nsec = rd32(IGC_AUXSTMPL0);
+ 		sec  = rd32(IGC_AUXSTMPH0);
+ 		event.type = PTP_CLOCK_EXTTS;
+-		event.index = 0;
+ 		event.timestamp = sec * NSEC_PER_SEC + nsec;
+-		ptp_clock_event(adapter->ptp_clock, &event);
++		if ( !skip_event ) ptp_clock_event(adapter->ptp_clock, &event);
+ 	}
+ 
+ 	if (tsicr & IGC_TSICR_AUTT1) {
++		unsigned int pin = adapter->ts1_pin;
++		unsigned int pin_val = 0;
++		if ( (adapter->ts1_flags & PTP_RISING_EDGE) && 
++			(!(adapter->ts1_flags & PTP_FALLING_EDGE) ) ) {
++			// rising edge only case 
++			if ( pin < 2 ) pin_val = rd32(IGC_CTRL) & igc_sdp_val[pin];
++			else pin_val = rd32(IGC_CTRL_EXT) & igc_sdp_val[pin];
++			if ( !pin_val ) return; // rising edge, pin should be high
++		} 
++		if ( (adapter->ts1_flags & PTP_FALLING_EDGE) && 
++			(!(adapter->ts1_flags & PTP_RISING_EDGE) ) ) {
++			// falling edge only case
++			if ( pin < 2 ) pin_val = rd32(IGC_CTRL) & igc_sdp_val[pin];
++			else pin_val = rd32(IGC_CTRL_EXT) & igc_sdp_val[pin];
++			if ( pin_val ) return; // falling edge, pin should be low
++		} 
++
+ 		nsec = rd32(IGC_AUXSTMPL1);
+ 		sec  = rd32(IGC_AUXSTMPH1);
+ 		event.type = PTP_CLOCK_EXTTS;
+@@ -6753,6 +6804,7 @@ static int igc_probe(struct pci_dev *pdev,
+ 	if (err < 0)
+ 		dev_info(&pdev->dev, "PCIe PTM not supported by PCIe bus/controller\n");
+ 
++
+ 	pci_set_master(pdev);
+ 
+ 	err = -ENOMEM;
+@@ -6946,6 +6998,9 @@ static int igc_probe(struct pci_dev *pdev,
+ 	adapter->flags &= ~IGC_FLAG_EEE;
+ 	igc_set_eee_i225(hw, false, false, false);
+ 
++	adapter->ts0_pin = 1000;
++	adapter->ts1_pin = 1000;
++
+ 	pm_runtime_put_noidle(&pdev->dev);
+ 
+ 	return 0;
+diff --git a/drivers/net/ethernet/intel/igc/igc_ptp.c b/drivers/net/ethernet/intel/igc/igc_ptp.c
+index 928f38792..dbea63c71 100644
+--- a/drivers/net/ethernet/intel/igc/igc_ptp.c
++++ b/drivers/net/ethernet/intel/igc/igc_ptp.c
+@@ -256,18 +256,23 @@ static int igc_ptp_feature_enable_i225(struct ptp_clock_info *ptp,
+ 
+ 	switch (rq->type) {
+ 	case PTP_CLK_REQ_EXTTS:
+-		/* Reject requests with unsupported flags */
+-		if (rq->extts.flags & ~(PTP_ENABLE_FEATURE |
+-					PTP_RISING_EDGE |
+-					PTP_FALLING_EDGE |
+-					PTP_STRICT_FLAGS))
+-			return -EOPNOTSUPP;
++		// PATCH , enable flags
++		/* Reject requests with unsupported flags -> PATCH ALLOW */
+ 
+-		/* Reject requests failing to enable both edges. */
++		/* Reject requests failing to enable both edges. -> PATCH ALLOW */
++		/*
+ 		if ((rq->extts.flags & PTP_STRICT_FLAGS) &&
+ 		    (rq->extts.flags & PTP_ENABLE_FEATURE) &&
+ 		    (rq->extts.flags & PTP_EXTTS_EDGES) != PTP_EXTTS_EDGES)
+ 			return -EOPNOTSUPP;
++		*/
++
++		// hack patch, non-ideal, complain to me over email
++		// if enabling extts, enable only for rising edge, always ignore falling edge
++		if ( rq->extts.flags & PTP_ENABLE_FEATURE ) {
++			rq->extts.flags = PTP_ENABLE_FEATURE | PTP_RISING_EDGE;
++		}
++		
+ 
+ 		if (on) {
+ 			pin = ptp_find_pin(igc->ptp_clock, PTP_PF_EXTTS,
+@@ -278,9 +283,13 @@ static int igc_ptp_feature_enable_i225(struct ptp_clock_info *ptp,
+ 		if (rq->extts.index == 1) {
+ 			tsauxc_mask = IGC_TSAUXC_EN_TS1;
+ 			tsim_mask = IGC_TSICR_AUTT1;
++			igc->ts1_pin = rq->extts.index;
++			igc->ts1_flags = rq->extts.flags;
+ 		} else {
+ 			tsauxc_mask = IGC_TSAUXC_EN_TS0;
+ 			tsim_mask = IGC_TSICR_AUTT0;
++			igc->ts0_pin = rq->extts.index;
++			igc->ts0_flags = rq->extts.flags;
+ 		}
+ 		spin_lock_irqsave(&igc->tmreg_lock, flags);
+ 		tsauxc = rd32(IGC_TSAUXC);
