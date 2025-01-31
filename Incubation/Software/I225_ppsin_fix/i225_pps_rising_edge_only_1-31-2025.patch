@@ -41,7 +41,7 @@ index a18af5c87..e83119155 100644
  #define MAX_JUMBO_FRAME_SIZE	0x2600
  
 diff --git a/drivers/net/ethernet/intel/igc/igc_main.c b/drivers/net/ethernet/intel/igc/igc_main.c
-index da1018d83..523e32b2e 100644
+index da1018d83..dd2bf4de5 100644
 --- a/drivers/net/ethernet/intel/igc/igc_main.c
 +++ b/drivers/net/ethernet/intel/igc/igc_main.c
 @@ -5304,6 +5304,9 @@ static void igc_tsync_interrupt(struct igc_adapter *adapter)
@@ -54,7 +54,7 @@ index da1018d83..523e32b2e 100644
  
  	tsicr = rd32(IGC_TSICR);
  
-@@ -5344,16 +5347,64 @@ static void igc_tsync_interrupt(struct igc_adapter *adapter)
+@@ -5344,16 +5347,70 @@ static void igc_tsync_interrupt(struct igc_adapter *adapter)
  		spin_unlock(&adapter->tmreg_lock);
  	}
  
@@ -65,31 +65,35 @@ index da1018d83..523e32b2e 100644
 +		// for single edge cases, workaround is to read pin level
 +		unsigned int pin = adapter->ts0_pin;
 +		unsigned int pin_val = 0;
++		// add a small delay to make sure GPIO read is valid
++		udelay(5);
 +		if ( (adapter->ts0_flags & PTP_RISING_EDGE) && 
 +			(!(adapter->ts0_flags & PTP_FALLING_EDGE) ) ) {
 +			// rising edge only case 
++			
 +			if ( pin < 2 ) {
 +				pin_val = rd32(IGC_CTRL) & igc_sdp_val[pin];
-+				dev_info(&adapter->pdev->dev, "TS0 int ctrl, pin %d, pinval = 0x%x\n",
++				/*
++				dev_info(&adapter->pdev->dev, "TS0 interrupt int ctrl, pin %d, pinval = 0x%x\n",
 +						pin, pin_val);
++				*/
 +			}
 +			else {
 +				pin_val = rd32(IGC_CTRL_EXT) & igc_sdp_val[pin];
-+				dev_info(&adapter->pdev->dev, "TS0 int ctrl_ext, pin %d, pinval = 0x%x\n",
++				/*
++				dev_info(&adapter->pdev->dev, "TS0 interrupt int ctrl_ext, pin %d, pinval = 0x%x\n",
 +						pin, pin_val);
++				*/
 +			}
-+			if ( pin_val ) skip_event = 1; // rising edge, pin should be high
-+						       // this is found through experiment
-+						       // the data value is lagging apparently
-+						       // so it will read 0 right after rising edge
-+						       // maybe race condition? but seems to work
++			if ( !pin_val ) skip_event = 1; // rising edge, pin should be high
++							// need the delay so register value is correct
 +		} 
 +		if ( (adapter->ts0_flags & PTP_FALLING_EDGE) && 
 +			(!(adapter->ts0_flags & PTP_RISING_EDGE) ) ) {
 +			// falling edge only case
 +			if ( pin < 2 ) pin_val = rd32(IGC_CTRL) & igc_sdp_val[pin];
 +			else pin_val = rd32(IGC_CTRL_EXT) & igc_sdp_val[pin];
-+			if ( !pin_val ) skip_event =1; // falling edge, pin should be low
++			if ( pin_val ) skip_event =1; // falling edge, pin should be low
 +		} 
  		nsec = rd32(IGC_AUXSTMPL0);
  		sec  = rd32(IGC_AUXSTMPH0);
@@ -103,6 +107,8 @@ index da1018d83..523e32b2e 100644
  	if (tsicr & IGC_TSICR_AUTT1) {
 +		unsigned int pin = adapter->ts1_pin;
 +		unsigned int pin_val = 0;
++		// add a small delay to make sure GPIO read is valid
++		udelay(5);
 +		if ( (adapter->ts1_flags & PTP_RISING_EDGE) && 
 +			(!(adapter->ts1_flags & PTP_FALLING_EDGE) ) ) {
 +			// rising edge only case 
@@ -121,7 +127,7 @@ index da1018d83..523e32b2e 100644
  		nsec = rd32(IGC_AUXSTMPL1);
  		sec  = rd32(IGC_AUXSTMPH1);
  		event.type = PTP_CLOCK_EXTTS;
-@@ -6753,6 +6804,7 @@ static int igc_probe(struct pci_dev *pdev,
+@@ -6753,6 +6810,7 @@ static int igc_probe(struct pci_dev *pdev,
  	if (err < 0)
  		dev_info(&pdev->dev, "PCIe PTM not supported by PCIe bus/controller\n");
  
@@ -129,7 +135,7 @@ index da1018d83..523e32b2e 100644
  	pci_set_master(pdev);
  
  	err = -ENOMEM;
-@@ -6946,6 +6998,9 @@ static int igc_probe(struct pci_dev *pdev,
+@@ -6946,6 +7004,9 @@ static int igc_probe(struct pci_dev *pdev,
  	adapter->flags &= ~IGC_FLAG_EEE;
  	igc_set_eee_i225(hw, false, false, false);
  
@@ -140,7 +146,7 @@ index da1018d83..523e32b2e 100644
  
  	return 0;
 diff --git a/drivers/net/ethernet/intel/igc/igc_ptp.c b/drivers/net/ethernet/intel/igc/igc_ptp.c
-index 928f38792..dbea63c71 100644
+index 928f38792..ebee4fa39 100644
 --- a/drivers/net/ethernet/intel/igc/igc_ptp.c
 +++ b/drivers/net/ethernet/intel/igc/igc_ptp.c
 @@ -256,18 +256,23 @@ static int igc_ptp_feature_enable_i225(struct ptp_clock_info *ptp,
@@ -174,17 +180,25 @@ index 928f38792..dbea63c71 100644
  
  		if (on) {
  			pin = ptp_find_pin(igc->ptp_clock, PTP_PF_EXTTS,
-@@ -278,9 +283,13 @@ static int igc_ptp_feature_enable_i225(struct ptp_clock_info *ptp,
+@@ -278,9 +283,21 @@ static int igc_ptp_feature_enable_i225(struct ptp_clock_info *ptp,
  		if (rq->extts.index == 1) {
  			tsauxc_mask = IGC_TSAUXC_EN_TS1;
  			tsim_mask = IGC_TSICR_AUTT1;
-+			igc->ts1_pin = rq->extts.index;
++			igc->ts1_pin = pin;
 +			igc->ts1_flags = rq->extts.flags;
++			/*
++			dev_info(&igc->pdev->dev, "TS1 int ctrl, pin %d, flags = %d\n",
++					pin, rq->extts.flags);
++			*/
  		} else {
  			tsauxc_mask = IGC_TSAUXC_EN_TS0;
  			tsim_mask = IGC_TSICR_AUTT0;
-+			igc->ts0_pin = rq->extts.index;
++			igc->ts0_pin = pin;
 +			igc->ts0_flags = rq->extts.flags;
++			/*
++			dev_info(&igc->pdev->dev, "TS0 int ctrl, pin %d, pinval = 0x%x\n",
++					pin, rq->extts.flags);
++			*/
  		}
  		spin_lock_irqsave(&igc->tmreg_lock, flags);
  		tsauxc = rd32(IGC_TSAUXC);
