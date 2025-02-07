@@ -305,7 +305,7 @@ void onESP32Passthrough(EmbeddedCli *cli, char *args, void *context)
     while ( esp32_uart_available() ) {
       Serial.print( (char)esp32_uart_read_char() );
     }
-    rtos::ThisThread::sleep_for(10);
+    rtos::ThisThread::sleep_for(10); // give scheduler control
   }
 }
 
