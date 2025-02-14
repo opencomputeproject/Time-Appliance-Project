@@ -9,7 +9,7 @@ sidebar_position: 1
 Time Card is the heart of the [Open Time Server](http://www.opentimeserver.com) Project.  
 This spec can be accessed using http://www.timingcard.com
 
-![Docusaurus Plushie](/img/timecard/timecard.png)
+[![Docusaurus Plushie](/img/timecard/timecard.png)](https://github.com/Time-Appliances-Project/Time-Appliance-Project/blob/master/Time-Card/images/timingcard.png)
 
 ## General
 
