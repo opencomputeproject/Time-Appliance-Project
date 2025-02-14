@@ -126,7 +126,8 @@ LED status signals:
 Time card has 4 SMA connectors that can be configured as outputs and outputs for various things such as 10Mhz, PHC, MAC, GNSS, GNSS2, IRIG, DCF for output and 10Mhz, PPS1, PPS2, TS1, TS2, IRIG, DCF for input.  
 Using a Calnex Sentinel device are comparing various things. Here we are comparing the 1PPS output (Channel A) and the 10Mhz output (Channel B) from the MAC (SA.53).
 
-![MACvs10MHz](/img/timecard/MACvs10MHz.png)
+<img width="799" alt="MACvs10Mhz" src="https://github.com/user-attachments/assets/7e6a31ec-0f20-46c5-8f1f-8b98d448d518" />
+
 
 ## Repository content
 
@@ -137,6 +138,7 @@ Using a Calnex Sentinel device are comparing various things. Here we are compari
 
 ## Where can I get one?
 
-You have all necessary source code, BOM, Gerber files and binaries to build it yourself. However, we are currently working with several suppliers and will have their contact info soon available to allow you to purchase an out-of-the-box ready Time Card.
+You have all the necessary source code, BOM, Gerber files, and binaries to build it yourself. However, we are currently working with several suppliers and will have their contact info soon available to allow you to purchase an out-of-the-box ready Time Card.
 
-If you don't want to build your own then they are commercially available via Timebeat. For ordering go to https://store.timebeat.app/products/ocp-tap-timecard
+If you don't want to build your own then they are commercially available via Makerfabs. For ordering go to:
+https://www.makerfabs.com/ocp-tap-time-card.html or make a PCBA order on PCBWay or JLCPCB, depending on your technical apetite. 
