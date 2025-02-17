@@ -1,2 +1,0 @@
-20221207 Version: 0x0005
-- Initial Release of the 200T FPGA Open Source version for the TimeCard

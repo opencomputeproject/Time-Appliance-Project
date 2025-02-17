@@ -1,1 +1,0 @@
-Ahmad Byagowi (ahmadexp)

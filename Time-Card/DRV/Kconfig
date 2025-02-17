@@ -1,6 +1,0 @@
-config PTP_OCP
-	bool "OpenCompute TimeCard"
-	depends on HAS_IOMEM
-	default y
-	help
-	  If you have an OpenCompute Timecard.
