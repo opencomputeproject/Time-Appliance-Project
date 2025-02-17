@@ -1,0 +1,16 @@
+20221207 Version: 0x0005
+- Added SMA status Reg to read back the value of SMA inputs
+- Added CommunicationSelector IP to select between UART and I2C for the communication with the MAC/Clock
+- Added header to the bin-file with PCIe id information (gotham version)
+- Updated project and docs
+- Added to the implementation Readme.md info about the AXI GPIO regs
+- Minor updates in the implementation, scripts, docs and binaries
+
+20220601 Version: 0x0001
+- Initial Release of the Open Source version for the TimeCard (Base System)
+
+20220919 Version: 0x0003
+- Extended Base System with PPS-Slave and TOD-Slave 
+
+20220601 Version: 0x0001
+- Initial Release of the Open Source version for the TimeCard (Base System)

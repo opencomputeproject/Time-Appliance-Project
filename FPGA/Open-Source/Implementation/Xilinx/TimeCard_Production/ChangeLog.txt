@@ -1,0 +1,2 @@
+20221207 Version: 0x8001
+- Initial Release of the Open Source version for the Production TimeCard (not SOM version)

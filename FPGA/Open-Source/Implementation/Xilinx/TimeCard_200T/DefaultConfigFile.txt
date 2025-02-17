@@ -1,0 +1,44 @@
+// Commands
+//      Skip    1
+//      Wait    2
+//      Read    3
+//      Write   4
+// Command; BaseAddr; RegAddr; Data or Time in ns if Wait;
+
+// Adj Clock
+// Disable 
+00000004 01000000 00000000 00000000
+// Select source_1 (PPS+ToD)
+00000004 01000000 00000008 00000001
+// Enable 
+00000004 01000000 00000000 00000001
+// Wait for about a second
+00000002 00000000 00000000 40000000
+
+// PPS Generator 
+// Polarity=1
+00000004 01030000 00000008 00000001
+// Enable PPS Generator
+00000004 01030000 00000000 00000001
+// Wait for about a second
+00000002 00000000 00000000 40000000
+
+//PPS Slave
+// Polarity=1
+00000004 01040000 00000008 00000001
+// Enable PPS Slave
+00000004 01040000 00000000 00000001
+// Wait for about a second
+00000002 00000000 00000000 40000000
+
+//ToD Slave
+// Polarity=1
+00000004 01050000 00000008 00000001
+// Enable ToD Slave
+00000004 01050000 00000000 00000001
+// Wait for about a second
+00000002 00000000 00000000 40000000
+
+//SMA Selector
+//Set FPGA PPS and GNSS PPS as SMA outputs
+00000004 00140000 00000008 80048001 
